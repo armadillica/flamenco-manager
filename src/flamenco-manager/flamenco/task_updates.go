@@ -193,51 +193,51 @@ func (self *TaskUpdatePusher) Close() {
 
 func (self *TaskUpdatePusher) Go() {
 	log.Info("TaskUpdatePusher: Starting")
-	mongo_sess := self.session.Copy()
-	defer mongo_sess.Close()
+	self.closableAdd(1)
+	go func() {
+		defer self.closableDone()
 
-	var last_push time.Time
-	db := mongo_sess.DB("")
-	queue := db.C(QUEUE_MGO_COLLECTION)
+		mongo_sess := self.session.Copy()
+		defer mongo_sess.Close()
 
-	if !self.closableAdd(1) {
-		return
-	}
-	defer self.closableDone()
+		var last_push time.Time
+		db := mongo_sess.DB("")
+		queue := db.C(QUEUE_MGO_COLLECTION)
 
-	// Investigate the queue periodically.
-	timer_chan := Timer("TaskUpdatePusherTimer",
-		TASK_QUEUE_INSPECT_PERIOD, false, &self.closable)
+		// Investigate the queue periodically.
+		timer_chan := Timer("TaskUpdatePusherTimer",
+			TASK_QUEUE_INSPECT_PERIOD, false, &self.closable)
 
-	for _ = range timer_chan {
-		// log.Info("TaskUpdatePusher: checking task update queue")
-		update_count, err := Count(queue)
-		if err != nil {
-			log.Warningf("TaskUpdatePusher: ERROR checking queue: %s", err)
-			continue
+		for _ = range timer_chan {
+			// log.Info("TaskUpdatePusher: checking task update queue")
+			update_count, err := Count(queue)
+			if err != nil {
+				log.Warningf("TaskUpdatePusher: ERROR checking queue: %s", err)
+				continue
+			}
+
+			time_since_last_push := time.Now().Sub(last_push)
+			may_regular_push := update_count > 0 &&
+				(update_count >= self.config.TaskUpdatePushMaxCount ||
+					time_since_last_push >= self.config.TaskUpdatePushMaxInterval)
+			may_empty_push := time_since_last_push >= self.config.CancelTaskFetchInterval
+			if !may_regular_push && !may_empty_push {
+				continue
+			}
+
+			// Time to push!
+			if update_count > 0 {
+				log.Debugf("TaskUpdatePusher: %d updates are queued", update_count)
+			}
+			if err := self.push(db); err != nil {
+				log.Warning("TaskUpdatePusher: unable to push to upstream Flamenco Server: ", err)
+				continue
+			}
+
+			// Only remember we've pushed after it was succesful.
+			last_push = time.Now()
 		}
-
-		time_since_last_push := time.Now().Sub(last_push)
-		may_regular_push := update_count > 0 &&
-			(update_count >= self.config.TaskUpdatePushMaxCount ||
-				time_since_last_push >= self.config.TaskUpdatePushMaxInterval)
-		may_empty_push := time_since_last_push >= self.config.CancelTaskFetchInterval
-		if !may_regular_push && !may_empty_push {
-			continue
-		}
-
-		// Time to push!
-		if update_count > 0 {
-			log.Debugf("TaskUpdatePusher: %d updates are queued", update_count)
-		}
-		if err := self.push(db); err != nil {
-			log.Warning("TaskUpdatePusher: unable to push to upstream Flamenco Server: ", err)
-			continue
-		}
-
-		// Only remember we've pushed after it was succesful.
-		last_push = time.Now()
-	}
+	}()
 }
 
 /**

@@ -233,8 +233,8 @@ func main() {
 	router.HandleFunc("/timeout", http_timeout)
 
 	upstream.SendStartupNotification()
-	go task_update_pusher.Go()
-	go task_timeout_checker.Go()
+	task_update_pusher.Go()
+	task_timeout_checker.Go()
 
 	// Create the HTTP server before allowing the shutdown signal Handler
 	// to exist. This prevents a race condition when Ctrl+C is pressed after

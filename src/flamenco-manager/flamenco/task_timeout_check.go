@@ -29,28 +29,29 @@ func CreateTaskTimeoutChecker(config *Conf, session *mgo.Session) *TaskTimeoutCh
 }
 
 func (self *TaskTimeoutChecker) Go() {
-	session := self.session.Copy()
-	defer session.Close()
-	db := session.DB("")
-
 	self.closableAdd(1)
-	defer self.closableDone()
-	defer log.Info("TaskTimeoutChecker: shutting down.")
+	go func() {
+		session := self.session.Copy()
+		db := session.DB("")
 
-	// Start with a delay, so that workers get a chance to push their updates
-	// after the manager has started up.
-	ok := KillableSleep("TaskTimeoutChecker-initial", TASK_TIMEOUT_CHECK_INITIAL_SLEEP, &self.closable)
-	if !ok {
-		log.Info("TaskTimeoutChecker: Killable sleep was killed, not even starting checker.")
-		return
-	}
+		defer session.Close()
+		defer self.closableDone()
+		defer log.Info("TaskTimeoutChecker: shutting down.")
 
-	timer := Timer("TaskTimeoutCheck", TASK_TIMEOUT_CHECK_INTERVAL, false, &self.closable)
+		// Start with a delay, so that workers get a chance to push their updates
+		// after the manager has started up.
+		ok := KillableSleep("TaskTimeoutChecker-initial", TASK_TIMEOUT_CHECK_INITIAL_SLEEP, &self.closable)
+		if !ok {
+			log.Info("TaskTimeoutChecker: Killable sleep was killed, not even starting checker.")
+			return
+		}
 
-	for _ = range timer {
-		self.Check(db)
-	}
+		timer := Timer("TaskTimeoutCheck", TASK_TIMEOUT_CHECK_INTERVAL, false, &self.closable)
 
+		for _ = range timer {
+			self.Check(db)
+		}
+	}()
 }
 
 func (self *TaskTimeoutChecker) Close() {
