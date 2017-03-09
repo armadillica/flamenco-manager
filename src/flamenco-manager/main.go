@@ -34,10 +34,6 @@ var task_timeout_checker *flamenco.TaskTimeoutChecker
 var httpServer *http.Server
 var shutdownComplete chan struct{}
 
-func http_status(w http.ResponseWriter, r *http.Request) {
-	flamenco.SendStatusReport(w, r, session, FLAMENCO_VERSION)
-}
-
 func http_register_worker(w http.ResponseWriter, r *http.Request) {
 	mongo_sess := session.Copy()
 	defer mongo_sess.Close()
@@ -219,11 +215,12 @@ func main() {
 	task_scheduler = flamenco.CreateTaskScheduler(&config, upstream, session)
 	task_update_pusher = flamenco.CreateTaskUpdatePusher(&config, upstream, session)
 	task_timeout_checker = flamenco.CreateTaskTimeoutChecker(&config, session)
+	reporter := flamenco.CreateReporter(&config, session, FLAMENCO_VERSION)
 
 	// Set up our own HTTP server
 	worker_authenticator := auth.NewBasicAuthenticator("Flamenco Manager", worker_secret)
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/", http_status).Methods("GET")
+	reporter.AddRoutes(router)
 	router.HandleFunc("/register-worker", http_register_worker).Methods("POST")
 	router.HandleFunc("/task", worker_authenticator.Wrap(http_schedule_task)).Methods("POST")
 	router.HandleFunc("/tasks/{task-id}/update", worker_authenticator.Wrap(http_task_update)).Methods("POST")

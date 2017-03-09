@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="/static/jquery.min.js"></script>
+    <script src="/static/status.js" async></script>
+    <link rel='stylesheet' href='/static/status.css'>
+</head>
+<body>
+    <h1>Flamenco Manager {{ .Version}}</h1>
+
+    <h2>Status</h2>
+
+    <section id='status'></section>
+
+    <button id='refresh' onclick="load_workers()">Refresh</button>
+    <h2>Workers</h2>
+
+    <section id='workers'></section>
+
+</body>
+</html>
