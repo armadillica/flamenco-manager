@@ -79,9 +79,18 @@ function load_workers() {
         setTimeout(load_workers, 2000);
     })
     .fail(function(error) {
-        console.log('ERROR', error);
         var $section = $('#status');
-        $section.html(error);
+        var $p = $('<p>').addClass('error');
+
+        if (error.status) {
+            $p.text('Error ' + error.status + ': ' + error.responseText);
+        } else {
+            $p.text('Unable to get the status report. Is the Manager still running & reachable?');
+        }
+        $section.html($p);
+
+        // Everything is bugging out, let's try it again soon-ish.
+        setTimeout(load_workers, 10000);
     });
 }
 
