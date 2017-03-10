@@ -80,19 +80,23 @@ function load_workers() {
             }
             $dl.append($task_dd);
 
-            var last_act = new Date(worker.last_activity);
-            var timediff = Date.now() - last_act;  // in milliseconds
             var strdiff;
-            if (timediff < 1000) {
-                strdiff = 'just now';
-            } else if (timediff < 60000) {  // less than a minute
-                strdiff = Math.round(timediff / 1000) + ' seconds ago';
-            } else if (timediff < 3600000) { // less than an hour
-                strdiff = Math.round(timediff / 60000) + ' minutes ago';
-            } else if (timediff < 24 * 3600000) { // less than a day hour
-                strdiff = Math.round(timediff / 3600000) + ' hours ago';
+            var last_act = new Date(worker.last_activity);
+            if (typeof worker.last_activity == 'undefined') {
+                strdiff = '-nevah-';
             } else {
-                strdiff = last_act;
+                var timediff = Date.now() - last_act;  // in milliseconds
+                if (timediff < 1000) {
+                    strdiff = 'just now';
+                } else if (timediff < 60000) {  // less than a minute
+                    strdiff = Math.round(timediff / 1000) + ' seconds ago';
+                } else if (timediff < 3600000) { // less than an hour
+                    strdiff = Math.round(timediff / 60000) + ' minutes ago';
+                } else if (timediff < 24 * 3600000) { // less than a day hour
+                    strdiff = Math.round(timediff / 3600000) + ' hours ago';
+                } else {
+                    strdiff = last_act;
+                }
             }
             $dl.append($('<dt>').text('Last Seen'));
             $dl.append($('<dd>')
