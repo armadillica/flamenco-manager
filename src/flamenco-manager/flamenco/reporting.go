@@ -64,8 +64,6 @@ func (rep *Reporter) showStatusPage(w http.ResponseWriter, r *http.Request) {
 
 // sendStatusReport reports the status of the manager in JSON.
 func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
-	log.Info(r.RemoteAddr, "Status request received")
-
 	mongoSess := rep.session.Copy()
 	defer mongoSess.Close()
 	db := mongoSess.DB("")
