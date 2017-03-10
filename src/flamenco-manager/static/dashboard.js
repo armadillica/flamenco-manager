@@ -62,7 +62,7 @@ function load_workers() {
             } else if (timediff < 24 * 3600000) { // less than a day hour
                 strdiff = Math.round(timediff / 3600000) + ' hours ago';
             } else {
-                strdiff = timediff;
+                strdiff = last_act;
             }
             $dl.append($('<dt>').text('Last Seen'));
             $dl.append($('<dd>')
