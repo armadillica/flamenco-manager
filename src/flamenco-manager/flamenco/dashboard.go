@@ -80,7 +80,7 @@ func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var workers []Worker
-	if err = db.C("flamenco_workers").Find(M{}).All(&workers); err != nil {
+	if err = db.C("flamenco_workers").Find(M{}).Sort("nickname", "status").All(&workers); err != nil {
 		fmt.Printf("ERROR: %s\n", err.Error())
 		return
 	}
