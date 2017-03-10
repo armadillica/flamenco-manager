@@ -70,11 +70,13 @@ function load_workers() {
             // $dl.append($('<dt>').text('Platform'));
             // $dl.append($('<dd>').text(worker.platform));
 
-            $dl.append($('<dt>').text('Current Task'));
+            $dl.append($('<dt>').text('Cur/last Task'));
             $task_dd = $('<dd>');
             if (typeof worker.current_task != 'undefined') {
-                $tasklink = $('<a>').attr('href', info.server + '/flamenco/tasks/' + worker.current_task);
-                $task_dd.append(tasklink);
+                $tasklink = $('<a>')
+                    .attr('href', info.server + 'flamenco/tasks/' + worker.current_task)
+                    .text(worker.current_task);
+                $task_dd.append($tasklink);
             } else {
                 $task_dd.text('-none-');
             }

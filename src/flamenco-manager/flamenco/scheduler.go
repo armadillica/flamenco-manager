@@ -86,6 +86,9 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 		return
 	}
 
+	// Update the "Current task" on the Worker as well.
+	worker.SetCurrentTask(task.ID, db)
+
 	// Perform variable replacement on the task.
 	ReplaceVariables(ts.config, task, worker)
 

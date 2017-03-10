@@ -29,10 +29,17 @@ func (worker *Worker) Identifier() string {
 	return worker.Address
 }
 
-// Sets the worker's status in the database.
+// SetStatus sets the worker's status, and updates the database too.
 func (worker *Worker) SetStatus(status string, db *mgo.Database) error {
 	worker.Status = status
 	updates := M{"status": status}
+	return db.C("flamenco_workers").UpdateId(worker.ID, M{"$set": updates})
+}
+
+// SetCurrentTask sets the worker's current task, and updates the database too.
+func (worker *Worker) SetCurrentTask(taskID bson.ObjectId, db *mgo.Database) error {
+	worker.CurrentTask = taskID
+	updates := M{"current_task": taskID}
 	return db.C("flamenco_workers").UpdateId(worker.ID, M{"$set": updates})
 }
 
