@@ -31,8 +31,8 @@ function load_workers() {
             var $dl = $('<dl>');
             // $dl.append($('<dt>').text('Nickname'));
             // $dl.append($('<dd>').text(worker.nickname));
-            // $dl.append($('<dt>').text('ID'));
-            // $dl.append($('<dd>').text(worker._id));
+            $dl.append($('<dt>').text('ID'));
+            $dl.append($('<dd>').text(worker._id));
             // $dl.append($('<dt>').text('Address'));
             // $dl.append($('<dd>').text(worker.address));
             $dl.append($('<dt>').text('Status'));
