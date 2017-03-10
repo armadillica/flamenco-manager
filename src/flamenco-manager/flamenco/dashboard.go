@@ -48,7 +48,7 @@ func noDirListing(h http.Handler) http.Handler {
 }
 
 func (rep *Reporter) showStatusPage(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("templates/status.html")
+	tmpl, err := template.ParseFiles("templates/dashboard.html")
 	if err != nil {
 		log.Error("Error parsing HTML template: ", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
