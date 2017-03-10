@@ -3,49 +3,18 @@ html, body {
     color: black;
     background-color: white;
 
-    text-shadow: 0.2ex 0.2ex 0.1ex rgba(0, 0, 0, 0.25);
+    text-shadow: 0.2ex 0.2ex 0.1ex rgba(0, 0, 0, 0.2);
 }
 
 .error {
     color: #800;
 }
 
-div.worker-info {
-    width: 40ex;
-    border: 1px solid black;
-    padding: 0;
-    border-radius: 20px;
-    float: left;
-    margin-right: 1em;
-}
-
-div.worker-info h3 {
-    border-radius: 20px 20px 0 0;
-    background-color: navy;
-    color: white;
-    margin: 0 0 0.4ex 0;
-    padding: 0.5ex 15px;
-}
-
-dl {
-    margin: 1ex;
-}
-
-dt {
-    font-size: smaller;
-    float: left;
-    width: 15ex;
-}
-
-.worker-status-down {
-    background-color: #eee;
-    color: #444;
-}
-
-.worker-status-timeout {
-    background-color: #fee;
-    color: #311;
-}
-
 button#refresh {
 }
+
+.panel-body { padding: 5px; }
+
+dl.dl-horizontal { margin: 0; }
+.dl-horizontal dt { width: 100px; }
+.dl-horizontal dd { margin-left: 120px; }

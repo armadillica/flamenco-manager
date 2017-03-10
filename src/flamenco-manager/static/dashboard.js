@@ -1,12 +1,18 @@
 
 function load_workers() {
+    var status_to_panel_class = {
+        'awake': 'panel-success',
+        'down': 'panel-default',
+        'timeout': 'panel-danger',
+    }
+
     $.get('/as-json')
     .done(function(info) {
         // Construct the overall status view.
         var $section = $('#status');
         $section.html('');
 
-        var $dl = $('<dl>');
+        var $dl = $('<dl>').addClass('dl-horizontal');
         $dl.append($('<dt>').text('Nr. of workers'));
         $dl.append($('<dd>').text(info.nr_of_workers));
         $dl.append($('<dt>')
@@ -25,10 +31,23 @@ function load_workers() {
         for (worker of info.workers) {
             var $div = $('<div>')
                 .attr('id', worker._id)
-                .addClass('worker-info worker-status-' + worker.status);
-            $div.append($('<h3>').text(worker.nickname))
+                .addClass('col-md-4');
+            $section.append($div);
 
-            var $dl = $('<dl>');
+            var $panel = $('<div>').addClass('panel');
+            var panelclass = status_to_panel_class[worker.status];
+            if (typeof panelclass == 'undefined') panelclass = 'panel-default';
+            $panel.addClass(panelclass);
+            $div.append($panel);
+
+            var $header = $('<div>').addClass('panel-heading');
+            $header.append($('<h3>')
+                .text(worker.nickname)
+                .addClass('panel-title')
+            )
+            $panel.append($header);
+
+            var $dl = $('<dl>').addClass('dl-horizontal');
             // $dl.append($('<dt>').text('Nickname'));
             // $dl.append($('<dd>').text(worker.nickname));
             $dl.append($('<dt>').text('ID'));
@@ -70,9 +89,10 @@ function load_workers() {
                 .attr('title', last_act));
             // $dl.append($('<dt>').text('Supported Job Types'));
             // $dl.append($('<dd>').text(worker.supported_job_types.join(', ')));
-            $div.append($dl);
 
-            $section.append($div);
+            var $panel_body = $('<div>').addClass('panel-body');
+            $panel_body.append($dl);
+            $panel.append($panel_body);
         }
 
         // Everything went fine, let's try it again soon.
