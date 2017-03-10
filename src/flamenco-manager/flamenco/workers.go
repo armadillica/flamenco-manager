@@ -117,17 +117,15 @@ func WorkerSecret(user string, db *mgo.Database) string {
 	return string(worker.HashedSecret)
 }
 
-/**
- * Returns the worker given its ID.
- */
-func FindWorker(worker_id string, projection interface{}, db *mgo.Database) (*Worker, error) {
+// FindWorker returns the worker given its ID in string form.
+func FindWorker(workerID string, projection interface{}, db *mgo.Database) (*Worker, error) {
 	worker := Worker{}
 
-	if !bson.IsObjectIdHex(worker_id) {
+	if !bson.IsObjectIdHex(workerID) {
 		return &worker, errors.New("Invalid ObjectID")
 	}
-	workers_coll := db.C("flamenco_workers")
-	err := workers_coll.FindId(bson.ObjectIdHex(worker_id)).Select(projection).One(&worker)
+	coll := db.C("flamenco_workers")
+	err := coll.FindId(bson.ObjectIdHex(workerID)).Select(projection).One(&worker)
 
 	return &worker, err
 }
