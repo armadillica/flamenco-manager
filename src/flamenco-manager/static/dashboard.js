@@ -28,11 +28,22 @@ function load_workers() {
         // Construct the worker list.
         var $section = $('#workers');
         $section.html('');
+
+        var $row;
+        var idx = 0;
+
         for (worker of info.workers) {
+            // Start a new row.
+            if (idx % 3 == 0) {
+                var $row = $('<div>').addClass('row');
+                $section.append($row);
+            }
+            idx++;
+
             var $div = $('<div>')
                 .attr('id', worker._id)
                 .addClass('col-md-4');
-            $section.append($div);
+            $row.append($div);
 
             var $panel = $('<div>').addClass('panel');
             var panelclass = status_to_panel_class[worker.status];
