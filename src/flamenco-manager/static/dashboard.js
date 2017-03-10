@@ -36,7 +36,7 @@ function load_workers() {
             // $dl.append($('<dt>').text('Address'));
             // $dl.append($('<dd>').text(worker.address));
             $dl.append($('<dt>').text('Status'));
-            $dl.append($('<dd>').text(worker.status).addClass('status-' + worker.status));
+            $dl.append($('<dd>').text(worker.status || '-none-').addClass('status-' + worker.status));
             // $dl.append($('<dt>').text('Platform'));
             // $dl.append($('<dd>').text(worker.platform));
 
