@@ -111,8 +111,8 @@ func worker_secret(user, realm string) string {
 }
 
 func shutdown(signum os.Signal) {
-	// Always shut down after 2 seconds.
-	timeout := flamenco.TimeoutAfter(2 * time.Second)
+	// Force shutdown after a bit longer than the HTTP server timeout.
+	timeout := flamenco.TimeoutAfter(17 * time.Second)
 
 	go func() {
 		log.Infof("Signal '%s' received, shutting down.", signum)
@@ -239,7 +239,12 @@ func main() {
 	// Create the HTTP server before allowing the shutdown signal Handler
 	// to exist. This prevents a race condition when Ctrl+C is pressed after
 	// the http.Server is created, but before it is assigned to httpServer.
-	httpServer = &http.Server{Addr: config.Listen, Handler: router}
+	httpServer = &http.Server{
+		Addr:         config.Listen,
+		Handler:      router,
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
 	shutdownComplete = make(chan struct{})
 
 	// Handle Ctrl+C
