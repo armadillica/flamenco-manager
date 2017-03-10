@@ -89,13 +89,13 @@ func StoreNewWorker(winfo *Worker, db *mgo.Database) error {
 	winfo.ID = bson.NewObjectId()
 	winfo.HashedSecret, err = bcrypt.GenerateFromPassword([]byte(winfo.Secret), bcrypt.DefaultCost)
 	if err != nil {
-		log.Errorf("Unable to hash password:", err)
+		log.Error("Unable to hash password:", err)
 		return err
 	}
 
 	workers_coll := db.C("flamenco_workers")
 	if err = workers_coll.Insert(winfo); err != nil {
-		log.Errorf("Unable to insert worker in DB:", err)
+		log.Error("Unable to insert worker in DB:", err)
 		return err
 	}
 
