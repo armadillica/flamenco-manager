@@ -29,6 +29,25 @@ func (worker *Worker) Identifier() string {
 	return worker.Address
 }
 
+// Sets the worker's status in the database.
+func (worker *Worker) SetStatus(status string, db *mgo.Database) error {
+	worker.Status = status
+	updates := M{"status": status}
+	return db.C("flamenco_workers").UpdateId(worker.ID, M{"$set": updates})
+}
+
+// TimeoutOnTask marks the worker as timed out on a given task.
+// The task is just used for logging.
+func (worker *Worker) TimeoutOnTask(task *Task, db *mgo.Database) {
+	log.Warningf("Worker %s (%s) timed out on task %s",
+		worker.Identifier(), worker.ID.Hex(), task.ID.Hex())
+
+	err := worker.SetStatus("timeout", db)
+	if err != nil {
+		log.Errorf("Unable to set worker status: %s", err)
+	}
+}
+
 func RegisterWorker(w http.ResponseWriter, r *http.Request, db *mgo.Database) {
 	var err error
 
@@ -110,6 +129,13 @@ func FindWorker(worker_id string, projection interface{}, db *mgo.Database) (*Wo
 	workers_coll := db.C("flamenco_workers")
 	err := workers_coll.FindId(bson.ObjectIdHex(worker_id)).Select(projection).One(&worker)
 
+	return &worker, err
+}
+
+// FindWorkerByID returns the entire worker, no projections.
+func FindWorkerByID(workerID bson.ObjectId, db *mgo.Database) (*Worker, error) {
+	worker := Worker{}
+	err := db.C("flamenco_workers").FindId(workerID).One(&worker)
 	return &worker, err
 }
 
@@ -207,6 +233,7 @@ func WorkerSeen(worker *Worker, remote_addr string, db *mgo.Database) {
 
 	updates := bson.M{
 		"last_activity": worker.LastActivity,
+		"status":        "awake",
 	}
 
 	if worker.Address != remote_addr {
@@ -270,11 +297,8 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 	}
 
 	// Update the worker itself, to show it's down in the DB too.
-	worker.Status = "down"
-	updates := bson.M{
-		"status": worker.Status,
-	}
-	if err := db.C("flamenco_workers").UpdateId(worker.ID, bson.M{"$set": updates}); err != nil {
+
+	if err := worker.SetStatus("down", db); err != nil {
 		if !sent_header {
 			w.WriteHeader(http.StatusInternalServerError)
 		}

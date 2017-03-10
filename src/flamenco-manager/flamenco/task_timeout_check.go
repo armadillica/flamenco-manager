@@ -84,25 +84,38 @@ func (self *TaskTimeoutChecker) Check(db *mgo.Database) {
 	}
 
 	for _, task := range timedout_tasks {
-		log.Warningf("    - Task %s (%s) timed out", task.Name, task.ID.Hex())
-		var ident string
-		if task.Worker != "" {
-			ident = task.Worker
-		} else if task.WorkerID != nil {
-			ident = task.WorkerID.Hex()
-		} else {
-			ident = "-no worker-"
-		}
-
-		tupdate := TaskUpdate{
-			TaskID:     task.ID,
-			TaskStatus: "failed",
-			Activity:   fmt.Sprintf("Task timed out on worker %s", ident),
-			Log: fmt.Sprintf(
-				"%s Task %s (%s) timed out, was active but untouched since %s. "+
-					"Was handled by worker %s",
-				UtcNow().Format(IsoFormat), task.Name, task.ID.Hex(), task.LastWorkerPing, ident),
-		}
-		QueueTaskUpdate(&tupdate, db)
+		self.timeoutTask(&task, db)
 	}
+}
+
+func (ttc *TaskTimeoutChecker) timeoutTask(task *Task, db *mgo.Database) {
+	log.Warningf("Task %s (%s) timed out", task.Name, task.ID.Hex())
+	var ident string
+
+	if task.WorkerID != nil {
+		worker, err := FindWorkerByID(*task.WorkerID, db)
+		if err != nil {
+			log.Errorf("Unable to find worker %v for task %s: %s",
+				task.WorkerID.Hex(), task.ID.Hex(), err)
+			ident = err.Error()
+		} else {
+			ident = worker.Identifier()
+			worker.TimeoutOnTask(task, db)
+		}
+	} else if task.Worker != "" {
+		ident = task.Worker
+	} else {
+		ident = "-no worker-"
+	}
+
+	tupdate := TaskUpdate{
+		TaskID:     task.ID,
+		TaskStatus: "failed",
+		Activity:   fmt.Sprintf("Task timed out on worker %s", ident),
+		Log: fmt.Sprintf(
+			"%s Task %s (%s) timed out, was active but untouched since %s. "+
+				"Was handled by worker %s",
+			UtcNow().Format(IsoFormat), task.Name, task.ID.Hex(), task.LastWorkerPing, ident),
+	}
+	QueueTaskUpdate(&tupdate, db)
 }
