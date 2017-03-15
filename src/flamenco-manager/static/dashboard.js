@@ -63,8 +63,8 @@ function load_workers() {
             // $dl.append($('<dd>').text(worker.nickname));
             $dl.append($('<dt>').text('ID'));
             $dl.append($('<dd>').text(worker._id));
-            // $dl.append($('<dt>').text('Address'));
-            // $dl.append($('<dd>').text(worker.address));
+            $dl.append($('<dt>').text('Address'));
+            $dl.append($('<dd>').text(worker.address));
             $dl.append($('<dt>').text('Status'));
             $dl.append($('<dd>').text(worker.status || '-none-').addClass('status-' + worker.status));
             // $dl.append($('<dt>').text('Platform'));
