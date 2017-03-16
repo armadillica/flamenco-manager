@@ -92,7 +92,7 @@ func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
 		// 2: Unwind the 1-element task array.
 		M{"$unwind": M{
 			"path": "$_task",
-			"preserveNullAndEmptyArrays": false,
+			"preserveNullAndEmptyArrays": true,
 		}},
 		// 3: Project to just get what we need.
 		M{"$project": M{
