@@ -72,7 +72,7 @@ function load_workers() {
             if (worker.software) {
                 /* 'Flamenco-Worker' is the default software, so don't mention that;
                  * do keep the version number, though. */
-                software = worker.software.replace('Flamenco-Worker ', '');
+                software = worker.software.replace('Flamenco-Worker/', '');
             }
             $dl.append($('<dt>').text('Software'));
             $dl.append($('<dd>').text(software));
