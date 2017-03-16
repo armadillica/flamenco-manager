@@ -5,7 +5,7 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-sed "s/FLAMENCO_VERSION = \"[^\"]*\"/FLAMENCO_VERSION = \"$1\"/" -i src/flamenco-manager/main.go
+sed "s/FLAMENCO_VERSION = \"[^\"]*\"/FLAMENCO_VERSION = \"$1\"/" -i main.go
 
 git diff
 echo
