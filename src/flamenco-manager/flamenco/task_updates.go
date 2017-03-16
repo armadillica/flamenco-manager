@@ -40,7 +40,7 @@ func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedReque
 		fmt.Fprintf(w, "Unable to find worker address: %s", err)
 		return
 	}
-	WorkerSeen(worker, r.RemoteAddr, db)
+	worker.Seen(&r.Request, db)
 	log.Infof("QueueTaskUpdateFromWorker: Received task update for task %s from %s",
 		task_id.Hex(), worker.Identifier())
 

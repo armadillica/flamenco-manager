@@ -46,7 +46,7 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 		fmt.Fprintf(w, "Unable to find worker: %s", err)
 		return
 	}
-	WorkerSeen(worker, r.RemoteAddr, db)
+	worker.Seen(&r.Request, db)
 	log.Infof("ScheduleTask: Worker %s asking for a task", worker.Identifier())
 
 	var task *Task

@@ -67,6 +67,15 @@ function load_workers() {
             $dl.append($('<dd>').text(worker.address));
             $dl.append($('<dt>').text('Status'));
             $dl.append($('<dd>').text(worker.status || '-none-').addClass('status-' + worker.status));
+
+            var software = '-unknown-';
+            if (worker.software) {
+                /* 'Flamenco-Worker' is the default software, so don't mention that;
+                 * do keep the version number, though. */
+                software = worker.software.replace('Flamenco-Worker ', '');
+            }
+            $dl.append($('<dt>').text('Software'));
+            $dl.append($('<dd>').text(software));
             // $dl.append($('<dt>').text('Platform'));
             // $dl.append($('<dd>').text(worker.platform));
 

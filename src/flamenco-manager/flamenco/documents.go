@@ -89,6 +89,7 @@ type Worker struct {
 	TimeCost          int           `bson:"time_cost" json:"time_cost"`
 	LastActivity      *time.Time    `bson:"last_activity,omitempty" json:"last_activity,omitempty"`
 	SupportedJobTypes []string      `bson:"supported_job_types" json:"supported_job_types"`
+	Software          string        `bson:"software" json:"software"`
 }
 
 // StartupNotification sent to upstream Flamenco Server upon startup. This is a combination

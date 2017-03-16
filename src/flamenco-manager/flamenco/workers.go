@@ -55,6 +55,31 @@ func (worker *Worker) TimeoutOnTask(task *Task, db *mgo.Database) {
 	}
 }
 
+// Seen registers that we have seen this worker at a certain address and with certain software.
+func (worker *Worker) Seen(r *http.Request, db *mgo.Database) {
+	worker.LastActivity = UtcNow()
+
+	updates := bson.M{
+		"last_activity": worker.LastActivity,
+		"status":        "awake",
+	}
+
+	remoteAddr := r.RemoteAddr
+	if worker.Address != remoteAddr {
+		worker.Address = remoteAddr
+		updates["address"] = remoteAddr
+	}
+
+	var userAgent string = r.Header.Get("User-Agent")
+	if worker.Software != userAgent {
+		updates["software"] = userAgent
+	}
+
+	if err := db.C("flamenco_workers").UpdateId(worker.ID, bson.M{"$set": updates}); err != nil {
+		log.Errorf("Worker.Seen: unable to update worker %s in MongoDB: %s", worker.ID, err)
+	}
+}
+
 func RegisterWorker(w http.ResponseWriter, r *http.Request, db *mgo.Database) {
 	var err error
 
@@ -167,7 +192,7 @@ func WorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest,
 		fmt.Fprintf(w, "Unable to find worker: %s", err)
 		return
 	}
-	WorkerSeen(worker, r.RemoteAddr, db)
+	worker.Seen(&r.Request, db)
 	log.Debugf("WorkerMayRunTask: %s asking if it is allowed to keep running task %s",
 		worker.Identifier(), task_id.Hex())
 
@@ -227,27 +252,6 @@ func WorkerPingedTask(worker_id *bson.ObjectId, task_id bson.ObjectId, db *mgo.D
 	if err := tasks_coll.UpdateId(task_id, bson.M{"$set": updates}); err != nil {
 		log.Errorf("WorkerPingedTask: ERROR unable to update last_worker_ping on task %s: %s",
 			task_id.Hex(), err)
-	}
-}
-
-/**
- * Registers that we have seen this worker at a certain address.
- */
-func WorkerSeen(worker *Worker, remote_addr string, db *mgo.Database) {
-	worker.LastActivity = UtcNow()
-
-	updates := bson.M{
-		"last_activity": worker.LastActivity,
-		"status":        "awake",
-	}
-
-	if worker.Address != remote_addr {
-		worker.Address = remote_addr
-		updates["address"] = remote_addr
-	}
-
-	if err := db.C("flamenco_workers").UpdateId(worker.ID, bson.M{"$set": updates}); err != nil {
-		log.Errorf("WorkerSeen: unable to update worker %s in MongoDB: %s", worker.ID, err)
 	}
 }
 
