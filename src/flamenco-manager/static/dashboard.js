@@ -82,9 +82,15 @@ function load_workers() {
             $dl.append($('<dt>').text('Cur/last Task'));
             $task_dd = $('<dd>');
             if (typeof worker.current_task != 'undefined') {
+                var task_text;
+                if (typeof worker.current_task_status != 'undefined') {
+                    task_text = worker.current_task + " (" + worker.current_task_status + ")";
+                } else {
+                    task_text = worker.current_task;
+                }
                 $tasklink = $('<a>')
                     .attr('href', info.server + 'flamenco/tasks/' + worker.current_task)
-                    .text(worker.current_task);
+                    .text(task_text);
                 $task_dd.append($tasklink);
             } else {
                 $task_dd.text('-none-');

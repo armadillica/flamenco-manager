@@ -10,6 +10,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	mgo "gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // Reporter can show HTML and JSON reports.
@@ -80,8 +81,40 @@ func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var workers []Worker
-	if err = db.C("flamenco_workers").Find(M{}).Sort("nickname", "status").All(&workers); err != nil {
-		fmt.Printf("ERROR: %s\n", err.Error())
+	pipe := db.C("flamenco_workers").Pipe([]M{
+		// 1: Look up the task for each worker.
+		M{"$lookup": M{
+			"from":         "flamenco_tasks",
+			"localField":   "current_task",
+			"foreignField": "_id",
+			"as":           "_task",
+		}},
+		// 2: Unwind the 1-element task array.
+		M{"$unwind": M{
+			"path": "$_task",
+			"preserveNullAndEmptyArrays": false,
+		}},
+		// 3: Project to just get what we need.
+		M{"$project": M{
+			"current_task_status": "$_task.status",
+			"address":             1,
+			"current_task":        1,
+			"last_activity":       1,
+			"nickname":            1,
+			"platform":            1,
+			"software":            1,
+			"status":              1,
+			"supported_job_types": 1,
+		}},
+		// 4: Sort.
+		M{"$sort": bson.D{
+			{"nickname", 1},
+			{"status", 1},
+		}},
+	})
+
+	if err := pipe.All(&workers); err != nil {
+		log.Errorf("Unable to fetch dashboard data: %s", err.Error())
 		return
 	}
 
