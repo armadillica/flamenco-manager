@@ -1,4 +1,3 @@
-
 function load_workers() {
     var status_to_panel_class = {
         'awake': 'panel-success',
@@ -84,7 +83,11 @@ function load_workers() {
             if (typeof worker.current_task != 'undefined') {
                 var task_text;
                 if (typeof worker.current_task_status != 'undefined') {
-                    task_text = worker.current_task + " (" + worker.current_task_status + ")";
+                    if (typeof worker.current_task_updated != 'undefined') {
+                        task_text = worker.current_task + " (" + worker.current_task_status + " " + time_diff(worker.current_task_updated) + ")";
+                    } else {
+                        task_text = worker.current_task + " (" + worker.current_task_status + ")";
+                    }
                 } else {
                     task_text = worker.current_task;
                 }
@@ -97,28 +100,10 @@ function load_workers() {
             }
             $dl.append($task_dd);
 
-            var strdiff;
-            var last_act = new Date(worker.last_activity);
-            if (typeof worker.last_activity == 'undefined') {
-                strdiff = '-nevah-';
-            } else {
-                var timediff = Date.now() - last_act;  // in milliseconds
-                if (timediff < 1000) {
-                    strdiff = 'just now';
-                } else if (timediff < 60000) {  // less than a minute
-                    strdiff = Math.round(timediff / 1000) + ' seconds ago';
-                } else if (timediff < 3600000) { // less than an hour
-                    strdiff = Math.round(timediff / 60000) + ' minutes ago';
-                } else if (timediff < 24 * 3600000) { // less than a day hour
-                    strdiff = Math.round(timediff / 3600000) + ' hours ago';
-                } else {
-                    strdiff = last_act;
-                }
-            }
             $dl.append($('<dt>').text('Last Seen'));
             $dl.append($('<dd>')
-                .text(strdiff)
-                .attr('title', last_act));
+                .text(time_diff(worker.last_activity))
+                .attr('title', new Date(worker.last_activity)));
             // $dl.append($('<dt>').text('Supported Job Types'));
             // $dl.append($('<dd>').text(worker.supported_job_types.join(', ')));
 
@@ -147,3 +132,28 @@ function load_workers() {
 }
 
 $(load_workers);
+
+
+function time_diff(timestamp) {
+    if (typeof timestamp == 'undefined') {
+        return '-nevah-';
+    }
+
+    var as_date = new Date(timestamp);
+    var timediff = Date.now() - as_date;  // in milliseconds
+
+    if (timediff < 1000) {
+        return 'just now';
+    }
+    if (timediff < 60000) {  // less than a minute
+        return Math.round(timediff / 1000) + ' seconds ago';
+    }
+    if (timediff < 3600000) { // less than an hour
+        return Math.round(timediff / 60000) + ' minutes ago';
+    }
+    if (timediff < 24 * 3600000) { // less than a day hour
+        return Math.round(timediff / 3600000) + ' hours ago';
+    }
+
+    return as_date;
+}

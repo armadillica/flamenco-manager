@@ -110,6 +110,8 @@ func QueueTaskUpdateWithExtra(tupdate *TaskUpdate, db *mgo.Database, extra_updat
 	// cancel-requested state we received from the Server.
 	task_coll := db.C("flamenco_tasks")
 	updates := extra_updates
+	updates["_updated"] = tupdate.ReceivedOnManager
+
 	if tupdate.TaskStatus != "" {
 		// Before blindly applying the task status, first check if the transition is valid.
 		if TaskStatusTransitionValid(task_coll, tupdate.TaskID, tupdate.TaskStatus) {

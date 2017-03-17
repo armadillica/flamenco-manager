@@ -96,15 +96,16 @@ func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
 		}},
 		// 3: Project to just get what we need.
 		M{"$project": M{
-			"current_task_status": "$_task.status",
-			"address":             1,
-			"current_task":        1,
-			"last_activity":       1,
-			"nickname":            1,
-			"platform":            1,
-			"software":            1,
-			"status":              1,
-			"supported_job_types": 1,
+			"current_task_status":  "$_task.status",
+			"current_task_updated": "$_task._updated",
+			"address":              1,
+			"current_task":         1,
+			"last_activity":        1,
+			"nickname":             1,
+			"platform":             1,
+			"software":             1,
+			"status":               1,
+			"supported_job_types":  1,
 		}},
 		// 4: Sort.
 		M{"$sort": bson.D{
