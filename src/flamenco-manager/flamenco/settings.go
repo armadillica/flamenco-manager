@@ -48,6 +48,9 @@ type Conf struct {
 
 	ActiveTaskTimeoutInterval_ int           `yaml:"active_task_timeout_interval_seconds"`
 	ActiveTaskTimeoutInterval  time.Duration `yaml:"-"`
+
+	TaskCleanupMaxAgeDays int           `yaml:"task_cleanup_max_age_days"`
+	TaskCleanupMaxAge     time.Duration `yaml:"-"`
 }
 
 func GetConf() Conf {
@@ -64,6 +67,7 @@ func GetConf() Conf {
 		TaskUpdatePushMaxCount:       10,
 		CancelTaskFetchInterval_:     10,
 		ActiveTaskTimeoutInterval_:   60,
+		TaskCleanupMaxAgeDays:        14,
 	}
 	err = yaml.Unmarshal(yamlFile, &c)
 	if err != nil {
@@ -93,6 +97,10 @@ func GetConf() Conf {
 	c.TaskUpdatePushMaxInterval = time.Duration(c.TaskUpdatePushMaxInterval_) * time.Second
 	c.CancelTaskFetchInterval = time.Duration(c.CancelTaskFetchInterval_) * time.Second
 	c.ActiveTaskTimeoutInterval = time.Duration(c.ActiveTaskTimeoutInterval_) * time.Second
+
+	// Days are assumed to be 24 hours long. This is not exactly accurate, but should
+	// be accurate enough for this type of cleanup.
+	c.TaskCleanupMaxAge = time.Duration(c.TaskCleanupMaxAgeDays) * time.Hour * 24
 
 	return c
 }

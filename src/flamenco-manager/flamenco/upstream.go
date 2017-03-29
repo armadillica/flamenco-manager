@@ -185,7 +185,12 @@ func download_tasks_from_upstream(config *Conf, mongo_sess *mgo.Session) {
 		log.Debugf("Received %d tasks from upstream Flamenco Server.", len(depsgraph))
 	}
 	tasks_coll := db.C("flamenco_tasks")
+	utcNow := UtcNow()
 	for _, task := range depsgraph {
+		// Count this as an update. By storing the update as "now", we don't have
+		// to parse the _updated field's date format from the Flamenco Server.
+		task.LastUpdated = utcNow
+
 		change, err := tasks_coll.Upsert(bson.M{"_id": task.ID}, task)
 		if err != nil {
 			log.Errorf("unable to insert new task %s: %s", task.ID.Hex(), err)

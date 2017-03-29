@@ -32,8 +32,9 @@ type Task struct {
 	Worker      string          `bson:"worker,omitempty" json:"worker,omitempty"`
 
 	// Internal bookkeeping
-	WorkerID       *bson.ObjectId `bson:"worker_id,omitempty" json:"-"`
-	LastWorkerPing *time.Time     `bson:"last_worker_ping,omitempty" json:"-"`
+	WorkerID       *bson.ObjectId `bson:"worker_id,omitempty" json:"-"`        // The worker assigned to this task.
+	LastWorkerPing *time.Time     `bson:"last_worker_ping,omitempty" json:"-"` // When a worker last said it was working on this. Might not have been a task update.
+	LastUpdated    *time.Time     `bson:"last_updated,omitempty" json:"-"`     // when we have last seen an update.
 }
 
 type aggregationPipelineResult struct {

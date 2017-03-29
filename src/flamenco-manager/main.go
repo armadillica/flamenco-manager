@@ -31,6 +31,7 @@ var upstream *flamenco.UpstreamConnection
 var task_scheduler *flamenco.TaskScheduler
 var task_update_pusher *flamenco.TaskUpdatePusher
 var task_timeout_checker *flamenco.TaskTimeoutChecker
+var taskCleaner *flamenco.TaskCleaner
 var startupNotifier *flamenco.StartupNotifier
 var httpServer *http.Server
 var shutdownComplete chan struct{}
@@ -209,6 +210,7 @@ func main() {
 	task_scheduler = flamenco.CreateTaskScheduler(&config, upstream, session)
 	task_update_pusher = flamenco.CreateTaskUpdatePusher(&config, upstream, session)
 	task_timeout_checker = flamenco.CreateTaskTimeoutChecker(&config, session)
+	taskCleaner = flamenco.CreateTaskCleaner(&config, session)
 	reporter := flamenco.CreateReporter(&config, session, FLAMENCO_VERSION)
 
 	// Set up our own HTTP server
@@ -225,6 +227,7 @@ func main() {
 	startupNotifier.Go()
 	task_update_pusher.Go()
 	task_timeout_checker.Go()
+	taskCleaner.Go()
 
 	// Create the HTTP server before allowing the shutdown signal Handler
 	// to exist. This prevents a race condition when Ctrl+C is pressed after

@@ -35,6 +35,14 @@ cancel_task_fetch_max_interval_seconds: 10
 # a worker called /may-i-run/{task-id} for this task.
 active_task_timeout_interval_seconds: 60
 
+# Tasks that have been in the local cache (i.e. the 'flamenco_tasks' collection)
+# without being updated for this many days are periodically deleted from the
+# manager's database. If the Server updates them, they will be re-downloaded.
+#
+# Days are assumed to be 24 hours long. This is not exactly accurate, but should
+# be accurate enough for this type of cleanup.
+task_cleanup_max_age_days: 14
+
 variables:
     blender:
         windows: c:/temp/blender.exe
