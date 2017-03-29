@@ -257,15 +257,7 @@ func (self *UpstreamConnection) SendStartupNotification() {
 	// Performs the actual sending.
 	send_startup_notification := func(mongo_sess *mgo.Session) error {
 		notification.NumberOfWorkers = WorkerCount(mongo_sess.DB(""))
-
-		err := self.SendJson("SendStartupNotification", "POST", url, &notification, nil)
-		if err != nil {
-			log.Warningf("SendStartupNotification: Unable to send: %s", err)
-			return err
-		}
-
-		log.Infof("SendStartupNotification: Done sending notification to upstream Flamenco")
-		return nil
+		return self.SendJson("SendStartupNotification", "POST", url, &notification, nil)
 	}
 
 	go func() {
@@ -276,24 +268,35 @@ func (self *UpstreamConnection) SendStartupNotification() {
 		mongo_sess := self.session.Copy()
 		defer mongo_sess.Close()
 
+		// We can't use a Timer here, because its lifetime would be connected to the
+		// UpstreamConnection object itself.
 		ok := KillableSleep("SendStartupNotification-initial", STARTUP_NOTIFICATION_INITIAL_DELAY,
 			&self.closable)
 		if !ok {
 			log.Warning("SendStartupNotification: shutting down without sending startup notification.")
 			return
 		}
-		timer_chan := Timer("SendStartupNotification", STARTUP_NOTIFICATION_RETRY,
-			false, &self.closable)
 
-		for _ = range timer_chan {
+		for {
 			log.Info("SendStartupNotification: trying to send notification.")
 			err := send_startup_notification(mongo_sess)
 			if err == nil {
+				break
+			}
+
+			log.Warningf("SendStartupNotification: Unable to send, will retry later: %s", err)
+
+			// We can't use a Timer here, because its lifetime would be connected to the
+			// UpstreamConnection object itself.
+			ok := KillableSleep("SendStartupNotification-retry", STARTUP_NOTIFICATION_RETRY,
+				&self.closable)
+			if !ok {
+				log.Warning("SendStartupNotification: shutting down without sending startup notification.")
 				return
 			}
 		}
 
-		log.Warning("SendStartupNotification: shutting down without succesfully sending notification.")
+		log.Infof("SendStartupNotification: Done sending notification to upstream Flamenco")
 	}()
 }
 
