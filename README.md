@@ -2,6 +2,9 @@
 
 This is the Flamenco Manager implementation in Go.
 
+Author: Sybren A. Stüvel <sybren@blender.studio>
+
+
 ## Running as service via systemd
 
 1. Build and configure Flamenco Manager (see below).
