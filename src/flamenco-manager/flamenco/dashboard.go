@@ -97,7 +97,7 @@ func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
 		// 3: Project to just get what we need.
 		M{"$project": M{
 			"current_task_status":  "$_task.status",
-			"current_task_updated": "$_task._updated",
+			"current_task_updated": "$_task.last_updated",
 			"address":              1,
 			"current_task":         1,
 			"last_activity":        1,
