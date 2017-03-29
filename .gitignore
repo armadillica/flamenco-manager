@@ -2,12 +2,9 @@
 /pkg/
 /src/[a-eg-z]*
 /src/flamenco-manager/flamenco-manager
-/src/flamenco-manager/flamenco-manager-linux-*
-/src/flamenco-manager/flamenco-manager-windows-*
-/src/flamenco-manager/flamenco-manager-darwin-*
 /src/flamenco-manager/flamenco-manager.yaml
 /src/flamenco-manager/test_*.json
 /src/flamenco-manager/docker/flamenco-manager
-/src/flamenco-manager/docker/flamenco-manager.yaml
-/src/flamenco-manager/docker/flamenco-manager-install-*.sh
-/src/flamenco-manager/docker/flamenco-manager-*.docker.tgz
+/src/flamenco-manager/docker/flamenco-manager-*linux*
+/src/flamenco-manager/docker/flamenco-manager-*windows*
+/src/flamenco-manager/docker/flamenco-manager-*darwin*
