@@ -8,8 +8,9 @@ import (
 )
 
 // Delay for the intial check. This gives the Manager some time to sync up with the Server
-// and workers after a shutdown & restart.
-const taskCleanupInitialSleep = 0 * time.Minute
+// and workers after a shutdown & restart. Slightly longer than the task timeout check
+// initial delay, so that those two don't happen at the same time.
+const taskCleanupInitialSleep = 6 * time.Minute
 
 const taskCleanupCheckInterval = 10 * time.Minute
 
