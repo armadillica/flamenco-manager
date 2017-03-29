@@ -6,6 +6,9 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// Timers and killable sleeps are checked with this period.
+const timerCheck = 200 * time.Millisecond
+
 // Timer is a generic timer for periodic signals.
 //
 // :param sleepFirst: if true: sleep first, then ping. If false: ping first, then sleep.
@@ -29,7 +32,8 @@ func Timer(name string, sleepDuration time.Duration, sleepFirst bool, closable *
 				return
 			default:
 				// Only sleep a little bit, so that we can check 'done' quite often.
-				time.Sleep(50 * time.Millisecond)
+				// log.Debugf("Timer '%s' sleeping a bit.", name)
+				time.Sleep(timerCheck)
 			}
 
 			now := time.Now()
@@ -60,7 +64,8 @@ func KillableSleep(name string, sleepDuration time.Duration, closable *closable)
 			return false
 		default:
 			// Only sleep a little bit, so that we can check 'done' quite often.
-			time.Sleep(50 * time.Millisecond)
+			// log.Debugf("KillableSleep '%s' sleeping a bit.", name)
+			time.Sleep(timerCheck)
 		}
 
 		now := time.Now()
