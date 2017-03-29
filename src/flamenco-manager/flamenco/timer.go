@@ -6,15 +6,11 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-type TimerPing struct{}
-
-/**
- * Generic timer for periodic signals.
- *
- * :param sleep_first: if true: sleep first, then ping. If false: ping first, then sleep.
- */
-func Timer(name string, sleep_duration time.Duration, sleep_first bool, closable *closable) <-chan TimerPing {
-	timer_chan := make(chan TimerPing, 1) // don't let the timer block
+// Timer is a generic timer for periodic signals.
+//
+// :param sleepFirst: if true: sleep first, then ping. If false: ping first, then sleep.
+func Timer(name string, sleepDuration time.Duration, sleepFirst bool, closable *closable) <-chan struct{} {
+	timerChan := make(chan struct{}, 1) // don't let the timer block
 
 	go func() {
 		if !closable.closableAdd(1) {
@@ -22,11 +18,11 @@ func Timer(name string, sleep_duration time.Duration, sleep_first bool, closable
 			return
 		}
 		defer closable.closableDone()
-		defer close(timer_chan)
+		defer close(timerChan)
 
-		last_timer := time.Time{}
-		if sleep_first {
-			last_timer = time.Now()
+		lastTimerPing := time.Time{}
+		if sleepFirst {
+			lastTimerPing = time.Now()
 		}
 
 		for {
@@ -40,23 +36,21 @@ func Timer(name string, sleep_duration time.Duration, sleep_first bool, closable
 			}
 
 			now := time.Now()
-			if now.Sub(last_timer) > sleep_duration {
+			if now.Sub(lastTimerPing) > sleepDuration {
 				// Timeout occurred
-				last_timer = now
-				timer_chan <- TimerPing{}
+				lastTimerPing = now
+				timerChan <- struct{}{}
 			}
 		}
 	}()
 
-	return timer_chan
+	return timerChan
 }
 
-/**
- * Sleep that can be killed by closing the "done_chan" channel.
- *
- * :returns: "ok", so true when the sleep stopped normally, and false if it was killed.
- */
-func KillableSleep(name string, sleep_duration time.Duration, closable *closable) bool {
+// KillableSleep performs a sleep that can be killed by closing the "done_chan" channel.
+//
+// :returns: true when the sleep stopped normally, and false if it was killed.
+func KillableSleep(name string, sleepDuration time.Duration, closable *closable) bool {
 
 	if !closable.closableAdd(1) {
 		return false
@@ -64,7 +58,7 @@ func KillableSleep(name string, sleep_duration time.Duration, closable *closable
 	defer closable.closableDone()
 	defer log.Infof("Sleep '%s' goroutine is shut down.", name)
 
-	sleep_start := time.Now()
+	sleepStart := time.Now()
 	for {
 		select {
 		case <-closable.doneChan:
@@ -76,7 +70,7 @@ func KillableSleep(name string, sleep_duration time.Duration, closable *closable
 		}
 
 		now := time.Now()
-		if now.Sub(sleep_start) > sleep_duration {
+		if now.Sub(sleepStart) > sleepDuration {
 			// Timeout occurred
 			break
 		}
