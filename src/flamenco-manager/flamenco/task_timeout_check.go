@@ -12,7 +12,10 @@ import (
 )
 
 // Interval for checking all active tasks for timeouts.
-const taskTimeoutCheckInterval = 1 * time.Second
+const taskTimeoutCheckInterval = 1 * time.Minute
+
+// Delay for the intial check. This gives workers a chance to reconnect to the Manager
+// and send updates after the Manager has started.
 const taskTimoutInitialSleep = 5 * time.Minute
 
 // TaskTimeoutChecker periodically times out tasks if the worker hasn't sent any update recently.
