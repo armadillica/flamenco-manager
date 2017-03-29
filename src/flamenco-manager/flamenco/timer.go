@@ -10,9 +10,7 @@ import (
 const timerCheck = 200 * time.Millisecond
 
 // Timer is a generic timer for periodic signals.
-//
-// :param sleepFirst: if true: sleep first, then ping. If false: ping first, then sleep.
-func Timer(name string, sleepDuration time.Duration, sleepFirst bool, closable *closable) <-chan struct{} {
+func Timer(name string, sleepDuration, initialDelay time.Duration, closable *closable) <-chan struct{} {
 	timerChan := make(chan struct{}, 1) // don't let the timer block
 
 	go func() {
@@ -20,10 +18,7 @@ func Timer(name string, sleepDuration time.Duration, sleepFirst bool, closable *
 		defer closable.closableDone()
 		defer close(timerChan)
 
-		lastTimerPing := time.Time{}
-		if sleepFirst {
-			lastTimerPing = time.Now()
-		}
+		nextPingAt := time.Now().Add(initialDelay)
 
 		for {
 			select {
@@ -37,9 +32,9 @@ func Timer(name string, sleepDuration time.Duration, sleepFirst bool, closable *
 			}
 
 			now := time.Now()
-			if now.Sub(lastTimerPing) > sleepDuration {
+			if nextPingAt.Before(now) {
 				// Timeout occurred
-				lastTimerPing = now
+				nextPingAt = now.Add(sleepDuration)
 				timerChan <- struct{}{}
 			}
 		}
@@ -48,48 +43,19 @@ func Timer(name string, sleepDuration time.Duration, sleepFirst bool, closable *
 	return timerChan
 }
 
-// KillableSleep performs a sleep that can be killed by closing the "done_chan" channel.
-//
-// :returns: true when the sleep stopped normally, and false if it was killed.
-func KillableSleep(name string, sleepDuration time.Duration, closable *closable) bool {
-	closable.closableAdd(1)
-	defer closable.closableDone()
-	defer log.Infof("Sleep '%s' goroutine is shut down.", name)
-
-	sleepStart := time.Now()
-	for {
-		select {
-		case <-closable.doneChan:
-			log.Infof("Sleep '%s' goroutine shutting down.", name)
-			return false
-		default:
-			// Only sleep a little bit, so that we can check 'done' quite often.
-			// log.Debugf("KillableSleep '%s' sleeping a bit.", name)
-			time.Sleep(timerCheck)
-		}
-
-		now := time.Now()
-		if now.Sub(sleepStart) > sleepDuration {
-			// Timeout occurred
-			break
-		}
-	}
-
-	return true
-}
-
+// UtcNow returns the current time & date in UTC.
 func UtcNow() *time.Time {
 	now := time.Now().UTC()
 	return &now
 }
 
-/* TimeoutAfter: Sends a 'true' to the channel after the given timeout.
- * Send a 'false' to the channel yourself if you want to notify the receiver that
- * a timeout didn't happen.
- *
- * The channel is buffered with size 2, so both your 'false' and this routine's 'true'
- * write won't block.
- */
+// TimeoutAfter sends a 'true' to the channel after the given timeout.
+//
+// Send a 'false' to the channel yourself if you want to notify the receiver that
+// a timeout didn't happen.
+//
+// The channel is buffered with size 2, so both your 'false' and this routine's 'true'
+// write won't block.
 func TimeoutAfter(duration time.Duration) chan bool {
 	timeout := make(chan bool, 2)
 

@@ -38,7 +38,9 @@ func TestStartupNotification(t *testing.T) {
 	upstream := ConnectUpstream(&config, session)
 	defer upstream.Close()
 
-	upstream.SendStartupNotification()
+	notifier := CreateStartupNotifier(&config, upstream, session)
+	notifier.Go()
+	defer notifier.Close()
 
 	timedout := <-timeout
 	assert.False(t, timedout, "HTTP POST to Flamenco not performed")

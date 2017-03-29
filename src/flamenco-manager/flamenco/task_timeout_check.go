@@ -45,13 +45,7 @@ func (ttc *TaskTimeoutChecker) Go() {
 
 		// Start with a delay, so that workers get a chance to push their updates
 		// after the manager has started up.
-		ok := KillableSleep("TaskTimeoutChecker-initial", taskTimoutInitialSleep, &ttc.closable)
-		if !ok {
-			log.Info("TaskTimeoutChecker: Killable sleep was killed, not even starting checker.")
-			return
-		}
-
-		timer := Timer("TaskTimeoutCheck", taskTimeoutCheckInterval, false, &ttc.closable)
+		timer := Timer("TaskTimeoutCheck", taskTimeoutCheckInterval, taskTimoutInitialSleep, &ttc.closable)
 
 		for _ = range timer {
 			ttc.check(db)

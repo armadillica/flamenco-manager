@@ -9,18 +9,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
-
-// Gives the system some time to start up (and open listening HTTP port)
-const STARTUP_NOTIFICATION_INITIAL_DELAY = 500 * time.Millisecond
-
-// Duration between consecutive retries of sending the startup notification.
-const STARTUP_NOTIFICATION_RETRY = 30 * time.Second
 
 type UpstreamConnection struct {
 	closable
@@ -82,7 +75,7 @@ func (self *UpstreamConnection) KickDownloader(synchronous bool) {
 func (self *UpstreamConnection) download_task_loop() {
 	timer_chan := Timer("download_task_loop",
 		self.config.DownloadTaskSleep,
-		false,
+		0,
 		&self.closable,
 	)
 
@@ -235,69 +228,6 @@ func (self *UpstreamConnection) SendJson(logprefix, method string, url *url.URL,
 	}
 
 	return SendJson(logprefix, method, url, payload, authenticate, responsehandler)
-}
-
-/**
- * Sends a StartupNotification document to upstream Flamenco Server.
- * Keeps trying in a goroutine until the notification was succesful.
- */
-func (self *UpstreamConnection) SendStartupNotification() {
-
-	notification := StartupNotification{
-		ManagerURL:         self.config.OwnUrl,
-		VariablesByVarname: self.config.VariablesByVarname,
-		NumberOfWorkers:    0,
-	}
-
-	url, err := self.ResolveUrl("/api/flamenco/managers/%s/startup", self.config.ManagerId)
-	if err != nil {
-		panic(fmt.Sprintf("SendStartupNotification: unable to construct URL: %s\n", err))
-	}
-
-	// Performs the actual sending.
-	send_startup_notification := func(mongo_sess *mgo.Session) error {
-		notification.NumberOfWorkers = WorkerCount(mongo_sess.DB(""))
-		return self.SendJson("SendStartupNotification", "POST", url, &notification, nil)
-	}
-
-	go func() {
-		// Register as a loop that responds to 'done' being closed.
-		self.closableAdd(1)
-		defer self.closableDone()
-
-		mongo_sess := self.session.Copy()
-		defer mongo_sess.Close()
-
-		// We can't use a Timer here, because its lifetime would be connected to the
-		// UpstreamConnection object itself.
-		ok := KillableSleep("SendStartupNotification-initial", STARTUP_NOTIFICATION_INITIAL_DELAY,
-			&self.closable)
-		if !ok {
-			log.Warning("SendStartupNotification: shutting down without sending startup notification.")
-			return
-		}
-
-		for {
-			log.Info("SendStartupNotification: trying to send notification.")
-			err := send_startup_notification(mongo_sess)
-			if err == nil {
-				break
-			}
-
-			log.Warningf("SendStartupNotification: Unable to send, will retry later: %s", err)
-
-			// We can't use a Timer here, because its lifetime would be connected to the
-			// UpstreamConnection object itself.
-			ok := KillableSleep("SendStartupNotification-retry", STARTUP_NOTIFICATION_RETRY,
-				&self.closable)
-			if !ok {
-				log.Warning("SendStartupNotification: shutting down without sending startup notification.")
-				return
-			}
-		}
-
-		log.Infof("SendStartupNotification: Done sending notification to upstream Flamenco")
-	}()
 }
 
 /**
