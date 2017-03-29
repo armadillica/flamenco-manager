@@ -4,6 +4,9 @@ own_url: http://192.168.3.108:8083/
 flamenco: https://cloud.blender.org/
 manager_id: 58514ce59837734ea16e9060
 manager_secret: theworldistheworld
+
+# Optional TLS keys for the built-in HTTP server. When given,
+# own_url will be rewritten to https://...
 tlskey: tls/privkey.pem
 tlscert: tls/cert.pem
 
