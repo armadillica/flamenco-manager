@@ -11,5 +11,5 @@ sed "s/FLAMENCO_VERSION=\"[^\"]*\"/FLAMENCO_VERSION=\"$1\"/" -i docker/build-via
 git diff
 echo
 echo "Don't forget to commit and tag:"
-echo git commit -m \'Bumped version to $1\' main.go
+echo git commit -m \'Bumped version to $1\' main.go docker/build-via-docker.sh
 echo git tag -a v$1 -m \'Tagged version $1\'
