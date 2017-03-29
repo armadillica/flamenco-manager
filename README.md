@@ -5,14 +5,12 @@ This is the Flamenco Manager implementation in Go.
 Author: Sybren A. Stüvel <sybren@blender.studio>
 
 
-## Running as service via systemd
+## Getting started
 
-1. Build and configure Flamenco Manager (see below).
-2. Edit `flamenco-manager.service` to update it for the installation location, then place the file
-   in `/etc/systemd/system`.
-3. Run `systemctl daemon-reload` to pick up on the new/edited file.
-4. Run `systemctl start flamenco-manager` to start Flamenco Manager.
-5. Run `systemctl enable flamenco-manager` to ensure it starts at boot too.
+Install MongoDB, copy `flamenco-manager-example.yaml` to `flamenco-manager.yaml`, edit the
+file to suit your needs, then start Flamenco Manager. Connect a browser, and you should
+see a (probably empty) status dashboard.
+
 
 ## CLI arguments
 
@@ -24,6 +22,16 @@ Flamenco Manager accepts the following CLI arguments:
 - `cleanslate`: Start with a clean slate; erases all tasks from the local MongoDB,
   then exits Flamenco Manager. This can be run while another Flamenco Manager is
   running, but this scenario has not been well-tested yet.
+
+
+## Running as service via systemd (Linux-only)
+
+1. Build and configure Flamenco Manager (see below).
+2. Edit `flamenco-manager.service` to update it for the installation location, then place the file
+   in `/etc/systemd/system`.
+3. Run `systemctl daemon-reload` to pick up on the new/edited file.
+4. Run `systemctl start flamenco-manager` to start Flamenco Manager.
+5. Run `systemctl enable flamenco-manager` to ensure it starts at boot too.
 
 
 ## Starting development
