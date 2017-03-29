@@ -13,6 +13,10 @@ if [ ! -z "$TARGET" ]; then
     echo "Only building for $TARGET, not packaging."
 fi
 
+if [ -z "$GOPATH" ]; then
+    echo "You have to define \$GOPATH." >&2
+    exit 2
+fi
 
 # Use Docker to get Go in a way that allows overwriting the
 # standard library with statically linked versions.
@@ -63,12 +67,14 @@ mkdir $PREFIX
 
 echo "Assembling files into $PREFIX/"
 rsync ../static ../templates $PREFIX -a --delete-after
-cp ../flamenco-manager-example.yaml $PREFIX
+cp ../flamenco-manager-example.yaml $PREFIX/
+cp ../../../{README.md,LICENSE.txt} $PREFIX/
 
 echo "Creating archive for Linux"
 cp flamenco-manager-linux $PREFIX/flamenco-manager
+cp ../flamenco-manager.service $PREFIX/
 tar zcf $PREFIX-linux.tar.gz $PREFIX/
-rm -f $PREFIX/flamenco-manager
+rm -f $PREFIX/flamenco-manager{,.service}
 
 echo "Creating archive for Windows"
 cp flamenco-manager-windows.exe $PREFIX/flamenco-manager.exe
