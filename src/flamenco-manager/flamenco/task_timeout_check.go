@@ -51,7 +51,7 @@ func (ttc *TaskTimeoutChecker) Go() {
 		timer := Timer("TaskTimeoutCheck", taskTimeoutCheckInterval, false, &ttc.closable)
 
 		for _ = range timer {
-			ttc.Check(db)
+			ttc.check(db)
 		}
 	}()
 }
@@ -62,7 +62,7 @@ func (ttc *TaskTimeoutChecker) Close() {
 	log.Debug("TaskTimeoutChecker: shutdown complete.")
 }
 
-func (ttc *TaskTimeoutChecker) Check(db *mgo.Database) {
+func (ttc *TaskTimeoutChecker) check(db *mgo.Database) {
 	timeoutThreshold := UtcNow().Add(-ttc.config.ActiveTaskTimeoutInterval)
 	log.Debugf("Failing all active tasks that have not been touched since %s", timeoutThreshold)
 
