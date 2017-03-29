@@ -13,10 +13,7 @@ func Timer(name string, sleepDuration time.Duration, sleepFirst bool, closable *
 	timerChan := make(chan struct{}, 1) // don't let the timer block
 
 	go func() {
-		if !closable.closableAdd(1) {
-			log.Infof("Timer '%s' goroutine shutting down.", name)
-			return
-		}
+		closable.closableAdd(1)
 		defer closable.closableDone()
 		defer close(timerChan)
 
@@ -51,10 +48,7 @@ func Timer(name string, sleepDuration time.Duration, sleepFirst bool, closable *
 //
 // :returns: true when the sleep stopped normally, and false if it was killed.
 func KillableSleep(name string, sleepDuration time.Duration, closable *closable) bool {
-
-	if !closable.closableAdd(1) {
-		return false
-	}
+	closable.closableAdd(1)
 	defer closable.closableDone()
 	defer log.Infof("Sleep '%s' goroutine is shut down.", name)
 

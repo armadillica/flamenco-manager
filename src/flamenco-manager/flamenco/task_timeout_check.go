@@ -58,6 +58,7 @@ func (ttc *TaskTimeoutChecker) Go() {
 
 // Close gracefully shuts down the task timeout checker goroutine.
 func (ttc *TaskTimeoutChecker) Close() {
+	log.Debug("TaskTimeoutChecker: Close() called.")
 	ttc.closableCloseAndWait()
 	log.Debug("TaskTimeoutChecker: shutdown complete.")
 }

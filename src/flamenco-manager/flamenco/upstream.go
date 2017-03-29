@@ -60,10 +60,7 @@ func (self *UpstreamConnection) KickDownloader(synchronous bool) {
 		log.Info("KickDownloader: Waiting for task downloader to finish.")
 
 		// wait for the download to be complete, or the connection to be shut down.
-		if !self.closableAdd(1) {
-			log.Debugf("KickDownloader: Aborting waiting for task downloader; shutting down.")
-			return
-		}
+		self.closableAdd(1)
 		defer self.closableDone()
 
 		for {
@@ -93,9 +90,7 @@ func (self *UpstreamConnection) download_task_loop() {
 		mongo_sess := self.session.Copy()
 		defer mongo_sess.Close()
 
-		if !self.closableAdd(1) {
-			return
-		}
+		self.closableAdd(1)
 		defer self.closableDone()
 		defer log.Info("download_task_loop: Task download goroutine shutting down.")
 
@@ -275,10 +270,7 @@ func (self *UpstreamConnection) SendStartupNotification() {
 
 	go func() {
 		// Register as a loop that responds to 'done' being closed.
-		if !self.closableAdd(1) {
-			log.Warning("SendStartupNotification: shutting down early without sending startup notification.")
-			return
-		}
+		self.closableAdd(1)
 		defer self.closableDone()
 
 		mongo_sess := self.session.Copy()

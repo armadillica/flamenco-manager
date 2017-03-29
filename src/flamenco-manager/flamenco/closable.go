@@ -18,10 +18,9 @@ func makeClosable() closable {
 }
 
 // closableAdd(delta) should be combined with 'delta' calls to closableDone()
-func (closable *closable) closableAdd(delta int) bool {
+func (closable *closable) closableAdd(delta int) {
 	log.Debugf("Closable: doneWg.Add(%d) ok", delta)
 	closable.doneWg.Add(delta)
-	return true
 }
 
 // closableDone marks one "thing" as "done"
