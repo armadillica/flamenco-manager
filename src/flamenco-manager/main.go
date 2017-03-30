@@ -277,10 +277,9 @@ func main() {
 	// to exist. This prevents a race condition when Ctrl+C is pressed after
 	// the http.Server is created, but before it is assigned to httpServer.
 	httpServer = &http.Server{
-		Addr:         config.Listen,
-		Handler:      router,
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+		Addr:        config.Listen,
+		Handler:     router,
+		ReadTimeout: 15 * time.Second,
 	}
 	shutdownComplete = make(chan struct{})
 	httpShutdownComplete = make(chan struct{})
