@@ -25,14 +25,7 @@ func NewOneToManyChan(srcChan <-chan string) *OneToManyChan {
 func (o *OneToManyChan) start() {
 	go func() {
 		for message := range o.inChan {
-			o.lock.Lock()
-			defer o.lock.Unlock()
-
-			for ch := range o.outChans {
-				go func(message string, ch chan<- string) {
-					ch <- message
-				}(message, ch)
-			}
+			o.broadcast(message)
 		}
 
 		o.lock.Lock()
@@ -42,6 +35,17 @@ func (o *OneToManyChan) start() {
 			close(ch)
 		}
 	}()
+}
+
+func (o *OneToManyChan) broadcast(message string) {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+
+	for ch := range o.outChans {
+		go func(message string, ch chan<- string) {
+			ch <- message
+		}(message, ch)
+	}
 }
 
 // AddOutputChan adds the given channel to the list of channels to broadcast to.

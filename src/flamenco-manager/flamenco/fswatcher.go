@@ -251,6 +251,8 @@ func (iw *ImageWatcher) imageMapLoop() {
 }
 
 func (iw *ImageWatcher) imageMapIteration() {
+	iw.imageMapLock.Lock()
+	defer iw.imageMapLock.Unlock()
 
 	// Files touched on or before this timestamp are considered "written"
 	old := UtcNow().Add(-fileAgeThreshold)
@@ -258,23 +260,17 @@ func (iw *ImageWatcher) imageMapIteration() {
 	// We can't remove keys while iterating over the map.
 	reportPaths := []string{}
 
-	// Separate block to minimise the locked time.
-	{
-		iw.imageMapLock.Lock()
-		defer iw.imageMapLock.Unlock()
-
-		for _, imageFile := range iw.imageMap {
-			if imageFile.lastWrite.After(old) {
-				// The file needs time to ripen and mature.
-				continue
-			}
-			reportPaths = append(reportPaths, imageFile.path)
+	for _, imageFile := range iw.imageMap {
+		if imageFile.lastWrite.After(old) {
+			// The file needs time to ripen and mature.
+			continue
 		}
+		reportPaths = append(reportPaths, imageFile.path)
+	}
 
-		// Remove all files we'll report.
-		for _, key := range reportPaths {
-			delete(iw.imageMap, key)
-		}
+	// Remove all files we'll report.
+	for _, key := range reportPaths {
+		delete(iw.imageMap, key)
 	}
 
 	// Send to the channel after unlocking the map. Otherwise a blocking
