@@ -18,6 +18,7 @@ import (
 	auth "github.com/abbot/go-http-auth"
 
 	"flamenco-manager/flamenco"
+	"flamenco-manager/flamenco/chantools"
 
 	"github.com/gorilla/mux"
 )
@@ -108,15 +109,17 @@ func shutdown(signum os.Signal) {
 	go func() {
 		log.Infof("Signal '%s' received, shutting down.", signum)
 
+		if imageWatcher != nil {
+			// ImageWatcher allows long-living HTTP connections, so it
+			// should be shut down before the HTTP server.
+			imageWatcher.Close()
+		}
+
 		if httpServer != nil {
 			log.Info("Shutting down HTTP server")
 			httpServer.Shutdown(context.Background())
 		} else {
 			log.Warning("HTTP server was not even started yet")
-		}
-
-		if imageWatcher != nil {
-			imageWatcher.Close()
 		}
 
 		task_timeout_checker.Close()
@@ -173,6 +176,28 @@ func configLogging() {
 	log.SetLevel(level)
 }
 
+func setupImageWatcher(watchPath string, router *mux.Router) {
+	imageWatcher = flamenco.CreateImageWatcher(cliArgs.imageWatchPath, 5)
+	broadcaster := chantools.NewOneToManyChan(imageWatcher.ImageCreated)
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		flamenco.ImageWatcherHTTPPush(w, r, broadcaster)
+	}
+
+	router.HandleFunc("/imagewatch", handler).Methods("GET")
+
+	go func() {
+		pathChannel := make(chan string)
+		broadcaster.AddOutputChan(pathChannel)
+		defer broadcaster.RemoveOutputChan(pathChannel)
+
+		for path := range pathChannel {
+			log.Infof("New image rendered: %s", path)
+		}
+	}()
+
+}
+
 func main() {
 	parseCliArgs()
 	if cliArgs.version {
@@ -220,15 +245,6 @@ func main() {
 	taskCleaner = flamenco.CreateTaskCleaner(&config, session)
 	reporter := flamenco.CreateReporter(&config, session, FLAMENCO_VERSION)
 
-	if cliArgs.imageWatchPath != "" {
-		imageWatcher = flamenco.CreateImageWatcher(cliArgs.imageWatchPath, 5)
-		go func() {
-			for path := range imageWatcher.ImageCreated {
-				log.Infof("New image rendered: %s", path)
-			}
-		}()
-	}
-
 	// Set up our own HTTP server
 	worker_authenticator := auth.NewBasicAuthenticator("Flamenco Manager", worker_secret)
 	router := mux.NewRouter().StrictSlash(true)
@@ -239,6 +255,10 @@ func main() {
 	router.HandleFunc("/may-i-run/{task-id}", worker_authenticator.Wrap(http_worker_may_run_task)).Methods("GET")
 	router.HandleFunc("/sign-off", worker_authenticator.Wrap(http_worker_sign_off)).Methods("POST")
 	router.HandleFunc("/kick", http_kick)
+
+	if cliArgs.imageWatchPath != "" {
+		setupImageWatcher(cliArgs.imageWatchPath, router)
+	}
 
 	startupNotifier.Go()
 	task_update_pusher.Go()
