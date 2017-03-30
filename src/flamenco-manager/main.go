@@ -34,6 +34,7 @@ var task_timeout_checker *flamenco.TaskTimeoutChecker
 var taskCleaner *flamenco.TaskCleaner
 var startupNotifier *flamenco.StartupNotifier
 var httpServer *http.Server
+var imageWatcher *flamenco.ImageWatcher
 var shutdownComplete chan struct{}
 
 func http_register_worker(w http.ResponseWriter, r *http.Request) {
@@ -114,6 +115,10 @@ func shutdown(signum os.Signal) {
 			log.Warning("HTTP server was not even started yet")
 		}
 
+		if imageWatcher != nil {
+			imageWatcher.Close()
+		}
+
 		task_timeout_checker.Close()
 		task_update_pusher.Close()
 		upstream.Close()
@@ -131,11 +136,12 @@ func shutdown(signum os.Signal) {
 }
 
 var cliArgs struct {
-	verbose    bool
-	debug      bool
-	jsonLog    bool
-	cleanSlate bool
-	version    bool
+	verbose        bool
+	debug          bool
+	jsonLog        bool
+	cleanSlate     bool
+	version        bool
+	imageWatchPath string
 }
 
 func parseCliArgs() {
@@ -144,6 +150,7 @@ func parseCliArgs() {
 	flag.BoolVar(&cliArgs.jsonLog, "json", false, "Log in JSON format")
 	flag.BoolVar(&cliArgs.cleanSlate, "cleanslate", false, "Start with a clean slate; erases all tasks from the local MongoDB")
 	flag.BoolVar(&cliArgs.version, "version", false, "Show the version of Flamenco Manager")
+	flag.StringVar(&cliArgs.imageWatchPath, "watch", "", "Path to rendered images, to show on the Dashboard")
 	flag.Parse()
 }
 
@@ -213,6 +220,15 @@ func main() {
 	taskCleaner = flamenco.CreateTaskCleaner(&config, session)
 	reporter := flamenco.CreateReporter(&config, session, FLAMENCO_VERSION)
 
+	if cliArgs.imageWatchPath != "" {
+		imageWatcher = flamenco.CreateImageWatcher(cliArgs.imageWatchPath, 5)
+		go func() {
+			for path := range imageWatcher.ImageCreated {
+				log.Infof("New image rendered: %s", path)
+			}
+		}()
+	}
+
 	// Set up our own HTTP server
 	worker_authenticator := auth.NewBasicAuthenticator("Flamenco Manager", worker_secret)
 	router := mux.NewRouter().StrictSlash(true)
@@ -228,6 +244,10 @@ func main() {
 	task_update_pusher.Go()
 	task_timeout_checker.Go()
 	taskCleaner.Go()
+
+	if imageWatcher != nil {
+		imageWatcher.Go()
+	}
 
 	// Create the HTTP server before allowing the shutdown signal Handler
 	// to exist. This prevents a race condition when Ctrl+C is pressed after
