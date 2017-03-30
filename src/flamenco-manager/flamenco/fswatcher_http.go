@@ -11,7 +11,7 @@ import (
 
 // ImageWatcherHTTPPush starts a server-side events channel.
 func ImageWatcherHTTPPush(w http.ResponseWriter, r *http.Request, broadcaster *chantools.OneToManyChan) {
-	log.Println(r.RemoteAddr, "Channel started at", r.URL.Path)
+	log.Infof("ImageWatcherHTTPPush: Channel started at %s for %s", r.URL.Path, r.RemoteAddr)
 
 	// Make sure that the writer supports flushing.
 	f, ok := w.(http.Flusher)
@@ -33,7 +33,7 @@ func ImageWatcherHTTPPush(w http.ResponseWriter, r *http.Request, broadcaster *c
 	w.Header().Set("Connection", "keep-alive")
 	f.Flush()
 
-	defer log.Infof("Finished HTTP request at %s from %s", r.URL.Path, r.RemoteAddr)
+	defer log.Debugf("Finished HTTP request at %s from %s", r.URL.Path, r.RemoteAddr)
 
 	// Hook our channel up to the image broadcaster.
 	pathChannel := make(chan string)
@@ -43,14 +43,14 @@ func ImageWatcherHTTPPush(w http.ResponseWriter, r *http.Request, broadcaster *c
 	for {
 		select {
 		case <-closeNotifier.CloseNotify():
-			log.Infof("ImageWatcher: Connection from %s closed", r.RemoteAddr)
+			log.Debugf("ImageWatcher: Connection from %s closed", r.RemoteAddr)
 			return
 		case path, ok := <-pathChannel:
 			if !ok {
 				// Shutting down.
 				return
 			}
-			log.Infof("ImageWatcher: Sending notification to %s", r.RemoteAddr)
+			log.Debugf("ImageWatcher: Sending notification to %s", r.RemoteAddr)
 			fmt.Fprintf(w, "event: image\n")
 			fmt.Fprintf(w, "data: %s\n\n", filepath.Base(path))
 			f.Flush()

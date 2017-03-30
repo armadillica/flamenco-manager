@@ -115,16 +115,16 @@ func (iw *ImageWatcher) fswatchLoop() {
 		case event := <-iw.watcher.Events:
 			switch {
 			case event.Op&fsnotify.Create == fsnotify.Create:
-				log.Debugf("ImageWatcher: Create %s", event.Name)
+				// log.Debugf("ImageWatcher: Create %s", event.Name)
 				iw.createPath(event.Name)
 			case event.Op&fsnotify.Write == fsnotify.Write:
-				log.Debugf("ImageWatcher: Write %s", event.Name)
+				// log.Debugf("ImageWatcher: Write %s", event.Name)
 				iw.queueImage(event.Name)
 			case event.Op&fsnotify.Remove == fsnotify.Remove:
-				log.Debugf("ImageWatcher: Remove %s", event.Name)
+				// log.Debugf("ImageWatcher: Remove %s", event.Name)
 				iw.removePath(event.Name)
 			case event.Op&fsnotify.Rename == fsnotify.Rename:
-				log.Debugf("ImageWatcher: Rename %s", event.Name)
+				// log.Debugf("ImageWatcher: Rename %s", event.Name)
 				iw.renamePath(event.Name)
 			}
 		}
@@ -215,7 +215,7 @@ func (iw *ImageWatcher) queueImage(path string) {
 		return
 	}
 
-	log.Debugf("ImageWatcher: Someone wrote to an image: %s", path)
+	// log.Debugf("ImageWatcher: Someone wrote to an image: %s", path)
 
 	iw.imageMapLock.Lock()
 	defer iw.imageMapLock.Unlock()
