@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <title>Flamenco Manager {{.Version}}</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -19,19 +20,28 @@
 <div class="container theme-showcase" role="main">
     <header class='pageheader'><h1>Flamenco Manager {{ .Version}}</h1></header>
 
-    <section class="panel panel-default">
-        <div id='status' class="panel-body"></div>
-        <img id='last_rendered_image' alt='Last-rendered image' src='/static/latest-image.jpg'>
-    </section>
-
-    <section class="row" id='workers'>
-        <div class='col-md-3'>
+    <section class="row">
+        <div class='col-md-5'>
             <div class="panel panel-default">
-                <div class="panel-heading"><h3 class="panel-title">Panel title</h3></div>
-                <div class="panel-body">Panel content</div>
+                <div class="panel-heading"><h3 class="panel-title">Status</h3></div>
+                <div id='status' class="panel-body"></div>
+            </div>
+        </div>
+        <div class='col-md-7'>
+            <div class="panel panel-default">
+                <div class="panel-heading"><h3 class="panel-title">Last rendered image</h3></div>
+                <div class="panel-body imageholder">
+                    <a href='/latest-image'>
+                    <img id='last_rendered_image'
+                         alt='Last-rendered image'
+                         src='/static/latest-image.jpg'>
+                     </a>
+                </div>
             </div>
         </div>
     </section>
+
+    <section class="row" id='workers'></section>
 </div>
 </body>
 </html>

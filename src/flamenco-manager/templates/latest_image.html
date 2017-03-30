@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Flamenco Manager {{.Version}} - Latest Image</title>
+
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script src="/static/jquery.min.js"></script>
+    <script src="/static/imagewatch.js" async></script>
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: black;
+            overflow: hidden;
+        }
+
+        #last_rendered_image {
+            width: 100%;
+            height: auto;
+            max-height: 100%;
+        }
+
+        a img {
+            border: 0;
+        }
+
+    </style>
+</head>
+<body class='imageviewer'>
+    <a href='/'>
+    <img id='last_rendered_image'
+         alt='Last-rendered image'
+         src='/static/latest-image.jpg'>
+     </a>
+</body>
+</html>

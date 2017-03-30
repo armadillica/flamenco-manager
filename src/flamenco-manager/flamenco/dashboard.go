@@ -33,6 +33,7 @@ func CreateReporter(config *Conf, session *mgo.Session, flamencoVersion string) 
 func (rep *Reporter) AddRoutes(router *mux.Router) {
 	router.HandleFunc("/", rep.showStatusPage).Methods("GET")
 	router.HandleFunc("/as-json", rep.sendStatusReport).Methods("GET")
+	router.HandleFunc("/latest-image", rep.showLatestImagePage).Methods("GET")
 
 	static := noDirListing(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	router.PathPrefix("/static/").Handler(static).Methods("GET")
@@ -48,8 +49,8 @@ func noDirListing(h http.Handler) http.Handler {
 	})
 }
 
-func (rep *Reporter) showStatusPage(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("templates/dashboard.html")
+func (rep *Reporter) showTemplate(templfname string, w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles(templfname)
 	if err != nil {
 		log.Error("Error parsing HTML template: ", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -61,6 +62,14 @@ func (rep *Reporter) showStatusPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tmpl.Execute(w, data)
+}
+
+func (rep *Reporter) showStatusPage(w http.ResponseWriter, r *http.Request) {
+	rep.showTemplate("templates/dashboard.html", w, r)
+}
+
+func (rep *Reporter) showLatestImagePage(w http.ResponseWriter, r *http.Request) {
+	rep.showTemplate("templates/latest_image.html", w, r)
 }
 
 // sendStatusReport reports the status of the manager in JSON.

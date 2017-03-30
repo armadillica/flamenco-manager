@@ -18,3 +18,11 @@ button#refresh {
 dl.dl-horizontal { margin: 0; }
 .dl-horizontal dt { width: 100px; }
 .dl-horizontal dd { margin-left: 120px; }
+
+#last_rendered_image {
+    width: 100%;
+}
+
+.imageholder {
+    text-align: center;
+}
