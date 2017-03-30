@@ -31,7 +31,7 @@ func ImageWatcherHTTPPush(w http.ResponseWriter, r *http.Request, broadcaster *c
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
-	defer log.Infof(r.RemoteAddr, "Finished HTTP request at", r.URL.Path)
+	defer log.Infof("Finished HTTP request at %s from %s", r.URL.Path, r.RemoteAddr)
 
 	// Hook our channel up to the image broadcaster.
 	pathChannel := make(chan string)
@@ -41,10 +41,11 @@ func ImageWatcherHTTPPush(w http.ResponseWriter, r *http.Request, broadcaster *c
 	for {
 		select {
 		case <-closeNotifier.CloseNotify():
-			log.Println(r.RemoteAddr, "Connection closed.")
+			log.Infof("ImageWatcher: Connection from %s closed", r.RemoteAddr)
 			return
 		case path, ok := <-pathChannel:
 			if !ok {
+				// Shutting down.
 				return
 			}
 			fmt.Fprintf(w, "event: image\n")
