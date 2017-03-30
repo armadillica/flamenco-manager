@@ -66,7 +66,7 @@ fi
 mkdir $PREFIX
 
 echo "Assembling files into $PREFIX/"
-rsync ../static ../templates $PREFIX -a --delete-after
+rsync ../static ../templates $PREFIX -a --delete-after --exclude static/latest-image.jpg
 cp ../flamenco-manager-example.yaml $PREFIX/
 cp ../../../{README.md,LICENSE.txt} $PREFIX/
 

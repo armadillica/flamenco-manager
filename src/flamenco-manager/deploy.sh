@@ -11,7 +11,7 @@ bash docker/build-via-docker.sh linux
 echo "======== Deploying onto $DEPLOYHOST"
 $SSH $DEPLOYHOST -t "sudo systemctl stop flamenco-manager.service"
 rsync -e "$SSH" -va docker/flamenco-manager-linux $DEPLOYHOST:$DEPLOYPATH/flamenco-manager --delete-after
-rsync -e "$SSH" -va templates static $DEPLOYHOST:$DEPLOYPATH --delete-after
+rsync -e "$SSH" -va templates static $DEPLOYHOST:$DEPLOYPATH --delete-after --exclude static/latest-image.jpg
 $SSH $DEPLOYHOST -t "sudo systemctl start flamenco-manager.service"
 
 echo "======== Deploy done."
