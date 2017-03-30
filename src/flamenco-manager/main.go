@@ -37,6 +37,7 @@ var startupNotifier *flamenco.StartupNotifier
 var httpServer *http.Server
 var imageWatcher *flamenco.ImageWatcher
 var shutdownComplete chan struct{}
+var httpShutdownComplete chan struct{}
 
 func http_register_worker(w http.ResponseWriter, r *http.Request) {
 	mongo_sess := session.Copy()
@@ -117,7 +118,10 @@ func shutdown(signum os.Signal) {
 
 		if httpServer != nil {
 			log.Info("Shutting down HTTP server")
-			httpServer.Shutdown(context.Background())
+			// the Shutdown() function seems to hang sometime, even though the
+			// main goroutine continues execution after ListenAndServe().
+			go httpServer.Shutdown(context.Background())
+			<-httpShutdownComplete
 		} else {
 			log.Warning("HTTP server was not even started yet")
 		}
@@ -279,6 +283,7 @@ func main() {
 		ReadTimeout:  15 * time.Second,
 	}
 	shutdownComplete = make(chan struct{})
+	httpShutdownComplete = make(chan struct{})
 
 	// Handle Ctrl+C
 	c := make(chan os.Signal, 1)
@@ -297,6 +302,9 @@ func main() {
 	} else {
 		log.Warning(httpServer.ListenAndServeTLS(config.TLSCert, config.TLSKey))
 	}
+	close(httpShutdownComplete)
+
+	log.Info("Waiting for shutdown to complete.")
 
 	<-shutdownComplete
 }
