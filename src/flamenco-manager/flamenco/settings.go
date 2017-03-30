@@ -51,6 +51,8 @@ type Conf struct {
 
 	TaskCleanupMaxAgeDays int           `yaml:"task_cleanup_max_age_days"`
 	TaskCleanupMaxAge     time.Duration `yaml:"-"`
+
+	WatchForLatestImage string `yaml:"watch_for_latest_image"`
 }
 
 func GetConf() Conf {

@@ -43,6 +43,11 @@ active_task_timeout_interval_seconds: 60
 # be accurate enough for this type of cleanup.
 task_cleanup_max_age_days: 14
 
+# If set, Flamenco Manager will recursively monitor this path, and show the latest
+# image placed there on the status dashboard.
+# watch_for_latest_image: /path/to/render/outputs
+
+
 variables:
     blender:
         windows: c:/temp/blender.exe

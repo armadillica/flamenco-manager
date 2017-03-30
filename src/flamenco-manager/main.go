@@ -143,12 +143,11 @@ func shutdown(signum os.Signal) {
 }
 
 var cliArgs struct {
-	verbose        bool
-	debug          bool
-	jsonLog        bool
-	cleanSlate     bool
-	version        bool
-	imageWatchPath string
+	verbose    bool
+	debug      bool
+	jsonLog    bool
+	cleanSlate bool
+	version    bool
 }
 
 func parseCliArgs() {
@@ -157,7 +156,6 @@ func parseCliArgs() {
 	flag.BoolVar(&cliArgs.jsonLog, "json", false, "Log in JSON format")
 	flag.BoolVar(&cliArgs.cleanSlate, "cleanslate", false, "Start with a clean slate; erases all tasks from the local MongoDB")
 	flag.BoolVar(&cliArgs.version, "version", false, "Show the version of Flamenco Manager")
-	flag.StringVar(&cliArgs.imageWatchPath, "watch", "", "Path to rendered images, to show on the Dashboard")
 	flag.Parse()
 }
 
@@ -181,7 +179,7 @@ func configLogging() {
 }
 
 func setupImageWatcher(watchPath string, router *mux.Router) {
-	imageWatcher = flamenco.CreateImageWatcher(cliArgs.imageWatchPath, 0)
+	imageWatcher = flamenco.CreateImageWatcher(watchPath, 0)
 	middleware := flamenco.ConvertAndForward(imageWatcher.ImageCreated, "static")
 	broadcaster := chantools.NewOneToManyChan(middleware)
 
@@ -260,8 +258,8 @@ func main() {
 	router.HandleFunc("/sign-off", worker_authenticator.Wrap(http_worker_sign_off)).Methods("POST")
 	router.HandleFunc("/kick", http_kick)
 
-	if cliArgs.imageWatchPath != "" {
-		setupImageWatcher(cliArgs.imageWatchPath, router)
+	if config.WatchForLatestImage != "" {
+		setupImageWatcher(config.WatchForLatestImage, router)
 	}
 
 	startupNotifier.Go()

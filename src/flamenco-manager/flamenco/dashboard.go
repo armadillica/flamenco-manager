@@ -16,6 +16,7 @@ import (
 // Reporter can show HTML and JSON reports.
 type Reporter struct {
 	session         *mgo.Session
+	config          *Conf
 	flamencoVersion string
 	server          string
 }
@@ -24,6 +25,7 @@ type Reporter struct {
 func CreateReporter(config *Conf, session *mgo.Session, flamencoVersion string) *Reporter {
 	return &Reporter{
 		session,
+		config,
 		flamencoVersion,
 		config.FlamencoStr,
 	}
@@ -59,6 +61,7 @@ func (rep *Reporter) showTemplate(templfname string, w http.ResponseWriter, r *h
 
 	data := map[string]interface{}{
 		"Version": rep.flamencoVersion,
+		"Config":  rep.config,
 	}
 
 	tmpl.Execute(w, data)
