@@ -19,7 +19,7 @@ var imageExtensions = map[string]bool{
 
 // If a file hasn't been written to in this amount of time,
 // it's considered "old enough" to be considered "written".
-const fileAgeThreshold = 5 * time.Second
+const fileAgeThreshold = 2 * time.Second
 
 // Struct to keep track of image files in a heap.
 type imageFile struct {
