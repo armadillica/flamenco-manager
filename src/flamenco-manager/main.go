@@ -181,8 +181,9 @@ func configLogging() {
 }
 
 func setupImageWatcher(watchPath string, router *mux.Router) {
-	imageWatcher = flamenco.CreateImageWatcher(cliArgs.imageWatchPath, 5)
-	broadcaster := chantools.NewOneToManyChan(imageWatcher.ImageCreated)
+	imageWatcher = flamenco.CreateImageWatcher(cliArgs.imageWatchPath, 0)
+	middleware := flamenco.ConvertAndForward(imageWatcher.ImageCreated, "static")
+	broadcaster := chantools.NewOneToManyChan(middleware)
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		flamenco.ImageWatcherHTTPPush(w, r, broadcaster)
@@ -199,7 +200,6 @@ func setupImageWatcher(watchPath string, router *mux.Router) {
 			log.Infof("New image rendered: %s", path)
 		}
 	}()
-
 }
 
 func main() {

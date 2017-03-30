@@ -4,6 +4,7 @@ import (
 	"flamenco-manager/flamenco/chantools"
 	"fmt"
 	"net/http"
+	"path/filepath"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -30,6 +31,7 @@ func ImageWatcherHTTPPush(w http.ResponseWriter, r *http.Request, broadcaster *c
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
+	f.Flush()
 
 	defer log.Infof("Finished HTTP request at %s from %s", r.URL.Path, r.RemoteAddr)
 
@@ -48,8 +50,9 @@ func ImageWatcherHTTPPush(w http.ResponseWriter, r *http.Request, broadcaster *c
 				// Shutting down.
 				return
 			}
+			log.Infof("ImageWatcher: Sending notification to %s", r.RemoteAddr)
 			fmt.Fprintf(w, "event: image\n")
-			fmt.Fprintf(w, "data: %s\n\n", path)
+			fmt.Fprintf(w, "data: %s\n\n", filepath.Base(path))
 			f.Flush()
 		}
 	}

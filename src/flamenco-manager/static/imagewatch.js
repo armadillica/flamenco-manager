@@ -1,20 +1,9 @@
 var source = new EventSource('/imagewatch');
 
 source.addEventListener('image', function (event) {
-    console.log(event);
+    var filename = event.data;
+    console.log(filename);
+
+    var url = '/static/' + filename + '?' + new Date().getTime();
+    $('#last_rendered_image').attr('src', url);
 }, false);
-
-/*
-source.onopen = function () {
-    console.log('Connection opened');
-};
-
-source.onerror = function () {
-    console.log('Connection closed');
-};
-
-source.onmessage = function (event) {
-    // a message without a type was fired
-    console.log('Unknown message received', event)
-};
-*/
