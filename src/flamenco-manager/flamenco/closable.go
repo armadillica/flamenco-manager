@@ -26,12 +26,18 @@ func makeClosable() closable {
 
 // closableAdd(delta) should be combined with 'delta' calls to closableDone()
 func (closable *closable) closableAdd(delta int) {
+	closable.closingMutex.Lock()
+	defer closable.closingMutex.Unlock()
+
 	log.Debugf("Closable: doneWg.Add(%d) ok", delta)
 	closable.doneWg.Add(delta)
 }
 
 // closableDone marks one "thing" as "done"
 func (closable *closable) closableDone() {
+	closable.closingMutex.Lock()
+	defer closable.closingMutex.Unlock()
+
 	log.Debugf("Closable: doneWg.Done() ok")
 	closable.doneWg.Done()
 }
