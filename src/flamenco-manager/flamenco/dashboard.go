@@ -117,7 +117,7 @@ func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
 			"platform":             1,
 			"software":             1,
 			"status":               1,
-			"supported_job_types":  1,
+			"supported_task_types": 1,
 		}},
 		// 4: Sort.
 		M{"$sort": bson.D{

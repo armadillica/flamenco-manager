@@ -55,14 +55,24 @@ func (worker *Worker) TimeoutOnTask(task *Task, db *mgo.Database) {
 	}
 }
 
+// Returns a bson.M used by the "Seen" function. Use this if you want to update the
+// worker yourself with more info.
+func (worker *Worker) setSeenUpdates(r *http.Request) {
+}
+
 // Seen registers that we have seen this worker at a certain address and with certain software.
 func (worker *Worker) Seen(r *http.Request, db *mgo.Database) {
+	if err := worker.SeenEx(r, db, bson.M{}); err != nil {
+		log.Errorf("Worker.Seen: unable to update worker %s in MongoDB: %s", worker.ID, err)
+	}
+}
+
+// SeenEx is same as Seen(), but allows for extra updates on the worker in the database, and returns err
+func (worker *Worker) SeenEx(r *http.Request, db *mgo.Database, updates bson.M) error {
 	worker.LastActivity = UtcNow()
 
-	updates := bson.M{
-		"last_activity": worker.LastActivity,
-		"status":        "awake",
-	}
+	updates["last_activity"] = worker.LastActivity
+	updates["status"] = "awake"
 
 	remoteAddr := r.RemoteAddr
 	if worker.Address != remoteAddr {
@@ -75,9 +85,7 @@ func (worker *Worker) Seen(r *http.Request, db *mgo.Database) {
 		updates["software"] = userAgent
 	}
 
-	if err := db.C("flamenco_workers").UpdateId(worker.ID, bson.M{"$set": updates}); err != nil {
-		log.Errorf("Worker.Seen: unable to update worker %s in MongoDB: %s", worker.ID, err)
-	}
+	return db.C("flamenco_workers").UpdateId(worker.ID, bson.M{"$set": updates})
 }
 
 func RegisterWorker(w http.ResponseWriter, r *http.Request, db *mgo.Database) {
@@ -95,7 +103,7 @@ func RegisterWorker(w http.ResponseWriter, r *http.Request, db *mgo.Database) {
 	worker := Worker{}
 	worker.Secret = winfo.Secret
 	worker.Platform = winfo.Platform
-	worker.SupportedJobTypes = winfo.SupportedJobTypes
+	worker.SupportedTaskTypes = winfo.SupportedTaskTypes
 	worker.Nickname = winfo.Nickname
 	worker.Address = r.RemoteAddr
 
@@ -313,4 +321,41 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 		}
 		log.Errorf("WorkerSignOff: unable to update worker %s in MongoDB: %s", w_ident, err)
 	}
+}
+
+// WorkerSignOn is optional, and allows a Worker to register a new list of supported task types.
+func WorkerSignOn(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.Database) {
+	// Get the worker
+	worker, err := FindWorker(r.Username, bson.M{"_id": 1, "address": 1, "nickname": 1}, db)
+	if err != nil {
+		log.Warningf("%s WorkerSignOn: Unable to find worker: %s", r.RemoteAddr, err)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	log.Infof("Worker %s signed on", worker.Identifier())
+
+	// Parse the given worker information.
+	winfo := WorkerSignonDoc{}
+	if err = DecodeJson(w, r.Body, &winfo, fmt.Sprintf("%s WorkerSignOn:", r.RemoteAddr)); err != nil {
+		return
+	}
+
+	// Only update those fields that were actually given.
+	updates := bson.M{}
+	if winfo.Nickname != "" && winfo.Nickname != worker.Nickname {
+		log.Infof("Worker %s changed nickname to %s", worker.Nickname, winfo.Nickname)
+		updates["nickname"] = winfo.Nickname
+	}
+	if len(winfo.SupportedTaskTypes) > 0 {
+		updates["supported_task_types"] = winfo.SupportedTaskTypes
+	}
+
+	if err = worker.SeenEx(&r.Request, db, updates); err != nil {
+		log.Errorf("WorkerSignOn: Unable to update worker %s: %s", worker.Identifier(), err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

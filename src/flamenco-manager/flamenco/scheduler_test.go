@@ -28,7 +28,7 @@ type SchedulerTestSuite struct {
 var _ = check.Suite(&SchedulerTestSuite{})
 
 func parseJSON(c *check.C, respRec *httptest.ResponseRecorder, expectedStatus int, parsed interface{}) {
-	assert.Equal(c, 200, respRec.Code)
+	assert.Equal(c, expectedStatus, respRec.Code)
 	headers := respRec.Header()
 	assert.Equal(c, "application/json", headers.Get("Content-Type"))
 
@@ -50,17 +50,17 @@ func (s *SchedulerTestSuite) SetUpTest(c *check.C) {
 
 	// Store workers in DB, on purpose in the opposite order as the tasks.
 	s.workerLnx = Worker{
-		Platform:          "linux",
-		SupportedJobTypes: []string{"sleeping"},
-		Nickname:          "workerLnx",
+		Platform:           "linux",
+		SupportedTaskTypes: []string{"sleeping"},
+		Nickname:           "workerLnx",
 	}
 	if err := StoreNewWorker(&s.workerLnx, s.db); err != nil {
 		c.Fatal("Unable to insert test workerLnx", err)
 	}
 	s.workerWin = Worker{
-		Platform:          "windows",
-		SupportedJobTypes: []string{"testing"},
-		Nickname:          "workerWin",
+		Platform:           "windows",
+		SupportedTaskTypes: []string{"testing"},
+		Nickname:           "workerWin",
 	}
 	if err := StoreNewWorker(&s.workerWin, s.db); err != nil {
 		c.Fatal("Unable to insert test workerWin", err)
@@ -101,18 +101,20 @@ func (s *SchedulerTestSuite) TestVariableReplacement(t *check.C) {
 	jsonTask := Task{}
 	parseJSON(t, respRec, 200, &jsonTask)
 	assert.Equal(t, "active", jsonTask.Status)
-	assert.Equal(t, "sleeping", jsonTask.JobType)
+	assert.Equal(t, "unittest", jsonTask.JobType)
+	assert.Equal(t, "sleeping", jsonTask.TaskType)
 	assert.Equal(t, "Running Blender from /opt/myblenderbuild/blender",
 		jsonTask.Commands[0].Settings["message"])
 
-	// Check worker with other job type
+	// Check worker with other task type
 	ar = &auth.AuthenticatedRequest{Request: *request, Username: s.workerWin.ID.Hex()}
 	s.sched.ScheduleTask(respRec, ar)
 
 	// Check the response JSON
 	parseJSON(t, respRec, 200, &jsonTask)
 	assert.Equal(t, "active", jsonTask.Status)
-	assert.Equal(t, "testing", jsonTask.JobType)
+	assert.Equal(t, "unittest", jsonTask.JobType)
+	assert.Equal(t, "testing", jsonTask.TaskType)
 	assert.Equal(t, "Running Blender from c:/temp/blender.exe",
 		jsonTask.Commands[0].Settings["message"])
 

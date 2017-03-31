@@ -38,7 +38,7 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	db := mongo_sess.DB("")
 
 	// Fetch the worker's info
-	projection := bson.M{"platform": 1, "supported_job_types": 1, "address": 1, "nickname": 1}
+	projection := bson.M{"platform": 1, "supported_task_types": 1, "address": 1, "nickname": 1}
 	worker, err := FindWorker(r.Username, projection, db)
 	if err != nil {
 		log.Warningf("ScheduleTask: Unable to find worker, requested from %s: %s", r.RemoteAddr, err)
@@ -52,7 +52,7 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	var task *Task
 	var was_changed bool
 	for attempt := 0; attempt < 1000; attempt++ {
-		// Fetch the first available task of a supported job type.
+		// Fetch the first available task of a supported task type.
 		task = ts.fetchTaskFromQueueOrManager(w, db, worker)
 		if task == nil {
 			// A response has already been written to 'w'.
@@ -112,10 +112,10 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 	w http.ResponseWriter, db *mgo.Database, worker *Worker) *Task {
 
-	if len(worker.SupportedJobTypes) == 0 {
-		log.Warningf("TaskScheduler: worker %s has no supported job types.", worker.Identifier())
+	if len(worker.SupportedTaskTypes) == 0 {
+		log.Warningf("TaskScheduler: worker %s has no supported task types.", worker.Identifier())
 		w.WriteHeader(http.StatusNotAcceptable)
-		fmt.Fprintln(w, "You do not support any job types.")
+		fmt.Fprintln(w, "You do not support any task types.")
 		return nil
 	}
 
@@ -123,10 +123,10 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 	tasks_coll := db.C("flamenco_tasks")
 
 	pipe := tasks_coll.Pipe([]M{
-		// 1: Select only tasks that have a runnable status & acceptable job type.
+		// 1: Select only tasks that have a runnable status & acceptable task type.
 		M{"$match": M{
-			"status": M{"$in": []string{"queued", "claimed-by-manager"}},
-			// "job_type": M{"$in": []string{"sleeping", "testing"}},
+			"status":    M{"$in": []string{"queued", "claimed-by-manager"}},
+			"task_type": M{"$in": worker.SupportedTaskTypes},
 		}},
 		// 2: Unwind the parents array, so that we can do a lookup in the next stage.
 		M{"$unwind": M{

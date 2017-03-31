@@ -15,6 +15,11 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+// The default task type, in case the task has no task_type field when we get it
+// from the Flamenco Server. This is for backward compatibility with Server
+// versions older than 2.0.1.
+const defaultTaskType = "unknown"
+
 type UpstreamConnection struct {
 	closable
 	config  *Conf
@@ -190,6 +195,14 @@ func download_tasks_from_upstream(config *Conf, mongo_sess *mgo.Session) {
 		// Count this as an update. By storing the update as "now", we don't have
 		// to parse the _updated field's date format from the Flamenco Server.
 		task.LastUpdated = utcNow
+
+		// For compatibility with older Flamen Servers, use an explicit string "unknown"
+		// as task type if it's empty.
+		if task.TaskType == "" {
+			task.TaskType = defaultTaskType
+			log.Warningf("Task %s has no task type, defaulting to task type \"%s\".",
+				task.ID.Hex(), task.TaskType)
+		}
 
 		change, err := tasks_coll.Upsert(bson.M{"_id": task.ID}, task)
 		if err != nil {

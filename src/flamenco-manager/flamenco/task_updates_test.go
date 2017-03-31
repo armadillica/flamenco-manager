@@ -103,12 +103,12 @@ func (s *TaskUpdatesTestSuite) TestMultipleWorkersForOneTask(c *check.C) {
 	assert.Nil(c, tasks_coll.Insert(task1))
 
 	worker1 := Worker{
-		Platform:          "linux",
-		SupportedJobTypes: []string{"testing"},
+		Platform:           "linux",
+		SupportedTaskTypes: []string{"testing"},
 	}
 	worker2 := Worker{
-		Platform:          "linux",
-		SupportedJobTypes: []string{"testing"},
+		Platform:           "linux",
+		SupportedTaskTypes: []string{"testing"},
 	}
 	assert.Nil(c, StoreNewWorker(&worker1, s.db))
 	assert.Nil(c, StoreNewWorker(&worker2, s.db))

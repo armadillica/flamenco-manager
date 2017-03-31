@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	auth "github.com/abbot/go-http-auth"
@@ -130,4 +131,46 @@ func (s *WorkerTestSuite) TestWorkerMayRun(t *check.C) {
 	resp = MayKeepRunningResponse{}
 	parseJSON(t, respRec, 200, &resp)
 	assert.Equal(t, false, resp.MayKeepRunning)
+}
+
+func (s *WorkerTestSuite) TestWorkerSignOn(t *check.C) {
+	signon := func(body string) {
+		respRec, ar := WorkerTestRequestWithBody(
+			s.workerLnx.ID, strings.NewReader(body),
+			"POST", "/sign-on")
+		WorkerSignOn(respRec, ar, s.db)
+		assert.Equal(t, 204, respRec.Code)
+	}
+
+	found := Worker{}
+	getworker := func() {
+		err := s.db.C("flamenco_workers").FindId(s.workerLnx.ID).One(&found)
+		if err != nil {
+			t.Fatal("Unable to find workerLnx: ", err)
+		}
+	}
+
+	// Empty signon doc -> no change
+	signon("{}")
+	getworker()
+	assert.Equal(t, []string{"sleeping"}, found.SupportedTaskTypes)
+	assert.Equal(t, "workerLnx", found.Nickname)
+
+	// Only change nickname
+	signon("{\"nickname\": \"new-and-sparkly\"}")
+	getworker()
+	assert.Equal(t, []string{"sleeping"}, found.SupportedTaskTypes)
+	assert.Equal(t, "new-and-sparkly", found.Nickname)
+
+	// Only change supported task types
+	signon("{\"supported_task_types\": [\"exr-merge\", \"unknown\"]}")
+	getworker()
+	assert.Equal(t, []string{"exr-merge", "unknown"}, found.SupportedTaskTypes)
+	assert.Equal(t, "new-and-sparkly", found.Nickname)
+
+	// Change both
+	signon("{\"supported_task_types\": [\"blender-render\"], \"nickname\": \"another\"}")
+	getworker()
+	assert.Equal(t, []string{"blender-render"}, found.SupportedTaskTypes)
+	assert.Equal(t, "another", found.Nickname)
 }

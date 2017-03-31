@@ -25,6 +25,7 @@ type Task struct {
 	Priority    int             `bson:"priority" json:"priority"`
 	JobPriority int             `bson:"job_priority" json:"job_priority"`
 	JobType     string          `bson:"job_type" json:"job_type"`
+	TaskType    string          `bson:"task_type" json:"task_type"`
 	Commands    []Command       `bson:"commands" json:"commands"`
 	Log         string          `bson:"log,omitempty" json:"log,omitempty"`
 	Activity    string          `bson:"activity,omitempty" json:"activity,omitempty"`
@@ -70,27 +71,33 @@ type TaskUpdateResponse struct {
 
 // WorkerRegistration is sent by the Worker to register itself at this Manager.
 type WorkerRegistration struct {
-	Secret            string   `json:"secret"`
-	Platform          string   `json:"platform"`
-	SupportedJobTypes []string `json:"supported_job_types"`
-	Nickname          string   `json:"nickname"`
+	Secret             string   `json:"secret"`
+	Platform           string   `json:"platform"`
+	SupportedTaskTypes []string `json:"supported_task_types"`
+	Nickname           string   `json:"nickname"`
+}
+
+// WorkerSignonDoc is sent by the Worker upon sign-on.
+type WorkerSignonDoc struct {
+	SupportedTaskTypes []string `json:"supported_task_types,omitempty"`
+	Nickname           string   `json:"nickname,omitempty"`
 }
 
 // Worker contains all information about a specific Worker.
 // Some fields come from the WorkerRegistration, whereas others are filled by us.
 type Worker struct {
-	ID                bson.ObjectId `bson:"_id,omitempty" json:"_id,omitempty"`
-	Secret            string        `bson:"-" json:"-"`
-	HashedSecret      []byte        `bson:"hashed_secret" json:"-"`
-	Nickname          string        `bson:"nickname" json:"nickname"`
-	Address           string        `bson:"address" json:"address"`
-	Status            string        `bson:"status" json:"status"`
-	Platform          string        `bson:"platform" json:"platform"`
-	CurrentTask       bson.ObjectId `bson:"current_task,omitempty" json:"current_task,omitempty"`
-	TimeCost          int           `bson:"time_cost" json:"time_cost"`
-	LastActivity      *time.Time    `bson:"last_activity,omitempty" json:"last_activity,omitempty"`
-	SupportedJobTypes []string      `bson:"supported_job_types" json:"supported_job_types"`
-	Software          string        `bson:"software" json:"software"`
+	ID                 bson.ObjectId `bson:"_id,omitempty" json:"_id,omitempty"`
+	Secret             string        `bson:"-" json:"-"`
+	HashedSecret       []byte        `bson:"hashed_secret" json:"-"`
+	Nickname           string        `bson:"nickname" json:"nickname"`
+	Address            string        `bson:"address" json:"address"`
+	Status             string        `bson:"status" json:"status"`
+	Platform           string        `bson:"platform" json:"platform"`
+	CurrentTask        bson.ObjectId `bson:"current_task,omitempty" json:"current_task,omitempty"`
+	TimeCost           int           `bson:"time_cost" json:"time_cost"`
+	LastActivity       *time.Time    `bson:"last_activity,omitempty" json:"last_activity,omitempty"`
+	SupportedTaskTypes []string      `bson:"supported_task_types" json:"supported_task_types"`
+	Software           string        `bson:"software" json:"software"`
 
 	// For dashboard
 	CurrentTaskStatus  string     `bson:"current_task_status,omitempty" json:"current_task_status,omitempty"`
