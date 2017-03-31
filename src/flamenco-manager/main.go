@@ -18,7 +18,6 @@ import (
 	auth "github.com/abbot/go-http-auth"
 
 	"flamenco-manager/flamenco"
-	"flamenco-manager/flamenco/chantools"
 
 	"github.com/gorilla/mux"
 )
@@ -35,7 +34,7 @@ var task_timeout_checker *flamenco.TaskTimeoutChecker
 var taskCleaner *flamenco.TaskCleaner
 var startupNotifier *flamenco.StartupNotifier
 var httpServer *http.Server
-var imageWatcher *flamenco.ImageWatcher
+var latestImageSystem *flamenco.LatestImageSystem
 var shutdownComplete chan struct{}
 var httpShutdownComplete chan struct{}
 
@@ -110,10 +109,10 @@ func shutdown(signum os.Signal) {
 	go func() {
 		log.Infof("Signal '%s' received, shutting down.", signum)
 
-		if imageWatcher != nil {
+		if latestImageSystem != nil {
 			// ImageWatcher allows long-living HTTP connections, so it
 			// should be shut down before the HTTP server.
-			imageWatcher.Close()
+			latestImageSystem.ImageWatcher.Close()
 		}
 
 		if httpServer != nil {
@@ -178,28 +177,6 @@ func configLogging() {
 	log.SetLevel(level)
 }
 
-func setupImageWatcher(watchPath string, router *mux.Router) {
-	imageWatcher = flamenco.CreateImageWatcher(watchPath, 0)
-	middleware := flamenco.ConvertAndForward(imageWatcher.ImageCreated, "static")
-	broadcaster := chantools.NewOneToManyChan(middleware)
-
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		flamenco.ImageWatcherHTTPPush(w, r, broadcaster)
-	}
-
-	router.HandleFunc("/imagewatch", handler).Methods("GET")
-
-	go func() {
-		pathChannel := make(chan string)
-		broadcaster.AddOutputChan(pathChannel)
-		defer broadcaster.RemoveOutputChan(pathChannel)
-
-		for path := range pathChannel {
-			log.Infof("New image rendered: %s", path)
-		}
-	}()
-}
-
 func main() {
 	parseCliArgs()
 	if cliArgs.version {
@@ -259,7 +236,8 @@ func main() {
 	router.HandleFunc("/kick", http_kick)
 
 	if config.WatchForLatestImage != "" {
-		setupImageWatcher(config.WatchForLatestImage, router)
+		latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
+		latestImageSystem.AddRoutes(router)
 	}
 
 	startupNotifier.Go()
@@ -267,8 +245,8 @@ func main() {
 	task_timeout_checker.Go()
 	taskCleaner.Go()
 
-	if imageWatcher != nil {
-		imageWatcher.Go()
+	if latestImageSystem != nil {
+		latestImageSystem.ImageWatcher.Go()
 	}
 
 	// Create the HTTP server before allowing the shutdown signal Handler

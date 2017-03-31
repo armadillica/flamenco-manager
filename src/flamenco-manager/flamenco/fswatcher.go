@@ -1,6 +1,8 @@
 package flamenco
 
 import (
+	"flamenco-manager/flamenco/chantools"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +11,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/fsnotify/fsnotify"
+	"github.com/gorilla/mux"
 )
 
 var imageExtensions = map[string]bool{
@@ -20,6 +23,13 @@ var imageExtensions = map[string]bool{
 // If a file hasn't been written to in this amount of time,
 // it's considered "old enough" to be considered "written".
 const fileAgeThreshold = 2 * time.Second
+
+// LatestImageSystem ties an ImageWatcher to a the fswatcher_middle and fswatcher_http stuff,
+// allowing the results to be pushed via HTTP to browsers.
+type LatestImageSystem struct {
+	ImageWatcher *ImageWatcher
+	broadcaster  *chantools.OneToManyChan
+}
 
 // Struct to keep track of image files in a heap.
 type imageFile struct {
@@ -46,6 +56,38 @@ type ImageWatcher struct {
 	// to be long enough ago to consider them "fully written".
 	imageMapLock *sync.Mutex
 	imageMap     imageMap
+}
+
+// CreateLatestImageSystem sets up a LatestImageSystem
+func CreateLatestImageSystem(watchPath string) *LatestImageSystem {
+	imageWatcher := CreateImageWatcher(watchPath, 0)
+	middleware := ConvertAndForward(imageWatcher.ImageCreated, "static")
+	broadcaster := chantools.NewOneToManyChan(middleware)
+
+	return &LatestImageSystem{
+		imageWatcher,
+		broadcaster,
+	}
+}
+
+// AddRoutes adds the HTTP Server-Side Events endpoint to the router.
+func (lis *LatestImageSystem) AddRoutes(router *mux.Router) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		ImageWatcherHTTPPush(w, r, lis.broadcaster)
+	}
+
+	router.HandleFunc("/imagewatch", handler).Methods("GET")
+
+	// Just for logging stuff, nothing special.
+	go func() {
+		pathChannel := make(chan string)
+		lis.broadcaster.AddOutputChan(pathChannel)
+		defer lis.broadcaster.RemoveOutputChan(pathChannel)
+
+		for path := range pathChannel {
+			log.Infof("New image rendered: %s", path)
+		}
+	}()
 }
 
 // CreateImageWatcher creates a new ImageWatcher for the given directory.
