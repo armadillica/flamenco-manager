@@ -128,3 +128,9 @@ type StatusReport struct {
 	Workers     []Worker `json:"workers"`
 	Server      string   `json:"server"`
 }
+
+// FileProduced is sent by the worker whenever it produces (e.g. renders)
+// some file. This hooks into the fswatcher system.
+type FileProduced struct {
+	Paths []string `json:"paths"`
+}

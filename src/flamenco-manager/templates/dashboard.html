@@ -14,10 +14,7 @@
     <script src="/static/jquery.min.js"></script>
     <script src="/static/bootstrap/js/bootstrap.min.js" async></script>
     <script src="/static/dashboard.js" async></script>
-
-    {{ if .Config.WatchForLatestImage }}
     <script src="/static/imagewatch.js" async></script>
-    {{ end }}
 </head>
 <body>
 <div class="container theme-showcase" role="main">
@@ -30,10 +27,9 @@
                 <div id='status' class="panel-body"></div>
             </div>
         </div>
-        {{ if .Config.WatchForLatestImage }}
         <div class='col-md-7'>
             <div class="panel panel-default">
-                <div class="panel-heading"><h3 class="panel-title">Last rendered image on {{.Config.WatchForLatestImage}}</h3></div>
+                <div class="panel-heading"><h3 class="panel-title">Last rendered image</h3></div>
                 <div class="panel-body imageholder">
                     <a href='/latest-image'>
                     <img id='last_rendered_image'
@@ -43,7 +39,6 @@
                 </div>
             </div>
         </div>
-        {{ end }}
     </section>
 
     <section class="row" id='workers'></section>

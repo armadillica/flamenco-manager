@@ -109,11 +109,9 @@ func shutdown(signum os.Signal) {
 	go func() {
 		log.Infof("Signal '%s' received, shutting down.", signum)
 
-		if latestImageSystem != nil {
-			// ImageWatcher allows long-living HTTP connections, so it
-			// should be shut down before the HTTP server.
-			latestImageSystem.ImageWatcher.Close()
-		}
+		// ImageWatcher allows long-living HTTP connections, so it
+		// should be shut down before the HTTP server.
+		latestImageSystem.Close()
 
 		if httpServer != nil {
 			log.Info("Shutting down HTTP server")
@@ -223,11 +221,13 @@ func main() {
 	task_timeout_checker = flamenco.CreateTaskTimeoutChecker(&config, session)
 	taskCleaner = flamenco.CreateTaskCleaner(&config, session)
 	reporter := flamenco.CreateReporter(&config, session, FLAMENCO_VERSION)
+	latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
 
 	// Set up our own HTTP server
 	worker_authenticator := auth.NewBasicAuthenticator("Flamenco Manager", worker_secret)
 	router := mux.NewRouter().StrictSlash(true)
 	reporter.AddRoutes(router)
+	latestImageSystem.AddRoutes(router, worker_authenticator)
 	router.HandleFunc("/register-worker", http_register_worker).Methods("POST")
 	router.HandleFunc("/task", worker_authenticator.Wrap(http_schedule_task)).Methods("POST")
 	router.HandleFunc("/tasks/{task-id}/update", worker_authenticator.Wrap(http_task_update)).Methods("POST")
@@ -235,19 +235,11 @@ func main() {
 	router.HandleFunc("/sign-off", worker_authenticator.Wrap(http_worker_sign_off)).Methods("POST")
 	router.HandleFunc("/kick", http_kick)
 
-	if config.WatchForLatestImage != "" {
-		latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
-		latestImageSystem.AddRoutes(router)
-	}
-
 	startupNotifier.Go()
 	task_update_pusher.Go()
 	task_timeout_checker.Go()
 	taskCleaner.Go()
-
-	if latestImageSystem != nil {
-		latestImageSystem.ImageWatcher.Go()
-	}
+	latestImageSystem.Go()
 
 	// Create the HTTP server before allowing the shutdown signal Handler
 	// to exist. This prevents a race condition when Ctrl+C is pressed after

@@ -2,6 +2,7 @@ package flamenco
 
 import (
 	"flamenco-manager/flamenco/chantools"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	auth "github.com/abbot/go-http-auth"
 	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/mux"
 )
@@ -24,11 +26,17 @@ var imageExtensions = map[string]bool{
 // it's considered "old enough" to be considered "written".
 const fileAgeThreshold = 2 * time.Second
 
+const imageQueueSize = 50
+
 // LatestImageSystem ties an ImageWatcher to a the fswatcher_middle and fswatcher_http stuff,
 // allowing the results to be pushed via HTTP to browsers.
 type LatestImageSystem struct {
-	ImageWatcher *ImageWatcher
+	imageWatcher *ImageWatcher
 	broadcaster  *chantools.OneToManyChan
+
+	// Paths to images can be sent to this channel, and will be
+	// run through the middleware and sent to the broadcaster.
+	imageCreated chan string
 }
 
 // Struct to keep track of image files in a heap.
@@ -60,23 +68,25 @@ type ImageWatcher struct {
 
 // CreateLatestImageSystem sets up a LatestImageSystem
 func CreateLatestImageSystem(watchPath string) *LatestImageSystem {
-	imageWatcher := CreateImageWatcher(watchPath, 0)
-	middleware := ConvertAndForward(imageWatcher.ImageCreated, "static")
-	broadcaster := chantools.NewOneToManyChan(middleware)
+	lis := &LatestImageSystem{}
 
-	return &LatestImageSystem{
-		imageWatcher,
-		broadcaster,
+	if watchPath != "" {
+		lis.imageWatcher = CreateImageWatcher(watchPath, imageQueueSize)
+		lis.imageCreated = lis.imageWatcher.imageCreated
+	} else {
+		lis.imageCreated = make(chan string, imageQueueSize)
 	}
+
+	middleware := ConvertAndForward(lis.imageCreated, "static")
+	lis.broadcaster = chantools.NewOneToManyChan(middleware)
+
+	return lis
 }
 
 // AddRoutes adds the HTTP Server-Side Events endpoint to the router.
-func (lis *LatestImageSystem) AddRoutes(router *mux.Router) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		ImageWatcherHTTPPush(w, r, lis.broadcaster)
-	}
-
-	router.HandleFunc("/imagewatch", handler).Methods("GET")
+func (lis *LatestImageSystem) AddRoutes(router *mux.Router, workerAuth *auth.BasicAuth) {
+	router.HandleFunc("/imagewatch", lis.serverSideEvents).Methods("GET")
+	router.HandleFunc("/output-produced", workerAuth.Wrap(lis.outputProduced)).Methods("POST")
 
 	// Just for logging stuff, nothing special.
 	go func() {
@@ -88,6 +98,55 @@ func (lis *LatestImageSystem) AddRoutes(router *mux.Router) {
 			log.Infof("New image rendered: %s", path)
 		}
 	}()
+}
+
+func (lis *LatestImageSystem) serverSideEvents(w http.ResponseWriter, r *http.Request) {
+	ImageWatcherHTTPPush(w, r, lis.broadcaster)
+}
+
+func (lis *LatestImageSystem) outputProduced(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
+	payload := FileProduced{}
+	defer r.Body.Close()
+	if err := DecodeJson(w, r.Body, &payload, "LatestImageSystem::outputProduced()"); err != nil {
+		return
+	}
+
+	if len(payload.Paths) == 0 {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		fmt.Fprint(w, "List of paths may not be empty.")
+		return
+	}
+
+	log.Infof("LatestImageSystem: %d files were produced on worker %s", len(payload.Paths), r.Username)
+
+	for _, path := range payload.Paths {
+		// I don't want to hook up MongoDB to the LatestImageSystem, so we can't find
+		// the worker's nickname.
+		log.Infof("LatestImageSystem: output was produced on worker %s: %s", r.Username, path)
+
+		// Send the path to the channel to push it through the conversion & to the browser.
+		lis.imageCreated <- path
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Go starts the image watcher, if the path to watch isn't empty.
+func (lis *LatestImageSystem) Go() {
+	if lis.imageWatcher == nil {
+		return
+	}
+
+	lis.imageWatcher.Go()
+}
+
+// Close gracefully shuts down the image watcher, if the path to watch isn't empty.
+func (lis *LatestImageSystem) Close() {
+	if lis.imageWatcher == nil {
+		return
+	}
+
+	lis.imageWatcher.Close()
 }
 
 // CreateImageWatcher creates a new ImageWatcher for the given directory.
