@@ -72,10 +72,14 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 		return
 	}
 
+	log.Infof("ScheduleTask: assigning task %s to worker %s",
+		task.ID.Hex(), worker.Identifier())
+
 	// Update the task status to "active", pushing it as a task update to the manager too.
 	task.Status = "active"
 	tupdate := TaskUpdate{TaskID: task.ID, TaskStatus: task.Status}
 	local_updates := bson.M{
+		"worker":           worker.Nickname,
 		"worker_id":        worker.ID,
 		"last_worker_ping": UtcNow(),
 	}
@@ -95,15 +99,40 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	// Set it to this worker.
 	w.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
-	encoder.Encode(task)
+	if err := encoder.Encode(task); err != nil {
+		log.Warningf("ScheduleTask: error encoding & sending task to worker: %s", err)
+		ts.unassignTaskFromWorker(task.ID, worker, err, db)
+		return
+	}
 
 	log.Infof("ScheduleTask: assigned task %s to worker %s",
 		task.ID.Hex(), worker.Identifier())
 
 	// Push a task log line stating we've assigned this task to the given worker.
 	// This is done here, instead of by the worker, so that it's logged even if the worker fails.
-	msg := fmt.Sprintf("Manager assigned task to worker %s", worker.Identifier())
+	msg := fmt.Sprintf("Manager assigned task %s to worker %s", task.ID.Hex(), worker.Identifier())
 	LogTaskActivity(worker, task.ID, msg, time.Now().Format(IsoFormat)+": "+msg, db)
+}
+
+func (ts *TaskScheduler) unassignTaskFromWorker(taskID bson.ObjectId, worker *Worker, reason error, db *mgo.Database) {
+	wIdent := worker.Identifier()
+
+	log.Warningf("unassignTaskFromWorker: un-assigning task %s from worker %s", taskID.Hex(), wIdent)
+
+	tupdate := TaskUpdate{
+		TaskID:     taskID,
+		TaskStatus: "claimed-by-manager",
+		Worker:     "-", // no longer assigned to any worker
+		Activity:   fmt.Sprintf("Re-queued task after unassigning from worker %s ", wIdent),
+		Log: fmt.Sprintf("%s: Manager re-queued task after there was an error sending it to worker %s:\n%s",
+			time.Now().Format(IsoFormat), wIdent, reason),
+	}
+
+	if err := QueueTaskUpdate(&tupdate, db); err != nil {
+		log.Errorf("unassignTaskFromWorker: unable to update task %s unassigned from worker %s in MongoDB: %s",
+			taskID.Hex(), wIdent, err)
+		return
+	}
 }
 
 /**

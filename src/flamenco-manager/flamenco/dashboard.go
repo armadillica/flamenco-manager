@@ -144,5 +144,8 @@ func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	encoder := json.NewEncoder(w)
-	encoder.Encode(statusreport)
+	if err := encoder.Encode(statusreport); err != nil {
+		// This is probably fine; broken connections are bound to happen.
+		log.Debugf("Unable to send dashboard data to %s: %s", r.RemoteAddr, err)
+	}
 }

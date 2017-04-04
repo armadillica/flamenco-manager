@@ -2,6 +2,7 @@ package flamenco
 
 import (
 	"encoding/json"
+	"flamenco-manager/flamenco/httperror"
 	"net/http"
 	"net/http/httptest"
 	"time"
@@ -417,4 +418,33 @@ func (s *SchedulerTestSuite) TestParentTaskOneCompletedOneNot(c *check.C) {
 	// We should not get any task back.
 	assert.Nil(c, task, "Expected nil, got task %v instead", task)
 	assert.Equal(c, http.StatusNoContent, respRec.Code)
+}
+
+// In this test we check that an error sending the JSON to the worker
+// actually unassigns the worker from the task.
+func (s *SchedulerTestSuite) TestCommunicationError(t *check.C) {
+	// Store task in DB.
+	task1 := ConstructTestTask("aaaaaaaaaaaaaaaaaaaaaaaa", "testing")
+	if err := s.db.C("flamenco_tasks").Insert(task1); err != nil {
+		t.Fatal("Unable to insert test task", err)
+	}
+
+	// Perform HTTP request
+	// TODO Sybren: cause an error here
+	respRec := httperror.NewFailingRecorder()
+	request, _ := http.NewRequest("GET", "/task", nil)
+	ar := &auth.AuthenticatedRequest{Request: *request, Username: s.workerLnx.ID.Hex()}
+	s.sched.ScheduleTask(respRec, ar)
+
+	// Check that the task isn't assigned to the worker.
+	foundTask := Task{}
+	err := s.db.C("flamenco_tasks").FindId(task1.ID).One(&foundTask)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "claimed-by-manager", foundTask.Status)
+
+	// The task will still have WorkerID set to the last worker touching the task.
+	// This is fine, as it's clear from the task status that the worker isn't
+	// actively working on the task anyway.
+	assert.Equal(t, s.workerLnx.Nickname, foundTask.Worker)
+	assert.Equal(t, s.workerLnx.ID, *foundTask.WorkerID)
 }
