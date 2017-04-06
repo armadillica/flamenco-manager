@@ -7,6 +7,20 @@ function load_workers() {
 
     $.get('/as-json')
     .done(function(info) {
+        // Split workers into "current" and "idle for too long"
+        var too_long = 31 * 24 * 3600000; // 31 days, in milliseconds
+        var current_workers = [];
+        var idle_workers = [];
+        for (worker of info.workers) {
+            var as_date = new Date(worker.last_activity);
+            var timediff = Date.now() - as_date;  // in milliseconds
+            if (typeof worker.last_activity == 'undefined' || timediff > too_long) {
+                idle_workers.push(worker);
+            } else {
+                current_workers.push(worker);
+            }
+        }
+
         // Construct the overall status view.
         var $section = $('#status');
         $section.html('');
@@ -22,6 +36,20 @@ function load_workers() {
         $dd = $('<dd>');
         $dd.append($('<a>').attr('href', info.server).text(info.server));
         $dl.append($dd);
+        if (idle_workers.length > 0) {
+            $dl.append($('<dt>')
+                .text('Old workers')
+                .attr('title', 'Workers not seen in over a month.'));
+            $dd = $('<dd>');
+            for (worker of idle_workers) {
+                $dd.append($('<span>')
+                    .addClass('idle-worker-name')
+                    .text(worker.nickname)
+                    .attr('title', worker._id)
+                );
+            }
+            $dl.append($dd);
+        }
         $section.append($dl);
 
         // Construct the worker list.
@@ -31,7 +59,7 @@ function load_workers() {
         var $row;
         var idx = 0;
 
-        for (worker of info.workers) {
+        for (worker of current_workers) {
             // Start a new row.
             if (idx % 3 == 0) {
                 var $row = $('<div>').addClass('row');

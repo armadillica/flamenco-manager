@@ -1,6 +1,13 @@
 Changelog for Flamenco Manager
 ==============================
 
+
+## Version 2.0.4 (in development)
+
+- Small dashboard JS tweak: hide workers we haven't seen in over a
+  month.
+
+
 ## Version 2.0.3 (released 2017-04-04)
 
 - Implemented error checking for JSON encoding & sending.
