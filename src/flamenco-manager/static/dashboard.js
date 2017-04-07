@@ -11,6 +11,12 @@ function load_workers() {
         var too_long = 31 * 24 * 3600000; // 31 days, in milliseconds
         var current_workers = [];
         var idle_workers = [];
+
+        // Make sure we can iterate over the list.
+        if (typeof info.workers == 'undefined' || info.workers == null) {
+            info.workers = [];
+        }
+
         for (worker of info.workers) {
             var as_date = new Date(worker.last_activity);
             var timediff = Date.now() - as_date;  // in milliseconds
