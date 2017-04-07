@@ -46,14 +46,16 @@ of this `flamenco-manager-go` directory.
 4. Download all dependencies with `go get`
 5. Download Flamenco test dependencies with `go get -t ./...`
 6. Run the unittests with `go test ./...`
-7. Build your first Flamenco Manager with `go build`; this will create an executable
-   `flamenco-manager` in `$FM/src/flamenco-manager` as well as an executable in the current folder
+7. Build your first Flamenco Manager with `go install`; this will create an executable
+   `flamenco-manager` in `$FM/bin`
 8. Copy `flamenco-manager-example.yaml` and name it `flamenco-manager.yaml` and then update
    it with the info generated after creating a manager document on the Server
+9. Run the Manager with `../../bin/flamenco-manager -verbose`
+
 
 ### Testing
 
-To run all unit tests, run `go test ./flamenco -v`. To run a specific GoCheck test, run
+To run all unit tests, run `go test ./... -v`. To run a specific GoCheck test, run
 `go test ./flamenco -v --run TestWithGocheck -check.f SchedulerTestSuite.TestVariableReplacement`
 where the argument to `--run` determines which suite to run, and `-check.f` determines the
 exact test function of that suite. Once all tests have been moved over to use GoCheck, the
