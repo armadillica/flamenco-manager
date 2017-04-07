@@ -426,7 +426,7 @@ func (s *SchedulerTestSuite) TestParentTaskOneCompletedOneNot(c *check.C) {
 // actually unassigns the worker from the task.
 func (s *SchedulerTestSuite) TestCommunicationError(t *check.C) {
 	// Store task in DB.
-	task1 := ConstructTestTask("aaaaaaaaaaaaaaaaaaaaaaaa", "testing")
+	task1 := ConstructTestTask("aaaaaaaaaaaaaaaaaaaaaaaa", "sleeping")
 	if err := s.db.C("flamenco_tasks").Insert(task1); err != nil {
 		t.Fatal("Unable to insert test task", err)
 	}
