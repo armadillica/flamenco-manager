@@ -14,13 +14,11 @@
         html, body {
             margin: 0;
             padding: 0;
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: black;
+            width: 100%;
+            height: 100%;
             overflow: hidden;
+            background-color: black;
+            white-space: nowrap;
         }
 
         #last_rendered_image {
@@ -29,13 +27,26 @@
             max-height: 100%;
         }
 
-        a img {
+        #rule {
+            width: 0;
+            height: 100%;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        img {
             border: 0;
+            vertical-align: middle;
+            height: 100%;
+            max-width: 100%;
         }
 
     </style>
 </head>
 <body class='imageviewer'>
+    <!-- this height=100% rule gives us enough height for the
+        vertical-align to work, and centre the image vertically. -->
+    <div id='rule'></div>
     <a href='/'>
     <img id='last_rendered_image'
          alt='Last-rendered image'

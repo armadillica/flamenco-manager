@@ -1,8 +1,7 @@
 Changelog for Flamenco Manager
 ==============================
 
-
-## Version 2.0.4 (in development)
+## Version 2.0.4 (released 2017-04-07)
 
 - Small dashboard JS tweak: hide workers we haven't seen in over a
   month.
@@ -10,6 +9,7 @@ Changelog for Flamenco Manager
   support will be scheduled for them. This also adds a /sign-on
   URL so workers can send a current list of supported task types
   (and their current nickname) to the Manager.
+- Dashboard: Vertically align last-rendered image.
 
 
 ## Version 2.0.3 (released 2017-04-04)
