@@ -55,11 +55,6 @@ func (worker *Worker) TimeoutOnTask(task *Task, db *mgo.Database) {
 	}
 }
 
-// Returns a bson.M used by the "Seen" function. Use this if you want to update the
-// worker yourself with more info.
-func (worker *Worker) setSeenUpdates(r *http.Request) {
-}
-
 // Seen registers that we have seen this worker at a certain address and with certain software.
 func (worker *Worker) Seen(r *http.Request, db *mgo.Database) {
 	if err := worker.SeenEx(r, db, bson.M{}); err != nil {
