@@ -432,7 +432,6 @@ func (s *SchedulerTestSuite) TestCommunicationError(t *check.C) {
 	}
 
 	// Perform HTTP request
-	// TODO Sybren: cause an error here
 	respRec := httperror.NewFailingRecorder()
 	request, _ := http.NewRequest("GET", "/task", nil)
 	ar := &auth.AuthenticatedRequest{Request: *request, Username: s.workerLnx.ID.Hex()}

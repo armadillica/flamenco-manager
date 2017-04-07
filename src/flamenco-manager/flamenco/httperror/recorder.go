@@ -33,7 +33,7 @@ type FailingResponseRecorder struct {
 	wroteHeader bool
 }
 
-// NewRecorder returns an initialized FailingResponseRecorder.
+// NewFailingRecorder returns an initialized FailingResponseRecorder.
 func NewFailingRecorder() *FailingResponseRecorder {
 	return &FailingResponseRecorder{
 		HeaderMap: make(http.Header),
