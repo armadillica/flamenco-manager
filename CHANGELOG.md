@@ -1,6 +1,23 @@
 Changelog for Flamenco Manager
 ==============================
 
+
+## Version 2.0.4 (in development)
+
+- Small dashboard JS tweak: hide workers we haven't seen in over a
+  month.
+
+
+## Version 2.0.3 (released 2017-04-04)
+
+- Implemented error checking for JSON encoding & sending.
+
+  This should work around a timeout issue we've seen, where a worker
+  times out while waiting for the scheduler. The Manager would ignore
+  the error and keep the task assigned to the worker. Now it detects
+  the error and unassigns the worker.
+
+
 ## Version 2.0.2 (released 2017-03-31)
 
 - Added `/output-produced` endpoint, where Workers can register the files

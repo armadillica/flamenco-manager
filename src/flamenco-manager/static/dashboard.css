@@ -26,3 +26,12 @@ dl.dl-horizontal { margin: 0; }
 .imageholder {
     text-align: center;
 }
+
+span.idle-worker-name:not(:first-child)::before {
+    content: ', ';
+}
+
+*[title] {
+    cursor: help;
+    border-bottom: 1px dashed #ddd;
+}

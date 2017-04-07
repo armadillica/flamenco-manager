@@ -114,7 +114,11 @@ func RegisterWorker(w http.ResponseWriter, r *http.Request, db *mgo.Database) {
 
 	w.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
-	encoder.Encode(worker)
+	if err := encoder.Encode(worker); err != nil {
+		log.Errorf("RegisterWorker: unable to send registration response to worker at %s: %s",
+			r.RemoteAddr, err)
+		return
+	}
 }
 
 func StoreNewWorker(winfo *Worker, db *mgo.Database) error {
@@ -223,7 +227,11 @@ func WorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest,
 	// Send the response
 	w.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
-	encoder.Encode(response)
+	if err := encoder.Encode(response); err != nil {
+		log.Warningf("WorkerMayRunTask: unable to send response to worker %s: %s",
+			worker.Identifier(), task_id.Hex())
+		return
+	}
 }
 
 func IsRunnableTaskStatus(status string) bool {
