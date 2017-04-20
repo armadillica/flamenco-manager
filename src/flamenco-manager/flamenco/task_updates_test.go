@@ -144,3 +144,38 @@ func (s *TaskUpdatesTestSuite) TestMultipleWorkersForOneTask(c *check.C) {
 	assert.Equal(c, task1.WorkerID, task1.WorkerID)
 	assert.Equal(c, task1.Activity, "doing stuff by worker1")
 }
+
+func (s *TaskUpdatesTestSuite) TestUpdateForCancelRequestedTask(c *check.C) {
+	tasks_coll := s.db.C("flamenco_tasks")
+
+	worker1 := Worker{
+		Platform:           "linux",
+		SupportedTaskTypes: []string{"testing"},
+	}
+	assert.Nil(c, StoreNewWorker(&worker1, s.db))
+
+	task1 := ConstructTestTask("1aaaaaaaaaaaaaaaaaaaaaaa", "testing")
+	task1.WorkerID = &worker1.ID
+	task1.Worker = worker1.Nickname
+	task1.Status = "cancel-requested"
+	task1.Activity = "Cancel requested by unittest"
+	assert.Nil(c, tasks_coll.Insert(task1))
+
+	tupdate := TaskUpdate{
+		TaskID:     task1.ID,
+		TaskStatus: "active",
+		Activity:   "doing stuff by worker1",
+	}
+	payload, err := json.Marshal(tupdate)
+	assert.Nil(c, err)
+	respRec, ar := WorkerTestRequestWithBody(worker1.ID, bytes.NewBuffer(payload), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
+	QueueTaskUpdateFromWorker(respRec, ar, s.db, task1.ID)
+
+	// This update should be rejected, and not change the task's status.
+	assert.Equal(c, http.StatusConflict, respRec.Code)
+
+	assert.Nil(c, tasks_coll.FindId(task1.ID).One(&task1))
+	assert.Equal(c, task1.WorkerID, task1.WorkerID)
+	assert.Equal(c, task1.Status, "cancel-requested")
+	assert.Equal(c, task1.Activity, "Cancel requested by unittest")
+}

@@ -69,6 +69,14 @@ func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedReque
 		fmt.Fprintf(w, "Task %s is assigned to another worker.", taskID.Hex())
 		return
 	}
+	if task.Status == statusCanceled || task.Status == statusCancelRequested {
+		// These statuses can never be overwritten, and all task updates will be rejected.
+		log.Warningf("%s QueueTaskUpdateFromWorker: task %s update rejected from %s (%s), task has status %s",
+			r.RemoteAddr, taskID.Hex(), worker.ID.Hex(), task.Status)
+		w.WriteHeader(http.StatusConflict)
+		fmt.Fprintf(w, "Task %s has status %s.", taskID.Hex(), task.Status)
+		return
+	}
 
 	// Only set the task's worker.ID if it's not already set to the current worker.
 	var setWorkerID *bson.ObjectId
