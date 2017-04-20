@@ -1,6 +1,12 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.0.5 (released 2017-04-20)
+
+- Fixed race condition where a cancelled task could be re-activated
+  by a worker.
+
+
 ## Version 2.0.4 (released 2017-04-07)
 
 - Small dashboard JS tweak: hide workers we haven't seen in over a
