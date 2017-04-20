@@ -6,6 +6,14 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+// Some of the statuses we recognise.
+// TODO Sybren: list all used statuses here as constants, instead of using string literals.
+const statusActive = "active"
+const statusCanceled = "canceled"
+const statusFailed = "failed"
+const statusCompleted = "completed"
+const statusCancelRequested = "cancel-requested"
+
 // Command is an executable part of a Task
 type Command struct {
 	Name     string `bson:"name" json:"name"`
