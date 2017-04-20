@@ -198,7 +198,7 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 		}},
 		// 8: just keep the task info, the "parents_runnable" is no longer needed.
 		M{"$project": M{"task": 1}},
-		// 9: Sort by priority, with highest prio first. If prio is equal, use newest task.
+		// 9: Sort by priority, with highest prio first. If prio is equal, use oldest task.
 		M{"$sort": bson.D{
 			{"task.job_priority", -1},
 			{"task.priority", -1},
