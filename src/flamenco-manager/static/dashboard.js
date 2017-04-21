@@ -8,7 +8,7 @@ function load_workers() {
     $.get('/as-json')
     .done(function(info) {
         // Split workers into "current" and "idle for too long"
-        var too_long = 31 * 24 * 3600000; // 31 days, in milliseconds
+        var too_long = 14 * 24 * 3600000; // in milliseconds
         var current_workers = [];
         var idle_workers = [];
 
