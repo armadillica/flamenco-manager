@@ -285,6 +285,10 @@ func (uc *UpstreamConnection) SendTaskUpdates(updates *[]TaskUpdate) (*TaskUpdat
  */
 func (uc *UpstreamConnection) RefetchTask(task *Task) bool {
 	getURL, err := uc.ResolveUrl("/api/flamenco/tasks/%s", task.ID.Hex())
+	if err != nil {
+		log.Errorf("WARNING: Unable to resolve URL: %s", err)
+		return false
+	}
 	log.Infof("Verifying task with Flamenco Server %s", getURL)
 
 	req, err := http.NewRequest("GET", getURL.String(), nil)
