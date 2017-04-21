@@ -32,10 +32,11 @@ func CreateTaskScheduler(config *Conf, upstream *UpstreamConnection, session *mg
 	}
 }
 
+// ScheduleTask assigns a task to a worker.
 func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-	mongo_sess := ts.session.Copy()
-	defer mongo_sess.Close()
-	db := mongo_sess.DB("")
+	mongoSess := ts.session.Copy()
+	defer mongoSess.Close()
+	db := mongoSess.DB("")
 
 	// Fetch the worker's info
 	projection := bson.M{"platform": 1, "supported_task_types": 1, "address": 1, "nickname": 1}
@@ -50,7 +51,7 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	log.Infof("ScheduleTask: Worker %s asking for a task", worker.Identifier())
 
 	var task *Task
-	var was_changed bool
+	var wasChanged bool
 	for attempt := 0; attempt < 1000; attempt++ {
 		// Fetch the first available task of a supported task type.
 		task = ts.fetchTaskFromQueueOrManager(w, db, worker)
@@ -59,14 +60,14 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 			return
 		}
 
-		was_changed = ts.upstream.RefetchTask(task)
-		if !was_changed {
+		wasChanged = ts.upstream.RefetchTask(task)
+		if !wasChanged {
 			break
 		}
 
 		log.Debugf("Task %s was changed, reexamining queue.", task.ID.Hex())
 	}
-	if was_changed {
+	if wasChanged {
 		log.Errorf("Infinite loop detected, tried 1000 tasks and they all changed...")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -78,12 +79,12 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	// Update the task status to "active", pushing it as a task update to the manager too.
 	task.Status = "active"
 	tupdate := TaskUpdate{TaskID: task.ID, TaskStatus: task.Status}
-	local_updates := bson.M{
+	localUpdates := bson.M{
 		"worker":           worker.Nickname,
 		"worker_id":        worker.ID,
 		"last_worker_ping": UtcNow(),
 	}
-	if err := QueueTaskUpdateWithExtra(&tupdate, db, local_updates); err != nil {
+	if err := QueueTaskUpdateWithExtra(&tupdate, db, localUpdates); err != nil {
 		log.Errorf("Unable to queue task update while assigning task %s to worker %s: %s",
 			task.ID.Hex(), worker.Identifier(), err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -149,9 +150,9 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 	}
 
 	result := aggregationPipelineResult{}
-	tasks_coll := db.C("flamenco_tasks")
+	tasksColl := db.C("flamenco_tasks")
 
-	pipe := tasks_coll.Pipe([]M{
+	pipe := tasksColl.Pipe([]M{
 		// 1: Select only tasks that have a runnable status & acceptable task type.
 		M{"$match": M{
 			"status":    M{"$in": []string{"queued", "claimed-by-manager"}},
