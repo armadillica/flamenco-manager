@@ -44,70 +44,70 @@ func ConnectUpstream(config *Conf, session *mgo.Session) *UpstreamConnection {
 /**
  * Closes the upstream connection by stopping all upload/download loops.
  */
-func (self *UpstreamConnection) Close() {
+func (uc *UpstreamConnection) Close() {
 	log.Debugf("UpstreamConnection: shutting down, waiting for shutdown to complete.")
-	close(self.download_kick) // TODO: maybe move this between closing of done channel and waiting
-	self.closableCloseAndWait()
+	close(uc.download_kick) // TODO: maybe move this between closing of done channel and waiting
+	uc.closableCloseAndWait()
 	log.Info("UpstreamConnection: shutdown complete.")
 }
 
-func (self *UpstreamConnection) KickDownloader(synchronous bool) {
+func (uc *UpstreamConnection) KickDownloader(synchronous bool) {
 	if synchronous {
 		pingback := make(chan bool)
-		self.download_kick <- pingback
+		uc.download_kick <- pingback
 		log.Info("KickDownloader: Waiting for task downloader to finish.")
 
 		// wait for the download to be complete, or the connection to be shut down.
-		self.closableAdd(1)
-		defer self.closableDone()
+		uc.closableAdd(1)
+		defer uc.closableDone()
 
 		for {
 			select {
 			case <-pingback:
 				log.Debugf("KickDownloader: done.")
 				return
-			case <-self.doneChan:
+			case <-uc.doneChan:
 				log.Debugf("KickDownloader: Aborting waiting for task downloader; shutting down.")
 				return
 			}
 		}
 	} else {
 		log.Debugf("KickDownloader: asynchronous kick, just kicking.")
-		self.download_kick <- nil
+		uc.download_kick <- nil
 	}
 }
 
-func (self *UpstreamConnection) download_task_loop() {
+func (uc *UpstreamConnection) download_task_loop() {
 	timer_chan := Timer("download_task_loop",
-		self.config.DownloadTaskSleep,
+		uc.config.DownloadTaskSleep,
 		0,
-		&self.closable,
+		&uc.closable,
 	)
 
 	go func() {
-		mongo_sess := self.session.Copy()
+		mongo_sess := uc.session.Copy()
 		defer mongo_sess.Close()
 
-		self.closableAdd(1)
-		defer self.closableDone()
+		uc.closableAdd(1)
+		defer uc.closableDone()
 		defer log.Info("download_task_loop: Task download goroutine shutting down.")
 
 		for {
 			select {
-			case <-self.doneChan:
+			case <-uc.doneChan:
 				return
 			case _, ok := <-timer_chan:
 				if !ok {
 					return
 				}
 				log.Info("download_task_loop: Going to fetch tasks due to periodic timeout.")
-				download_tasks_from_upstream(self.config, mongo_sess)
-			case pingback_chan, ok := <-self.download_kick:
+				download_tasks_from_upstream(uc.config, mongo_sess)
+			case pingback_chan, ok := <-uc.download_kick:
 				if !ok {
 					return
 				}
 				log.Info("download_task_loop: Going to fetch tasks due to kick.")
-				download_tasks_from_upstream(self.config, mongo_sess)
+				download_tasks_from_upstream(uc.config, mongo_sess)
 				if pingback_chan != nil {
 					pingback_chan <- true
 				}
@@ -227,22 +227,22 @@ func download_tasks_from_upstream(config *Conf, mongo_sess *mgo.Session) {
 	}
 }
 
-func (self *UpstreamConnection) ResolveUrl(relative_url string, a ...interface{}) (*url.URL, error) {
+func (uc *UpstreamConnection) ResolveUrl(relative_url string, a ...interface{}) (*url.URL, error) {
 	rel_url, err := url.Parse(fmt.Sprintf(relative_url, a...))
 	if err != nil {
 		return &url.URL{}, err
 	}
-	url := self.config.Flamenco.ResolveReference(rel_url)
+	url := uc.config.Flamenco.ResolveReference(rel_url)
 
 	return url, nil
 }
 
-func (self *UpstreamConnection) SendJson(logprefix, method string, url *url.URL,
+func (uc *UpstreamConnection) SendJson(logprefix, method string, url *url.URL,
 	payload interface{},
 	responsehandler func(resp *http.Response, body []byte) error,
 ) error {
 	authenticate := func(req *http.Request) {
-		req.SetBasicAuth(self.config.ManagerSecret, "")
+		req.SetBasicAuth(uc.config.ManagerSecret, "")
 	}
 
 	return SendJson(logprefix, method, url, payload, authenticate, responsehandler)
@@ -252,9 +252,9 @@ func (self *UpstreamConnection) SendJson(logprefix, method string, url *url.URL,
  * Performs a POST to /api/flamenco/managers/{manager-id}/task-update-batch to
  * send a batch of task updates to the Server.
  */
-func (self *UpstreamConnection) SendTaskUpdates(updates *[]TaskUpdate) (*TaskUpdateResponse, error) {
-	url, err := self.ResolveUrl("/api/flamenco/managers/%s/task-update-batch",
-		self.config.ManagerId)
+func (uc *UpstreamConnection) SendTaskUpdates(updates *[]TaskUpdate) (*TaskUpdateResponse, error) {
+	url, err := uc.ResolveUrl("/api/flamenco/managers/%s/task-update-batch",
+		uc.config.ManagerId)
 	if err != nil {
 		panic(fmt.Sprintf("SendTaskUpdates: unable to construct URL: %s\n", err))
 	}
@@ -268,7 +268,7 @@ func (self *UpstreamConnection) SendTaskUpdates(updates *[]TaskUpdate) (*TaskUpd
 		}
 		return nil
 	}
-	err = self.SendJson("SendTaskUpdates", "POST", url, updates, parse_response)
+	err = uc.SendJson("SendTaskUpdates", "POST", url, updates, parse_response)
 
 	return &response, err
 }
@@ -283,8 +283,8 @@ func (self *UpstreamConnection) SendTaskUpdates(updates *[]TaskUpdate) (*TaskUpd
  * If the task was untouched, this function returns false.
  * If it was changed or removed, this function return true.
  */
-func (self *UpstreamConnection) RefetchTask(task *Task) bool {
-	get_url, err := self.ResolveUrl("/api/flamenco/tasks/%s", task.ID.Hex())
+func (uc *UpstreamConnection) RefetchTask(task *Task) bool {
+	get_url, err := uc.ResolveUrl("/api/flamenco/tasks/%s", task.ID.Hex())
 	log.Infof("Verifying task with Flamenco Server %s", get_url)
 
 	req, err := http.NewRequest("GET", get_url.String(), nil)
@@ -292,7 +292,7 @@ func (self *UpstreamConnection) RefetchTask(task *Task) bool {
 		log.Errorf("WARNING: Unable to create GET request: %s", err)
 		return false
 	}
-	req.SetBasicAuth(self.config.ManagerSecret, "")
+	req.SetBasicAuth(uc.config.ManagerSecret, "")
 	req.Header["If-None-Match"] = []string{task.Etag}
 
 	client := &http.Client{}
@@ -351,7 +351,7 @@ func (self *UpstreamConnection) RefetchTask(task *Task) bool {
 	// save the task to the queue.
 	log.Infof("Cached task %s was changed on the Server, status=%s, priority=%d.",
 		task.ID.Hex(), new_task.Status, new_task.Priority)
-	tasks_coll := self.session.DB("").C("flamenco_tasks")
+	tasks_coll := uc.session.DB("").C("flamenco_tasks")
 	tasks_coll.UpdateId(task.ID,
 		bson.M{"$set": new_task})
 
