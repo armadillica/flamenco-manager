@@ -48,7 +48,7 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 		return
 	}
 	worker.Seen(&r.Request, db)
-	log.Infof("ScheduleTask: Worker %s asking for a task", worker.Identifier())
+	log.Debugf("ScheduleTask: Worker %s asking for a task", worker.Identifier())
 
 	var task *Task
 	var wasChanged bool
@@ -211,7 +211,7 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 
 	err := pipe.One(&result)
 	if err == mgo.ErrNotFound {
-		log.Infof("TaskScheduler: no more tasks available for %s", worker.Identifier())
+		log.Debugf("TaskScheduler: no more tasks available for %s", worker.Identifier())
 		ts.maybeKickTaskDownloader()
 		w.WriteHeader(204)
 		return nil
