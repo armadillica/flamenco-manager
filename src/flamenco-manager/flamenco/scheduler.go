@@ -231,7 +231,7 @@ func (ts *TaskScheduler) maybeKickTaskDownloader() {
 		return
 	}
 
-	log.Infof("TaskScheduler: kicking task downloader")
+	log.Debug("TaskScheduler: kicking task downloader")
 	ts.lastUpstreamCheck = time.Now()
 	ts.upstream.KickDownloader(false)
 }

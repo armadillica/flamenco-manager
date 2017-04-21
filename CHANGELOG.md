@@ -5,6 +5,7 @@ Changelog for Flamenco Manager
 
 - Reduced logging of workers requesting tasks, as we now have a nice dashboard
   to show the status.
+- Reduced logging of task downloading.
 
 
 ## Version 2.0.5 (released 2017-04-20)

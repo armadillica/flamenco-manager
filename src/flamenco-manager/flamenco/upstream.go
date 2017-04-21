@@ -100,13 +100,13 @@ func (uc *UpstreamConnection) download_task_loop() {
 				if !ok {
 					return
 				}
-				log.Info("download_task_loop: Going to fetch tasks due to periodic timeout.")
+				log.Debugf("download_task_loop: Going to fetch tasks due to periodic timeout.")
 				download_tasks_from_upstream(uc.config, mongo_sess)
 			case pingback_chan, ok := <-uc.download_kick:
 				if !ok {
 					return
 				}
-				log.Info("download_task_loop: Going to fetch tasks due to kick.")
+				log.Debugf("download_task_loop: Going to fetch tasks due to kick.")
 				download_tasks_from_upstream(uc.config, mongo_sess)
 				if pingback_chan != nil {
 					pingback_chan <- true
@@ -158,7 +158,7 @@ func download_tasks_from_upstream(config *Conf, mongo_sess *mgo.Session) {
 		return
 	}
 	if resp.StatusCode == http.StatusNoContent {
-		log.Info("No tasks for us; sleeping.")
+		log.Debug("No tasks for us; sleeping.")
 		return
 	}
 	if resp.StatusCode >= 300 {
