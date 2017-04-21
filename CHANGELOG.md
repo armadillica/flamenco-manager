@@ -1,6 +1,12 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.0.6 (released 2017-04-21)
+
+- Reduced logging of workers requesting tasks, as we now have a nice dashboard
+  to show the status.
+
+
 ## Version 2.0.5 (released 2017-04-20)
 
 - Fixed race condition where a cancelled task could be re-activated
