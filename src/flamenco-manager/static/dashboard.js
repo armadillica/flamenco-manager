@@ -12,6 +12,8 @@ function load_workers() {
         var current_workers = [];
         var idle_workers = [];
 
+        $('#managerversion').text(info.version);
+
         // Make sure we can iterate over the list.
         if (typeof info.workers == 'undefined' || info.workers == null) {
             info.workers = [];
