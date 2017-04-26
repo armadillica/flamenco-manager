@@ -1,6 +1,11 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.0.7 (in development)
+
+- Added 'Kick task downloader' button to dashboard.
+
+
 ## Version 2.0.6 (released 2017-04-21)
 
 - Reduced logging of workers requesting tasks, as we now have a nice dashboard
