@@ -50,7 +50,7 @@ func (sn *StartupNotifier) Go() {
 		NumberOfWorkers:    0,
 	}
 
-	url, err := sn.upstream.ResolveUrl("/api/flamenco/managers/%s/startup", sn.config.ManagerId)
+	url, err := sn.upstream.ResolveURL("/api/flamenco/managers/%s/startup", sn.config.ManagerId)
 	if err != nil {
 		panic(fmt.Sprintf("SendStartupNotification: unable to construct URL: %s\n", err))
 	}
@@ -73,7 +73,7 @@ func (sn *StartupNotifier) Go() {
 
 			// Send the notification
 			notification.NumberOfWorkers = WorkerCount(db)
-			err := sn.upstream.SendJson("SendStartupNotification", "POST", url, &notification, nil)
+			err := sn.upstream.SendJSON("SendStartupNotification", "POST", url, &notification, nil)
 			if err == nil {
 				// Success!
 				sn.closableCloseNotWait() // the timer will close the loop.

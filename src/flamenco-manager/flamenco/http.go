@@ -39,7 +39,7 @@ func DecodeJson(w http.ResponseWriter, r io.Reader, document interface{},
  * :param responsehandler: is called when a non-error response has been read.
  *    May be nil.
  */
-func SendJson(logprefix, method string, url *url.URL,
+func SendJSON(logprefix, method string, url *url.URL,
 	payload interface{},
 	tweakrequest func(req *http.Request),
 	responsehandler func(resp *http.Response, body []byte) error,

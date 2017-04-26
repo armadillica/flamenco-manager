@@ -20,15 +20,17 @@ import (
 // versions older than 2.0.1.
 const defaultTaskType = "unknown"
 
+// UpstreamConnection represents a connection to an upstream Flamenco Server.
 type UpstreamConnection struct {
 	closable
 	config  *Conf
 	session *mgo.Session
 
 	// Send any boolean here to kick the task downloader into downloading new tasks.
-	download_kick chan chan bool
+	downloadKick chan chan bool
 }
 
+// ConnectUpstream creates a new UpstreamConnection object and starts the task download loop.
 func ConnectUpstream(config *Conf, session *mgo.Session) *UpstreamConnection {
 	upconn := UpstreamConnection{
 		makeClosable(),
@@ -41,20 +43,19 @@ func ConnectUpstream(config *Conf, session *mgo.Session) *UpstreamConnection {
 	return &upconn
 }
 
-/**
- * Closes the upstream connection by stopping all upload/download loops.
- */
+// Close gracefully closes the upstream connection by stopping all upload/download loops.
 func (uc *UpstreamConnection) Close() {
 	log.Debugf("UpstreamConnection: shutting down, waiting for shutdown to complete.")
-	close(uc.download_kick) // TODO: maybe move this between closing of done channel and waiting
+	close(uc.downloadKick) // TODO: maybe move this between closing of done channel and waiting
 	uc.closableCloseAndWait()
 	log.Info("UpstreamConnection: shutdown complete.")
 }
 
+// KickDownloader fetches new tasks from the Flamenco Server.
 func (uc *UpstreamConnection) KickDownloader(synchronous bool) {
 	if synchronous {
 		pingback := make(chan bool)
-		uc.download_kick <- pingback
+		uc.downloadKick <- pingback
 		log.Info("KickDownloader: Waiting for task downloader to finish.")
 
 		// wait for the download to be complete, or the connection to be shut down.
@@ -73,7 +74,7 @@ func (uc *UpstreamConnection) KickDownloader(synchronous bool) {
 		}
 	} else {
 		log.Debugf("KickDownloader: asynchronous kick, just kicking.")
-		uc.download_kick <- nil
+		uc.downloadKick <- nil
 	}
 }
 
@@ -102,7 +103,7 @@ func (uc *UpstreamConnection) downloadTaskLoop() {
 				}
 				log.Debugf("downloadTaskLoop: Going to fetch tasks due to periodic timeout.")
 				downloadTasksFromUpstream(uc.config, mongoSess)
-			case pingbackChan, ok := <-uc.download_kick:
+			case pingbackChan, ok := <-uc.downloadKick:
 				if !ok {
 					return
 				}
@@ -162,9 +163,9 @@ func downloadTasksFromUpstream(config *Conf, mongoSess *mgo.Session) {
 		return
 	}
 	if resp.StatusCode >= 300 {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Errorf("Error %d GETing %s: %s", resp.StatusCode, getURL, err)
+		body, ioErr := ioutil.ReadAll(resp.Body)
+		if ioErr != nil {
+			log.Errorf("Error %d GETing %s: %s", resp.StatusCode, getURL, ioErr)
 			return
 		}
 		log.Errorf("Error %d GETing %s: %s", resp.StatusCode, getURL, body)
@@ -219,16 +220,17 @@ func downloadTasksFromUpstream(config *Conf, mongoSess *mgo.Session) {
 	}
 
 	// Check if we had a Last-Modified header, since we need to remember that.
-	last_modified := resp.Header.Get("X-Flamenco-Last-Updated")
-	if last_modified != "" {
-		log.Info("Last modified task was at ", last_modified)
-		settings.DepsgraphLastModified = &last_modified
+	lastModified := resp.Header.Get("X-Flamenco-Last-Updated")
+	if lastModified != "" {
+		log.Info("Last modified task was at ", lastModified)
+		settings.DepsgraphLastModified = &lastModified
 		SaveSettings(db, settings)
 	}
 }
 
-func (uc *UpstreamConnection) ResolveUrl(relative_url string, a ...interface{}) (*url.URL, error) {
-	relURL, err := url.Parse(fmt.Sprintf(relative_url, a...))
+// ResolveURL returns the given URL relative to the base URL of the upstream server, as absolute URL.
+func (uc *UpstreamConnection) ResolveURL(relativeURL string, a ...interface{}) (*url.URL, error) {
+	relURL, err := url.Parse(fmt.Sprintf(relativeURL, a...))
 	if err != nil {
 		return &url.URL{}, err
 	}
@@ -237,7 +239,8 @@ func (uc *UpstreamConnection) ResolveUrl(relative_url string, a ...interface{}) 
 	return url, nil
 }
 
-func (uc *UpstreamConnection) SendJson(logprefix, method string, url *url.URL,
+// SendJSON sends a JSON document to the given URL.
+func (uc *UpstreamConnection) SendJSON(logprefix, method string, url *url.URL,
 	payload interface{},
 	responsehandler func(resp *http.Response, body []byte) error,
 ) error {
@@ -245,15 +248,13 @@ func (uc *UpstreamConnection) SendJson(logprefix, method string, url *url.URL,
 		req.SetBasicAuth(uc.config.ManagerSecret, "")
 	}
 
-	return SendJson(logprefix, method, url, payload, authenticate, responsehandler)
+	return SendJSON(logprefix, method, url, payload, authenticate, responsehandler)
 }
 
-/**
- * Performs a POST to /api/flamenco/managers/{manager-id}/task-update-batch to
- * send a batch of task updates to the Server.
- */
+// SendTaskUpdates performs a POST to /api/flamenco/managers/{manager-id}/task-update-batch to
+// send a batch of task updates to the Server.
 func (uc *UpstreamConnection) SendTaskUpdates(updates *[]TaskUpdate) (*TaskUpdateResponse, error) {
-	url, err := uc.ResolveUrl("/api/flamenco/managers/%s/task-update-batch",
+	url, err := uc.ResolveURL("/api/flamenco/managers/%s/task-update-batch",
 		uc.config.ManagerId)
 	if err != nil {
 		panic(fmt.Sprintf("SendTaskUpdates: unable to construct URL: %s\n", err))
@@ -268,23 +269,21 @@ func (uc *UpstreamConnection) SendTaskUpdates(updates *[]TaskUpdate) (*TaskUpdat
 		}
 		return nil
 	}
-	err = uc.SendJson("SendTaskUpdates", "POST", url, updates, parseResponse)
+	err = uc.SendJSON("SendTaskUpdates", "POST", url, updates, parseResponse)
 
 	return &response, err
 }
 
-/**
- * Re-fetches a task from the Server, but only if its etag changed.
- * - If the etag changed, the differences between the old and new status are handled.
- * - If the Server cannot be reached, this error is ignored and the task is untouched.
- * - If the Server returns an error code other than 500 Internal Server Error,
- *   (Forbidden, Not Found, etc.) the task is removed from the local task queue.
- *
- * If the task was untouched, this function returns false.
- * If it was changed or removed, this function return true.
- */
+// RefetchTask re-fetches a task from the Server, but only if its etag changed.
+// - If the etag changed, the differences between the old and new status are handled.
+// - If the Server cannot be reached, this error is ignored and the task is untouched.
+// - If the Server returns an error code other than 500 Internal Server Error,
+//   (Forbidden, Not Found, etc.) the task is removed from the local task queue.
+//
+// If the task was untouched, this function returns false.
+// If it was changed or removed, this function return true.
 func (uc *UpstreamConnection) RefetchTask(task *Task) bool {
-	getURL, err := uc.ResolveUrl("/api/flamenco/tasks/%s", task.ID.Hex())
+	getURL, err := uc.ResolveURL("/api/flamenco/tasks/%s", task.ID.Hex())
 	if err != nil {
 		log.Errorf("WARNING: Unable to resolve URL: %s", err)
 		return false
