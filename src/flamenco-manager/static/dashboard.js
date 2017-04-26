@@ -191,3 +191,21 @@ function time_diff(timestamp) {
 
     return as_date;
 }
+
+function downloadkick() {
+    var button = $(this);
+    button.fadeOut();
+    $.get('/kick')
+    .done(function() {
+        button.fadeIn();
+    })
+    .fail(function(err) {
+        button.text('Error, see console.');
+        button.fadeIn();
+        console.log(err);
+    });
+}
+
+$(function() {
+    $('#downloadkick').on('click', downloadkick);
+})

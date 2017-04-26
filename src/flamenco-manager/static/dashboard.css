@@ -35,3 +35,12 @@ span.idle-worker-name:not(:first-child)::before {
     cursor: help;
     border-bottom: 1px dashed #ddd;
 }
+
+#statusheading {
+    position: relative;
+}
+button#downloadkick {
+    position: absolute;
+    top: 0.75ex;
+    right: 1ex;
+}
