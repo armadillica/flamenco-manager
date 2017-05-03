@@ -7,9 +7,24 @@ Author: Sybren A. Stüvel <sybren@blender.studio>
 
 ## Getting started
 
-Install MongoDB, copy `flamenco-manager-example.yaml` to `flamenco-manager.yaml`, edit the
-file to suit your needs, then start Flamenco Manager. Connect a browser, and you should
-see a (probably empty) status dashboard.
+Install [MongoDB 3.2 or newer](https://docs.mongodb.com/manual/administration/install-community/),
+copy `flamenco-manager-example.yaml` to `flamenco-manager.yaml` and edit the file to suit your needs
+(see below), then start Flamenco Manager. Connect a browser, and you should see a (probably empty)
+status dashboard.
+
+## Configuration
+
+This describes the minimal changes you'll have to do to get Flamenco Manager running.
+
+- Copy `flamenco-manager-example.yaml` to `flamenco-manager.yaml` if you haven't done that yet.
+- Update `own_url` to point to the IP address or hostname by which your machine can be reached
+  by the workers.
+- Set the `manager_id` and `manager_secret` to the values obtained from the Blender Cloud
+  administrators.
+- Either generate TLS certificates (TLS is the we-are-no-longer-living-in-the-90ies-name for
+  SSL), or remove the `tlskey` and `tlscert` options from your `flamenco-manager.yaml` file.
+- Update the `variables` for your render farm. The `blender` variable should point to the
+  Blender executable where it can be found *on the workers*.
 
 
 ## CLI arguments
@@ -19,7 +34,7 @@ Flamenco Manager accepts the following CLI arguments:
 - `-debug`: Enable debug-level logging
 - `-verbose`: Enable info-level logging (no-op if `-debug` is also given)
 - `-json`: Log in JSON format, instead of plain text
-- `cleanslate`: Start with a clean slate; erases all tasks from the local MongoDB,
+- `-cleanslate`: Start with a clean slate; erases all tasks from the local MongoDB,
   then exits Flamenco Manager. This can be run while another Flamenco Manager is
   running, but this scenario has not been well-tested yet.
 
