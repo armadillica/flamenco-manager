@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -21,6 +22,8 @@ type TaskScheduler struct {
 	/* Timestamp of the last time we kicked the task downloader because there weren't any
 	 * tasks left for workers. */
 	lastUpstreamCheck time.Time
+
+	mutex *sync.Mutex
 }
 
 func CreateTaskScheduler(config *Conf, upstream *UpstreamConnection, session *mgo.Session) *TaskScheduler {
@@ -29,6 +32,7 @@ func CreateTaskScheduler(config *Conf, upstream *UpstreamConnection, session *mg
 		upstream,
 		session,
 		time.Time{},
+		new(sync.Mutex),
 	}
 }
 
@@ -151,6 +155,9 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 
 	result := aggregationPipelineResult{}
 	tasksColl := db.C("flamenco_tasks")
+
+	ts.mutex.Lock()
+	defer ts.mutex.Unlock()
 
 	pipe := tasksColl.Pipe([]M{
 		// 1: Select only tasks that have a runnable status & acceptable task type.

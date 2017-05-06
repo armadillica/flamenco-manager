@@ -1,6 +1,12 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.0.8 (in development)
+
+- Use mutex in scheduler to avoid race condition.
+
+
+
 ## Version 2.0.7 (released 2017-04-26)
 
 - Added 'Kick task downloader' button to dashboard.
