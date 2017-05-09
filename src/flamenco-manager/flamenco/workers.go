@@ -224,7 +224,7 @@ func WorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest,
 		response.Reason = fmt.Sprintf("task %s in non-runnable status %s", taskID.Hex(), task.Status)
 	} else {
 		response.MayKeepRunning = true
-		WorkerPingedTask(&worker.ID, taskID, db)
+		WorkerPingedTask(worker.ID, taskID, "", db)
 	}
 
 	// Send the response
@@ -252,19 +252,35 @@ func IsRunnableTaskStatus(status string) bool {
 // WorkerPingedTask marks the task as pinged by the worker.
 // If worker_id is not nil, sets the worker_id field of the task. Otherwise doesn't
 // touch that field and only updates last_worker_ping.
-func WorkerPingedTask(workerID *bson.ObjectId, taskID bson.ObjectId, db *mgo.Database) {
+func WorkerPingedTask(workerID bson.ObjectId, taskID bson.ObjectId, taskStatus string, db *mgo.Database) {
 	tasksColl := db.C("flamenco_tasks")
+	workersColl := db.C("flamenco_workers")
 
+	now := UtcNow()
 	updates := bson.M{
-		"last_worker_ping": UtcNow(),
-	}
-	if workerID != nil {
-		updates["worker_id"] = *workerID
+		"last_worker_ping": now,
+		"worker_id":        workerID,
 	}
 
+	log.Debugf("WorkerPingedTask: updating task %s by setting %v", taskID, updates)
 	if err := tasksColl.UpdateId(taskID, bson.M{"$set": updates}); err != nil {
 		log.Errorf("WorkerPingedTask: ERROR unable to update last_worker_ping on task %s: %s",
 			taskID.Hex(), err)
+		return
+	}
+
+	// Also update this worker to reflect the last time it pinged a task.
+	updates = bson.M{
+		"current_task_updated": now,
+	}
+	if len(taskStatus) > 0 {
+		updates["current_task_status"] = taskStatus
+	}
+	log.Debugf("WorkerPingedTask: updating worker %s by setting %v", workerID, updates)
+	if err := workersColl.UpdateId(workerID, bson.M{"$set": updates}); err != nil {
+		log.Errorf("WorkerPingedTask: ERROR unable to update current_task_updated on worker %s: %s",
+			workerID.Hex(), err)
+		return
 	}
 }
 

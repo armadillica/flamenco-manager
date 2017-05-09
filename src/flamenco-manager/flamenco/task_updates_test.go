@@ -128,7 +128,7 @@ func (s *TaskUpdatesTestSuite) TestMultipleWorkersForOneTask(c *check.C) {
 
 	// Because of this update, the task should be assigned to worker 1
 	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
-	assert.Equal(c, task1.WorkerID, task1.WorkerID)
+	assert.Equal(c, *task1.WorkerID, worker1.ID)
 	assert.Equal(c, task1.Activity, "doing stuff by worker1")
 
 	// An update by worker 2 should fail.
@@ -141,7 +141,7 @@ func (s *TaskUpdatesTestSuite) TestMultipleWorkersForOneTask(c *check.C) {
 
 	// The task should still be assigned to worker 1
 	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
-	assert.Equal(c, task1.WorkerID, task1.WorkerID)
+	assert.Equal(c, *task1.WorkerID, worker1.ID)
 	assert.Equal(c, task1.Activity, "doing stuff by worker1")
 }
 
@@ -175,7 +175,87 @@ func (s *TaskUpdatesTestSuite) TestUpdateForCancelRequestedTask(c *check.C) {
 	assert.Equal(c, http.StatusConflict, respRec.Code)
 
 	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
-	assert.Equal(c, task1.WorkerID, task1.WorkerID)
+	assert.Equal(c, *task1.WorkerID, worker1.ID)
 	assert.Equal(c, task1.Status, "cancel-requested")
 	assert.Equal(c, task1.Activity, "Cancel requested by unittest")
+}
+
+func (s *TaskUpdatesTestSuite) TestTaskRescheduling(c *check.C) {
+	tasksColl := s.db.C("flamenco_tasks")
+
+	task1 := ConstructTestTask("1aaaaaaaaaaaaaaaaaaaaaaa", "testing")
+	assert.Nil(c, tasksColl.Insert(task1))
+
+	worker1 := Worker{
+		Platform:           "linux",
+		Nickname:           "worker1",
+		SupportedTaskTypes: []string{"testing"},
+	}
+	worker2 := Worker{
+		Platform:           "linux",
+		Nickname:           "worker2",
+		SupportedTaskTypes: []string{"testing"},
+	}
+	assert.Nil(c, StoreNewWorker(&worker1, s.db))
+	assert.Nil(c, StoreNewWorker(&worker2, s.db))
+
+	taskSched := CreateTaskScheduler(&s.config, s.upstream, s.session)
+
+	tupdate := TaskUpdate{
+		TaskID:     task1.ID,
+		TaskStatus: "active",
+		Activity:   "doing stuff by worker1",
+	}
+	payloadBytes, err := json.Marshal(tupdate)
+	assert.Nil(c, err)
+	respRec, ar := WorkerTestRequestWithBody(worker1.ID, bytes.NewBuffer(payloadBytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
+	QueueTaskUpdateFromWorker(respRec, ar, s.db, task1.ID)
+	assert.Equal(c, http.StatusNoContent, respRec.Code)
+
+	// Because of this update, the task should be assigned to worker 1.
+	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
+	assert.Equal(c, worker1.ID, *task1.WorkerID)
+	assert.Equal(c, "doing stuff by worker1", task1.Activity)
+
+	// Worker 1 signs off, so task becomes available again for scheduling to worker 2.
+	respRec, ar = WorkerTestRequest(worker1.ID, "POST", "/sign-off")
+	WorkerSignOff(respRec, ar, s.db)
+	respRec, ar = WorkerTestRequest(worker2.ID, "POST", "/task")
+	taskSched.ScheduleTask(respRec, ar)
+	assert.Equal(c, http.StatusOK, respRec.Code)
+
+	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
+	assert.Equal(c, "active", task1.Status)
+
+	// Sleep a bit before we update the task again, so that we can clearly see a difference
+	// in update timestamps.
+	time.Sleep(250 * time.Millisecond)
+	timestampBetweenUpdates := time.Now().UTC()
+	time.Sleep(250 * time.Millisecond)
+
+	// An update by worker 2 should be accepted.
+	tupdate.Activity = "doing stuff by worker2"
+	tupdate.TaskStatus = "failed"
+	payloadBytes, err = json.Marshal(tupdate)
+	assert.Nil(c, err)
+	respRec, ar = WorkerTestRequestWithBody(worker2.ID, bytes.NewBuffer(payloadBytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
+	QueueTaskUpdateFromWorker(respRec, ar, s.db, task1.ID)
+	assert.Equal(c, http.StatusNoContent, respRec.Code)
+
+	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
+	assert.Equal(c, *task1.WorkerID, worker2.ID)
+	assert.Equal(c, task1.Status, "failed")
+	assert.Equal(c, task1.Activity, "doing stuff by worker2")
+
+	// The workers now should have different CurrentTaskUpdated fields.
+	workersColl := s.db.C("flamenco_workers")
+	assert.Nil(c, workersColl.FindId(worker1.ID).One(&worker1))
+	assert.Nil(c, workersColl.FindId(worker2.ID).One(&worker2))
+
+	assert.NotNil(c, worker1.CurrentTaskUpdated)
+	assert.NotNil(c, worker2.CurrentTaskUpdated)
+	assert.True(c, worker1.CurrentTaskUpdated.Before(timestampBetweenUpdates))
+	assert.True(c, worker2.CurrentTaskUpdated.After(timestampBetweenUpdates))
+	assert.Equal(c, "active", worker1.CurrentTaskStatus)
+	assert.Equal(c, "failed", worker2.CurrentTaskStatus)
 }

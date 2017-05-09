@@ -6,13 +6,18 @@ package flamenco
 import (
 	"testing"
 
+	log "github.com/Sirupsen/logrus"
+
 	check "gopkg.in/check.v1"
 	"gopkg.in/mgo.v2/bson"
 )
 
 // Hook up gocheck into the "go test" runner.
 // You only need one of these per package, or tests will run multiple times.
-func TestWithGocheck(t *testing.T) { check.TestingT(t) }
+func TestWithGocheck(t *testing.T) {
+	log.SetLevel(log.DebugLevel)
+	check.TestingT(t)
+}
 
 func ConstructTestTask(taskID, taskType string) Task {
 	return ConstructTestTaskWithPrio(taskID, taskType, 50)

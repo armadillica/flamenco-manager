@@ -63,8 +63,8 @@ func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedReque
 		return
 	}
 	if task.WorkerID != nil && *task.WorkerID != worker.ID {
-		log.Warningf("%s QueueTaskUpdateFromWorker: task %s update rejected from %s (%s), task is assigned to %s",
-			r.RemoteAddr, taskID.Hex(), worker.ID.Hex(), worker.Identifier(), task.WorkerID.Hex())
+		log.Warningf("%s QueueTaskUpdateFromWorker: task %s update rejected from %s (%s), task has status \"%s\" and is assigned to %s",
+			r.RemoteAddr, taskID.Hex(), worker.ID.Hex(), worker.Identifier(), task.Status, task.WorkerID.Hex())
 		w.WriteHeader(http.StatusConflict)
 		fmt.Fprintf(w, "Task %s is assigned to another worker.", taskID.Hex())
 		return
@@ -78,12 +78,7 @@ func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedReque
 		return
 	}
 
-	// Only set the task's worker.ID if it's not already set to the current worker.
-	var setWorkerID *bson.ObjectId
-	if task.WorkerID == nil {
-		setWorkerID = &worker.ID
-	}
-	WorkerPingedTask(setWorkerID, tupdate.TaskID, db)
+	WorkerPingedTask(worker.ID, tupdate.TaskID, tupdate.TaskStatus, db)
 
 	if err := QueueTaskUpdate(&tupdate, db); err != nil {
 		log.Warningf("%s: %s", worker.Identifier(), err)

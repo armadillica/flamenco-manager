@@ -6,6 +6,9 @@ Changelog for Flamenco Manager
 - Use mutex in scheduler to avoid race condition.
 - Clear the worker's current task upon sign-on. This makes the dasboard less confusing
   when the worker's task was rescheduled to another worker.
+- On the dashboard, for the current/task of a worker, show the last timestamp/status
+  that this particular worker worked on it (rather than showing the last timestamp/status
+  of the task itself)
 
 
 ## Version 2.0.7 (released 2017-04-26)
