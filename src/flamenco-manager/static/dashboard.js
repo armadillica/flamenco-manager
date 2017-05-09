@@ -61,9 +61,7 @@ function load_workers() {
         $section.append($dl);
 
         // Construct the worker list.
-        var $section = $('#workers');
-        $section.html('');
-
+        var $tbody = $('<tbody id="workers">');
         for (worker of current_workers) {
             var $row = $('<tr>')
                 .attr('id', worker._id)
@@ -73,18 +71,7 @@ function load_workers() {
             if (typeof status_class != 'undefined') $row.addClass(status_class);
 
             $row.append($('<td>').text(worker.nickname));
-            $row.append($('<td>').text(worker._id));
-            $row.append($('<td>').text(worker.address));
             $row.append($('<td>').text(worker.status || '-none-').addClass('status-' + worker.status));
-
-            var software = '-unknown-';
-            if (worker.software) {
-                /* 'Flamenco-Worker' is the default software, so don't mention that;
-                 * do keep the version number, though. */
-                software = worker.software.replace('Flamenco-Worker/', '');
-            }
-            $row.append($('<td>').text(software));
-            // $row.append($('<td>').text(worker.platform));
 
             $task_td = $('<td>');
             if (typeof worker.current_task != 'undefined') {
@@ -111,9 +98,21 @@ function load_workers() {
                 .text(time_diff(worker.last_activity))
                 .attr('title', new Date(worker.last_activity)));
             // $dl.append($('<dd>').text(worker.supported_job_types.join(', ')));
+            $row.append($('<td>').text(worker._id));
+            $row.append($('<td>').text(worker.address));
 
-            $section.append($row);
+            var software = '-unknown-';
+            if (worker.software) {
+                /* 'Flamenco-Worker' is the default software, so don't mention that;
+                 * do keep the version number, though. */
+                software = worker.software.replace('Flamenco-Worker/', '');
+            }
+            $row.append($('<td>').text(software));
+            // $row.append($('<td>').text(worker.platform));
+
+            $tbody.append($row);
         }
+        $('#workers').replaceWith($tbody);
 
         // Everything went fine, let's try it again soon.
         setTimeout(load_workers, 2000);
