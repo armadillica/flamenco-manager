@@ -41,14 +41,14 @@ func (s *TaskUpdatesTestSuite) TearDownTest(c *check.C) {
 }
 
 func (s *TaskUpdatesTestSuite) TestCancelRunningTasks(t *check.C) {
-	tasks_coll := s.db.C("flamenco_tasks")
+	tasksColl := s.db.C("flamenco_tasks")
 
 	task1 := ConstructTestTask("1aaaaaaaaaaaaaaaaaaaaaaa", "testing")
-	if err := tasks_coll.Insert(task1); err != nil {
+	if err := tasksColl.Insert(task1); err != nil {
 		t.Fatal("Unable to insert test task", err)
 	}
 	task2 := ConstructTestTask("2aaaaaaaaaaaaaaaaaaaaaaa", "sleeping")
-	if err := tasks_coll.Insert(task2); err != nil {
+	if err := tasksColl.Insert(task2); err != nil {
 		t.Fatal("Unable to insert test task 2", err)
 	}
 
@@ -89,18 +89,18 @@ func (s *TaskUpdatesTestSuite) TestCancelRunningTasks(t *check.C) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Check that one task was canceled and the other was not.
-	task_db := Task{}
-	assert.Nil(t, tasks_coll.FindId(task1.ID).One(&task_db))
-	assert.Equal(t, "queued", task_db.Status)
-	assert.Nil(t, tasks_coll.FindId(task2.ID).One(&task_db))
-	assert.Equal(t, "canceled", task_db.Status)
+	taskDb := Task{}
+	assert.Nil(t, tasksColl.FindId(task1.ID).One(&taskDb))
+	assert.Equal(t, "queued", taskDb.Status)
+	assert.Nil(t, tasksColl.FindId(task2.ID).One(&taskDb))
+	assert.Equal(t, "canceled", taskDb.Status)
 }
 
 func (s *TaskUpdatesTestSuite) TestMultipleWorkersForOneTask(c *check.C) {
-	tasks_coll := s.db.C("flamenco_tasks")
+	tasksColl := s.db.C("flamenco_tasks")
 
 	task1 := ConstructTestTask("1aaaaaaaaaaaaaaaaaaaaaaa", "testing")
-	assert.Nil(c, tasks_coll.Insert(task1))
+	assert.Nil(c, tasksColl.Insert(task1))
 
 	worker1 := Worker{
 		Platform:           "linux",
@@ -120,33 +120,33 @@ func (s *TaskUpdatesTestSuite) TestMultipleWorkersForOneTask(c *check.C) {
 		TaskID:   task1.ID,
 		Activity: "doing stuff by worker1",
 	}
-	payload_bytes, err := json.Marshal(tupdate)
+	payloadBytes, err := json.Marshal(tupdate)
 	assert.Nil(c, err)
-	resp_rec, ar := WorkerTestRequestWithBody(worker1.ID, bytes.NewBuffer(payload_bytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
-	QueueTaskUpdateFromWorker(resp_rec, ar, s.db, task1.ID)
-	assert.Equal(c, 204, resp_rec.Code)
+	respRec, ar := WorkerTestRequestWithBody(worker1.ID, bytes.NewBuffer(payloadBytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
+	QueueTaskUpdateFromWorker(respRec, ar, s.db, task1.ID)
+	assert.Equal(c, 204, respRec.Code)
 
 	// Because of this update, the task should be assigned to worker 1
-	assert.Nil(c, tasks_coll.FindId(task1.ID).One(&task1))
+	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
 	assert.Equal(c, task1.WorkerID, task1.WorkerID)
 	assert.Equal(c, task1.Activity, "doing stuff by worker1")
 
 	// An update by worker 2 should fail.
 	tupdate.Activity = "doing stuff by worker2"
-	payload_bytes, err = json.Marshal(tupdate)
+	payloadBytes, err = json.Marshal(tupdate)
 	assert.Nil(c, err)
-	resp_rec, ar = WorkerTestRequestWithBody(worker2.ID, bytes.NewBuffer(payload_bytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
-	QueueTaskUpdateFromWorker(resp_rec, ar, s.db, task1.ID)
-	assert.Equal(c, http.StatusConflict, resp_rec.Code)
+	respRec, ar = WorkerTestRequestWithBody(worker2.ID, bytes.NewBuffer(payloadBytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
+	QueueTaskUpdateFromWorker(respRec, ar, s.db, task1.ID)
+	assert.Equal(c, http.StatusConflict, respRec.Code)
 
 	// The task should still be assigned to worker 1
-	assert.Nil(c, tasks_coll.FindId(task1.ID).One(&task1))
+	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
 	assert.Equal(c, task1.WorkerID, task1.WorkerID)
 	assert.Equal(c, task1.Activity, "doing stuff by worker1")
 }
 
 func (s *TaskUpdatesTestSuite) TestUpdateForCancelRequestedTask(c *check.C) {
-	tasks_coll := s.db.C("flamenco_tasks")
+	tasksColl := s.db.C("flamenco_tasks")
 
 	worker1 := Worker{
 		Platform:           "linux",
@@ -159,7 +159,7 @@ func (s *TaskUpdatesTestSuite) TestUpdateForCancelRequestedTask(c *check.C) {
 	task1.Worker = worker1.Nickname
 	task1.Status = "cancel-requested"
 	task1.Activity = "Cancel requested by unittest"
-	assert.Nil(c, tasks_coll.Insert(task1))
+	assert.Nil(c, tasksColl.Insert(task1))
 
 	tupdate := TaskUpdate{
 		TaskID:     task1.ID,
@@ -174,7 +174,7 @@ func (s *TaskUpdatesTestSuite) TestUpdateForCancelRequestedTask(c *check.C) {
 	// This update should be rejected, and not change the task's status.
 	assert.Equal(c, http.StatusConflict, respRec.Code)
 
-	assert.Nil(c, tasks_coll.FindId(task1.ID).One(&task1))
+	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
 	assert.Equal(c, task1.WorkerID, task1.WorkerID)
 	assert.Equal(c, task1.Status, "cancel-requested")
 	assert.Equal(c, task1.Activity, "Cancel requested by unittest")

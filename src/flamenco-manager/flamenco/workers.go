@@ -16,12 +16,10 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-/**
- * Returns the worker's address, with the nickname in parentheses (if set).
- *
- * Make sure that you include the nickname in the projection when you fetch
- * the worker from MongoDB.
- */
+// Identifier returns the worker's address, with the nickname in parentheses (if set).
+//
+// Make sure that you include the nickname in the projection when you fetch
+// the worker from MongoDB.
 func (worker *Worker) Identifier() string {
 	if len(worker.Nickname) > 0 {
 		return fmt.Sprintf("%s (%s)", worker.Address, worker.Nickname)
@@ -89,6 +87,7 @@ func (worker *Worker) SeenEx(r *http.Request, db *mgo.Database, set bson.M, unse
 	return db.C("flamenco_workers").UpdateId(worker.ID, updates)
 }
 
+// RegisterWorker creates a new Worker in the DB, based on the WorkerRegistration document received.
 func RegisterWorker(w http.ResponseWriter, r *http.Request, db *mgo.Database) {
 	var err error
 
@@ -127,6 +126,7 @@ func RegisterWorker(w http.ResponseWriter, r *http.Request, db *mgo.Database) {
 	}
 }
 
+// StoreNewWorker saves the given worker in the database.
 func StoreNewWorker(winfo *Worker, db *mgo.Database) error {
 	var err error
 
@@ -138,8 +138,8 @@ func StoreNewWorker(winfo *Worker, db *mgo.Database) error {
 		return err
 	}
 
-	workers_coll := db.C("flamenco_workers")
-	if err = workers_coll.Insert(winfo); err != nil {
+	workersColl := db.C("flamenco_workers")
+	if err = workersColl.Insert(winfo); err != nil {
 		log.Error("Unable to insert worker in DB:", err)
 		return err
 	}
@@ -147,9 +147,7 @@ func StoreNewWorker(winfo *Worker, db *mgo.Database) error {
 	return nil
 }
 
-/**
- * Returns the hashed secret of the worker.
- */
+// WorkerSecret returns the hashed secret of the worker.
 func WorkerSecret(user string, db *mgo.Database) string {
 	projection := bson.M{"hashed_secret": 1}
 	worker, err := FindWorker(user, projection, db)
@@ -182,9 +180,7 @@ func FindWorkerByID(workerID bson.ObjectId, db *mgo.Database) (*Worker, error) {
 	return &worker, err
 }
 
-/**
- * Returns the number of registered workers.
- */
+// WorkerCount returns the number of registered workers.
 func WorkerCount(db *mgo.Database) int {
 	count, err := Count(db.C("flamenco_workers"))
 	if err != nil {
@@ -193,8 +189,9 @@ func WorkerCount(db *mgo.Database) int {
 	return count
 }
 
+// WorkerMayRunTask tells the worker whether it's allowed to keep running the given task.
 func WorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest,
-	db *mgo.Database, task_id bson.ObjectId) {
+	db *mgo.Database, taskID bson.ObjectId) {
 
 	// Get the worker
 	worker, err := FindWorker(r.Username, M{"_id": 1, "address": 1, "nickname": 1}, db)
@@ -207,27 +204,27 @@ func WorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest,
 	}
 	worker.Seen(&r.Request, db)
 	log.Debugf("WorkerMayRunTask: %s asking if it is allowed to keep running task %s",
-		worker.Identifier(), task_id.Hex())
+		worker.Identifier(), taskID.Hex())
 
 	response := MayKeepRunningResponse{}
 
 	// Get the task and check its status.
 	task := Task{}
-	if err := db.C("flamenco_tasks").FindId(task_id).One(&task); err != nil {
+	if err := db.C("flamenco_tasks").FindId(taskID).One(&task); err != nil {
 		log.Warningf("%s WorkerMayRunTask: unable to find task %s for worker %s",
-			r.RemoteAddr, task_id.Hex(), worker.ID.Hex())
-		response.Reason = fmt.Sprintf("unable to find task %s", task_id.Hex())
+			r.RemoteAddr, taskID.Hex(), worker.ID.Hex())
+		response.Reason = fmt.Sprintf("unable to find task %s", taskID.Hex())
 	} else if task.WorkerID != nil && *task.WorkerID != worker.ID {
 		log.Warningf("%s WorkerMayRunTask: task %s was assigned from worker %s to %s",
-			r.RemoteAddr, task_id.Hex(), worker.ID.Hex(), task.WorkerID.Hex())
-		response.Reason = fmt.Sprintf("task %s reassigned to another worker", task_id.Hex())
+			r.RemoteAddr, taskID.Hex(), worker.ID.Hex(), task.WorkerID.Hex())
+		response.Reason = fmt.Sprintf("task %s reassigned to another worker", taskID.Hex())
 	} else if !IsRunnableTaskStatus(task.Status) {
 		log.Warningf("%s WorkerMayRunTask: task %s is in not-runnable status %s, worker %s will stop",
-			r.RemoteAddr, task_id.Hex(), task.Status, worker.ID.Hex())
-		response.Reason = fmt.Sprintf("task %s in non-runnable status %s", task_id.Hex(), task.Status)
+			r.RemoteAddr, taskID.Hex(), task.Status, worker.ID.Hex())
+		response.Reason = fmt.Sprintf("task %s in non-runnable status %s", taskID.Hex(), task.Status)
 	} else {
 		response.MayKeepRunning = true
-		WorkerPingedTask(&worker.ID, task_id, db)
+		WorkerPingedTask(&worker.ID, taskID, db)
 	}
 
 	// Send the response
@@ -235,46 +232,43 @@ func WorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest,
 	encoder := json.NewEncoder(w)
 	if err := encoder.Encode(response); err != nil {
 		log.Warningf("WorkerMayRunTask: unable to send response to worker %s: %s",
-			worker.Identifier(), task_id.Hex())
+			worker.Identifier(), taskID.Hex())
 		return
 	}
 }
 
+// IsRunnableTaskStatus returns whether the given status is considered "runnable".
 func IsRunnableTaskStatus(status string) bool {
-	runnable_statuses := map[string]bool{
+	runnableStatuses := map[string]bool{
 		"active":             true,
 		"claimed-by-manager": true,
 		"queued":             true,
 	}
 
-	runnable, found := runnable_statuses[status]
+	runnable, found := runnableStatuses[status]
 	return runnable && found
 }
 
-/*
- * Mark the task as pinged by the worker.
- * If worker_id is not nil, sets the worker_id field of the task. Otherwise doesn't
- * touch that field and only updates last_worker_ping.
- */
-func WorkerPingedTask(worker_id *bson.ObjectId, task_id bson.ObjectId, db *mgo.Database) {
-	tasks_coll := db.C("flamenco_tasks")
+// WorkerPingedTask marks the task as pinged by the worker.
+// If worker_id is not nil, sets the worker_id field of the task. Otherwise doesn't
+// touch that field and only updates last_worker_ping.
+func WorkerPingedTask(workerID *bson.ObjectId, taskID bson.ObjectId, db *mgo.Database) {
+	tasksColl := db.C("flamenco_tasks")
 
 	updates := bson.M{
 		"last_worker_ping": UtcNow(),
 	}
-	if worker_id != nil {
-		updates["worker_id"] = *worker_id
+	if workerID != nil {
+		updates["worker_id"] = *workerID
 	}
 
-	if err := tasks_coll.UpdateId(task_id, bson.M{"$set": updates}); err != nil {
+	if err := tasksColl.UpdateId(taskID, bson.M{"$set": updates}); err != nil {
 		log.Errorf("WorkerPingedTask: ERROR unable to update last_worker_ping on task %s: %s",
-			task_id.Hex(), err)
+			taskID.Hex(), err)
 	}
 }
 
-/**
- * Re-queues all active tasks (should be only one) that are assigned to this worker.
- */
+// WorkerSignOff re-queues all active tasks (should be only one) that are assigned to this worker.
 func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.Database) {
 	// Get the worker
 	worker, err := FindWorker(r.Username, bson.M{"_id": 1, "address": 1, "nickname": 1}, db)
@@ -283,9 +277,9 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-	w_ident := worker.Identifier()
+	workerIdent := worker.Identifier()
 
-	log.Warningf("%s Worker %s signing off", r.RemoteAddr, w_ident)
+	log.Warningf("%s Worker %s signing off", r.RemoteAddr, workerIdent)
 
 	// Update the tasks assigned to the worker.
 	var tasks []Task
@@ -293,31 +287,31 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 		"worker_id": worker.ID,
 		"status":    "active",
 	}
-	sent_header := false
+	sentHeader := false
 	if err := db.C("flamenco_tasks").Find(query).All(&tasks); err != nil {
 		log.Warningf("WorkerSignOff: unable to find active tasks of worker %s in MongoDB: %s",
-			w_ident, err)
+			workerIdent, err)
 		w.WriteHeader(http.StatusInternalServerError)
-		sent_header = true
+		sentHeader = true
 	} else {
 		tupdate := TaskUpdate{
 			TaskStatus: "claimed-by-manager",
 			Worker:     "-", // no longer assigned to any worker
-			Activity:   fmt.Sprintf("Re-queued task after worker %s signed off", w_ident),
+			Activity:   fmt.Sprintf("Re-queued task after worker %s signed off", workerIdent),
 			Log: fmt.Sprintf("%s: Manager re-queued task after worker %s signed off",
-				time.Now(), w_ident),
+				time.Now(), workerIdent),
 		}
 
 		for _, task := range tasks {
 			tupdate.TaskID = task.ID
 			if err := QueueTaskUpdate(&tupdate, db); err != nil {
-				if !sent_header {
+				if !sentHeader {
 					w.WriteHeader(http.StatusInternalServerError)
-					sent_header = true
+					sentHeader = true
 				}
 				fmt.Fprintf(w, "Error updating task %s: %s\n", task.ID.Hex(), err)
 				log.Errorf("WorkerSignOff: unable to update task %s for worker %s in MongoDB: %s",
-					task.ID.Hex(), w_ident, err)
+					task.ID.Hex(), workerIdent, err)
 			}
 		}
 	}
@@ -325,10 +319,10 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 	// Update the worker itself, to show it's down in the DB too.
 
 	if err := worker.SetStatus("down", db); err != nil {
-		if !sent_header {
+		if !sentHeader {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
-		log.Errorf("WorkerSignOff: unable to update worker %s in MongoDB: %s", w_ident, err)
+		log.Errorf("WorkerSignOff: unable to update worker %s in MongoDB: %s", workerIdent, err)
 	}
 }
 
