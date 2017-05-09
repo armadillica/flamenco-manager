@@ -9,6 +9,7 @@ Changelog for Flamenco Manager
 - On the dashboard, for the current/task of a worker, show the last timestamp/status
   that this particular worker worked on it (rather than showing the last timestamp/status
   of the task itself)
+- Show workers in dashboard as table (instead of blocks).
 
 
 ## Version 2.0.7 (released 2017-04-26)

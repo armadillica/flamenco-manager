@@ -1,8 +1,8 @@
 function load_workers() {
-    var status_to_panel_class = {
-        'awake': 'panel-success',
-        'down': 'panel-default',
-        'timeout': 'panel-danger',
+    var status_to_bootstrap_class = {
+        'awake': 'success',
+        'down': 'default',
+        'timeout': 'danger',
     }
 
     $.get('/as-json')
@@ -42,7 +42,7 @@ function load_workers() {
         $dl.append($('<dd>').text(info.nr_of_tasks));
         $dl.append($('<dt>').text('Server'));
         $dd = $('<dd>');
-        $dd.append($('<a>').attr('href', info.server).text(info.server));
+        $dd.append($('<a>').attr('href', info.server + 'flamenco/').text(info.server));
         $dl.append($dd);
         if (idle_workers.length > 0) {
             $dl.append($('<dt>')
@@ -64,44 +64,18 @@ function load_workers() {
         var $section = $('#workers');
         $section.html('');
 
-        var $row;
-        var idx = 0;
-
         for (worker of current_workers) {
-            // Start a new row.
-            if (idx % 3 == 0) {
-                var $row = $('<div>').addClass('row');
-                $section.append($row);
-            }
-            idx++;
-
-            var $div = $('<div>')
+            var $row = $('<tr>')
                 .attr('id', worker._id)
-                .addClass('col-md-4');
-            $row.append($div);
+                .addClass("status-" + worker.status);
 
-            var $panel = $('<div>').addClass('panel');
-            var panelclass = status_to_panel_class[worker.status];
-            if (typeof panelclass == 'undefined') panelclass = 'panel-default';
-            $panel.addClass(panelclass);
-            $div.append($panel);
+            var status_class = status_to_bootstrap_class[worker.status];
+            if (typeof status_class != 'undefined') $row.addClass(status_class);
 
-            var $header = $('<div>').addClass('panel-heading');
-            $header.append($('<h3>')
-                .text(worker.nickname)
-                .addClass('panel-title')
-            )
-            $panel.append($header);
-
-            var $dl = $('<dl>').addClass('dl-horizontal');
-            // $dl.append($('<dt>').text('Nickname'));
-            // $dl.append($('<dd>').text(worker.nickname));
-            $dl.append($('<dt>').text('ID'));
-            $dl.append($('<dd>').text(worker._id));
-            $dl.append($('<dt>').text('Address'));
-            $dl.append($('<dd>').text(worker.address));
-            $dl.append($('<dt>').text('Status'));
-            $dl.append($('<dd>').text(worker.status || '-none-').addClass('status-' + worker.status));
+            $row.append($('<td>').text(worker.nickname));
+            $row.append($('<td>').text(worker._id));
+            $row.append($('<td>').text(worker.address));
+            $row.append($('<td>').text(worker.status || '-none-').addClass('status-' + worker.status));
 
             var software = '-unknown-';
             if (worker.software) {
@@ -109,13 +83,10 @@ function load_workers() {
                  * do keep the version number, though. */
                 software = worker.software.replace('Flamenco-Worker/', '');
             }
-            $dl.append($('<dt>').text('Software'));
-            $dl.append($('<dd>').text(software));
-            // $dl.append($('<dt>').text('Platform'));
-            // $dl.append($('<dd>').text(worker.platform));
+            $row.append($('<td>').text(software));
+            // $row.append($('<td>').text(worker.platform));
 
-            $dl.append($('<dt>').text('Cur/last Task'));
-            $task_dd = $('<dd>');
+            $task_td = $('<td>');
             if (typeof worker.current_task != 'undefined') {
                 var task_text;
                 if (typeof worker.current_task_status != 'undefined') {
@@ -130,22 +101,18 @@ function load_workers() {
                 $tasklink = $('<a>')
                     .attr('href', info.server + 'flamenco/tasks/' + worker.current_task)
                     .text(task_text);
-                $task_dd.append($tasklink);
+                $task_td.append($tasklink);
             } else {
-                $task_dd.text('-none-');
+                $task_td.text('-none-');
             }
-            $dl.append($task_dd);
+            $row.append($task_td);
 
-            $dl.append($('<dt>').text('Last Seen'));
-            $dl.append($('<dd>')
+            $row.append($('<td>')
                 .text(time_diff(worker.last_activity))
                 .attr('title', new Date(worker.last_activity)));
-            // $dl.append($('<dt>').text('Supported Job Types'));
             // $dl.append($('<dd>').text(worker.supported_job_types.join(', ')));
 
-            var $panel_body = $('<div>').addClass('panel-body');
-            $panel_body.append($dl);
-            $panel.append($panel_body);
+            $section.append($row);
         }
 
         // Everything went fine, let's try it again soon.
