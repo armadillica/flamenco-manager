@@ -38,7 +38,7 @@ func (worker *Worker) SetStatus(status string, db *mgo.Database) error {
 
 // SetCurrentTask sets the worker's current task, and updates the database too.
 func (worker *Worker) SetCurrentTask(taskID bson.ObjectId, db *mgo.Database) error {
-	worker.CurrentTask = taskID
+	worker.CurrentTask = &taskID
 	updates := M{"current_task": taskID}
 	return db.C("flamenco_workers").UpdateId(worker.ID, M{"$set": updates})
 }
@@ -57,30 +57,36 @@ func (worker *Worker) TimeoutOnTask(task *Task, db *mgo.Database) {
 
 // Seen registers that we have seen this worker at a certain address and with certain software.
 func (worker *Worker) Seen(r *http.Request, db *mgo.Database) {
-	if err := worker.SeenEx(r, db, bson.M{}); err != nil {
+	if err := worker.SeenEx(r, db, bson.M{}, bson.M{}); err != nil {
 		log.Errorf("Worker.Seen: unable to update worker %s in MongoDB: %s", worker.ID, err)
 	}
 }
 
 // SeenEx is same as Seen(), but allows for extra updates on the worker in the database, and returns err
-func (worker *Worker) SeenEx(r *http.Request, db *mgo.Database, updates bson.M) error {
+func (worker *Worker) SeenEx(r *http.Request, db *mgo.Database, set bson.M, unset bson.M) error {
 	worker.LastActivity = UtcNow()
 
-	updates["last_activity"] = worker.LastActivity
-	updates["status"] = "awake"
+	set["last_activity"] = worker.LastActivity
+	set["status"] = "awake"
 
 	remoteAddr := r.RemoteAddr
 	if worker.Address != remoteAddr {
 		worker.Address = remoteAddr
-		updates["address"] = remoteAddr
+		set["address"] = remoteAddr
 	}
 
 	var userAgent string = r.Header.Get("User-Agent")
 	if worker.Software != userAgent {
-		updates["software"] = userAgent
+		set["software"] = userAgent
 	}
 
-	return db.C("flamenco_workers").UpdateId(worker.ID, bson.M{"$set": updates})
+	updates := bson.M{"$set": set}
+	if len(unset) > 0 {
+		updates["$unset"] = unset
+	}
+	log.Debugf("Updating worker %s: %v", worker.ID, updates)
+
+	return db.C("flamenco_workers").UpdateId(worker.ID, updates)
 }
 
 func RegisterWorker(w http.ResponseWriter, r *http.Request, db *mgo.Database) {
@@ -326,7 +332,9 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 	}
 }
 
-// WorkerSignOn is optional, and allows a Worker to register a new list of supported task types.
+// WorkerSignOn allows a Worker to register a new list of supported task types.
+// It also clears the worker's "current" task from the dashboard, so that it's clear that the
+// now-active worker is not actually working on that task.
 func WorkerSignOn(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.Database) {
 	// Get the worker
 	worker, err := FindWorker(r.Username, bson.M{"_id": 1, "address": 1, "nickname": 1}, db)
@@ -345,16 +353,21 @@ func WorkerSignOn(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.D
 	}
 
 	// Only update those fields that were actually given.
-	updates := bson.M{}
+	updateSet := bson.M{}
 	if winfo.Nickname != "" && winfo.Nickname != worker.Nickname {
 		log.Infof("Worker %s changed nickname to %s", worker.Nickname, winfo.Nickname)
-		updates["nickname"] = winfo.Nickname
+		updateSet["nickname"] = winfo.Nickname
 	}
 	if len(winfo.SupportedTaskTypes) > 0 {
-		updates["supported_task_types"] = winfo.SupportedTaskTypes
+		updateSet["supported_task_types"] = winfo.SupportedTaskTypes
 	}
 
-	if err = worker.SeenEx(&r.Request, db, updates); err != nil {
+	updateUnset := bson.M{
+		"current_task": 1,
+	}
+	worker.CurrentTask = nil
+
+	if err = worker.SeenEx(&r.Request, db, updateSet, updateUnset); err != nil {
 		log.Errorf("WorkerSignOn: Unable to update worker %s: %s", worker.Identifier(), err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return

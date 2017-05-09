@@ -4,7 +4,8 @@ Changelog for Flamenco Manager
 ## Version 2.0.8 (in development)
 
 - Use mutex in scheduler to avoid race condition.
-
+- Clear the worker's current task upon sign-on. This makes the dasboard less confusing
+  when the worker's task was rescheduled to another worker.
 
 
 ## Version 2.0.7 (released 2017-04-26)

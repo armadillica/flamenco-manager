@@ -173,4 +173,15 @@ func (s *WorkerTestSuite) TestWorkerSignOn(t *check.C) {
 	getworker()
 	assert.Equal(t, []string{"blender-render"}, found.SupportedTaskTypes)
 	assert.Equal(t, "another", found.Nickname)
+
+	// Test that the current task is cleared.
+	assert.Nil(t, s.db.C("flamenco_workers").UpdateId(
+		s.workerLnx.ID,
+		bson.M{"$set": bson.M{"current_task": bson.ObjectIdHex("1234567890ab1234567890ab")}},
+	))
+	getworker()
+	assert.Equal(t, "1234567890ab1234567890ab", found.CurrentTask.Hex())
+	signon("{}")
+	getworker()
+	assert.Nil(t, found.CurrentTask)
 }

@@ -94,18 +94,18 @@ type WorkerSignonDoc struct {
 // Worker contains all information about a specific Worker.
 // Some fields come from the WorkerRegistration, whereas others are filled by us.
 type Worker struct {
-	ID                 bson.ObjectId `bson:"_id,omitempty" json:"_id,omitempty"`
-	Secret             string        `bson:"-" json:"-"`
-	HashedSecret       []byte        `bson:"hashed_secret" json:"-"`
-	Nickname           string        `bson:"nickname" json:"nickname"`
-	Address            string        `bson:"address" json:"address"`
-	Status             string        `bson:"status" json:"status"`
-	Platform           string        `bson:"platform" json:"platform"`
-	CurrentTask        bson.ObjectId `bson:"current_task,omitempty" json:"current_task,omitempty"`
-	TimeCost           int           `bson:"time_cost" json:"time_cost"`
-	LastActivity       *time.Time    `bson:"last_activity,omitempty" json:"last_activity,omitempty"`
-	SupportedTaskTypes []string      `bson:"supported_task_types" json:"supported_task_types"`
-	Software           string        `bson:"software" json:"software"`
+	ID                 bson.ObjectId  `bson:"_id,omitempty" json:"_id,omitempty"`
+	Secret             string         `bson:"-" json:"-"`
+	HashedSecret       []byte         `bson:"hashed_secret" json:"-"`
+	Nickname           string         `bson:"nickname" json:"nickname"`
+	Address            string         `bson:"address" json:"address"`
+	Status             string         `bson:"status" json:"status"`
+	Platform           string         `bson:"platform" json:"platform"`
+	CurrentTask        *bson.ObjectId `bson:"current_task,omitempty" json:"current_task,omitempty"`
+	TimeCost           int            `bson:"time_cost" json:"time_cost"`
+	LastActivity       *time.Time     `bson:"last_activity,omitempty" json:"last_activity,omitempty"`
+	SupportedTaskTypes []string       `bson:"supported_task_types" json:"supported_task_types"`
+	Software           string         `bson:"software" json:"software"`
 
 	// For dashboard
 	CurrentTaskStatus  string     `bson:"current_task_status,omitempty" json:"current_task_status,omitempty"`
