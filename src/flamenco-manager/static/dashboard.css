@@ -44,3 +44,8 @@ button#downloadkick {
     top: 0.75ex;
     right: 1ex;
 }
+
+.click-to-copy {
+    cursor: pointer;
+    border-bottom: none;
+}

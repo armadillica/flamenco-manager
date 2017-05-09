@@ -1,3 +1,5 @@
+var clipboard;
+
 function load_workers() {
     var status_to_bootstrap_class = {
         'awake': 'success',
@@ -98,8 +100,12 @@ function load_workers() {
                 .text(time_diff(worker.last_activity))
                 .attr('title', new Date(worker.last_activity)));
             // $dl.append($('<dd>').text(worker.supported_job_types.join(', ')));
-            $row.append($('<td>').text(worker._id));
-            $row.append($('<td>').text(worker.address));
+            $row.append($('<td>')
+                .addClass('click-to-copy')
+                .text(worker._id));
+            $row.append($('<td>')
+                .addClass('click-to-copy')
+                .text(worker.address));
 
             var software = '-unknown-';
             if (worker.software) {
@@ -130,7 +136,20 @@ function load_workers() {
 
         // Everything is bugging out, let's try it again soon-ish.
         setTimeout(load_workers, 10000);
-    });
+    })
+    .always(function() {
+        if (typeof clipboard != 'undefined') {
+            clipboard.destroy();
+        }
+        clipboard = new Clipboard('.click-to-copy', {
+            text: function(trigger) {
+                return $(trigger).text();
+            }
+        });
+
+        $('.click-to-copy').attr('title', 'Click to copy');
+    })
+    ;
 }
 
 $(load_workers);
