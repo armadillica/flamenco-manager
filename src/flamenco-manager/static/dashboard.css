@@ -49,3 +49,8 @@ button#downloadkick {
     cursor: pointer;
     border-bottom: none;
 }
+
+.worker-id {
+    white-space: nowrap;
+    min-width: 8ex;
+}

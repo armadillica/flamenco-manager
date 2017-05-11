@@ -77,15 +77,16 @@ function load_workers() {
 
             $task_td = $('<td>');
             if (typeof worker.current_task != 'undefined') {
+                var task_id_text = '…' + worker.current_task.substr(-8);
                 var task_text;
                 if (typeof worker.current_task_status != 'undefined') {
                     if (typeof worker.current_task_updated != 'undefined') {
-                        task_text = worker.current_task + " (" + worker.current_task_status + " " + time_diff(worker.current_task_updated) + ")";
+                        task_text = task_id_text + " (" + worker.current_task_status + " " + time_diff(worker.current_task_updated) + ")";
                     } else {
-                        task_text = worker.current_task + " (" + worker.current_task_status + ")";
+                        task_text = task_id_text + " (" + worker.current_task_status + ")";
                     }
                 } else {
-                    task_text = worker.current_task;
+                    task_text = task_id_text;
                 }
                 $tasklink = $('<a>')
                     .attr('href', info.server + 'flamenco/tasks/' + worker.current_task)
@@ -101,10 +102,13 @@ function load_workers() {
                 .attr('title', new Date(worker.last_activity)));
             // $dl.append($('<dd>').text(worker.supported_job_types.join(', ')));
             $row.append($('<td>')
-                .addClass('click-to-copy')
-                .text(worker._id));
+                .addClass('click-to-copy worker-id')
+                .attr('data-clipboard-text', worker._id)
+                .text('…' + worker._id.substr(-6))
+            );
             $row.append($('<td>')
-                .addClass('click-to-copy')
+                .addClass('click-to-copy worker-address')
+                .attr('data-clipboard-text', worker.address)
                 .text(worker.address));
 
             var software = '-unknown-';
@@ -141,11 +145,7 @@ function load_workers() {
         if (typeof clipboard != 'undefined') {
             clipboard.destroy();
         }
-        clipboard = new Clipboard('.click-to-copy', {
-            text: function(trigger) {
-                return $(trigger).text();
-            }
-        });
+        clipboard = new Clipboard('.click-to-copy');
 
         $('.click-to-copy').attr('title', 'Click to copy');
     })
@@ -172,11 +172,17 @@ function time_diff(timestamp) {
     if (timediff < 3600000) { // less than an hour
         return Math.round(timediff / 60000) + ' minutes ago';
     }
-    if (timediff < 24 * 3600000) { // less than a day hour
+    if (timediff < 2 * 24 * 3600000) { // less than two days
         return Math.round(timediff / 3600000) + ' hours ago';
     }
 
-    return as_date;
+    return as_date.toLocaleString('en-GB', {
+        hour12: false,
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+    });
+    return (1900 + as_date.getYear()) + '-' + as_date.getMonth() + '-' + as_date.getDay();
 }
 
 function downloadkick() {
