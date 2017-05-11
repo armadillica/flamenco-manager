@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -67,10 +68,15 @@ func (worker *Worker) SeenEx(r *http.Request, db *mgo.Database, set bson.M, unse
 	set["last_activity"] = worker.LastActivity
 	set["status"] = "awake"
 
-	remoteAddr := r.RemoteAddr
-	if worker.Address != remoteAddr {
-		worker.Address = remoteAddr
-		set["address"] = remoteAddr
+	remoteHost, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		log.Warningf("Unable to split '%s' into host/port; using the whole thing instead: %s",
+			r.RemoteAddr, err)
+		remoteHost = r.RemoteAddr
+	}
+	if worker.Address != remoteHost {
+		worker.Address = remoteHost
+		set["address"] = remoteHost
 	}
 
 	var userAgent string = r.Header.Get("User-Agent")
