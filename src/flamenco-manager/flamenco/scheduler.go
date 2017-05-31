@@ -14,6 +14,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+// TaskScheduler offers tasks to Workers when they ask for them.
 type TaskScheduler struct {
 	config   *Conf
 	upstream *UpstreamConnection
@@ -26,6 +27,7 @@ type TaskScheduler struct {
 	mutex *sync.Mutex
 }
 
+// CreateTaskScheduler constructs a new TaskScheduler, including private fields.
 func CreateTaskScheduler(config *Conf, upstream *UpstreamConnection, session *mgo.Session) *TaskScheduler {
 	return &TaskScheduler{
 		config,
