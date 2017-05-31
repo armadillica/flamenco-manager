@@ -54,6 +54,17 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	worker.Seen(&r.Request, db)
 	log.Debugf("ScheduleTask: Worker %s asking for a task", worker.Identifier())
 
+	// From here on, things should be locked. This prevents multiple workers from
+	// getting assigned the same task.
+	//
+	// TODO: In the future, this should be done smarter, for example by immediately
+	// marking the task returned by ts.fetchTaskFromQueueOrManager() in the database
+	// as "under consideration" for a worker. This should contain a timestamp, though,
+	// so that it can be automatically ignored after a certain time, without having
+	// to re-update the database.
+	ts.mutex.Lock()
+	defer ts.mutex.Unlock()
+
 	var task *Task
 	var wasChanged bool
 	for attempt := 0; attempt < 1000; attempt++ {
@@ -156,8 +167,6 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 	result := aggregationPipelineResult{}
 	tasksColl := db.C("flamenco_tasks")
 
-	ts.mutex.Lock()
-	defer ts.mutex.Unlock()
 
 	pipe := tasksColl.Pipe([]M{
 		// 1: Select only tasks that have a runnable status & acceptable task type.
