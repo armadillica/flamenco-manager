@@ -449,3 +449,83 @@ func (s *SchedulerTestSuite) TestCommunicationError(t *check.C) {
 	assert.Equal(t, s.workerLnx.Nickname, foundTask.Worker)
 	assert.Equal(t, s.workerLnx.ID, *foundTask.WorkerID)
 }
+
+// Tests worker requesting a new task while it already has a task assigned.
+// Instead of assigning yet another task (causing the first to time out),
+// the Manager should simply return the already-assigned task.
+func (s *SchedulerTestSuite) TestRequestNewWhenAssigned(t *check.C) {
+	tasksColl := s.db.C("flamenco_tasks")
+
+	// Task 1 is assigned to workerLnx, the same worker that'll ask for a new task.
+	task1 := ConstructTestTaskWithPrio("1aaaaaaaaaaaaaaaaaaaaaaa", "sleeping", 50)
+	task1.Status = "active"
+	task1.WorkerID = &s.workerLnx.ID
+	task1.Worker = s.workerLnx.Identifier()
+	assert.Nil(t, tasksColl.Insert(task1))
+
+	// Task 2 is queued, and of higher priority.
+	task2 := ConstructTestTaskWithPrio("2aaaaaaaaaaaaaaaaaaaaaaa", "sleeping", 55)
+	task2.Status = "queued"
+	task2.Worker = ""
+	assert.Nil(t, tasksColl.Insert(task2))
+
+	// Perform HTTP request to the scheduler.
+	respRec := httptest.NewRecorder()
+	request, _ := http.NewRequest("GET", "/task", nil)
+	ar := &auth.AuthenticatedRequest{Request: *request, Username: s.workerLnx.ID.Hex()}
+	s.sched.ScheduleTask(respRec, ar)
+
+	// We should have gotten task 1, because it was already assigned.
+	jsonTask := Task{}
+	parseJSON(t, respRec, 200, &jsonTask)
+	assert.Equal(t, task1.ID.Hex(), jsonTask.ID.Hex())
+
+	// Check that task2 isn't assigned to the worker.
+	foundTask := Task{}
+	err := s.db.C("flamenco_tasks").FindId(task2.ID).One(&foundTask)
+	assert.Nil(t, err)
+	assert.Equal(t, "queued", foundTask.Status)
+	assert.Equal(t, "", foundTask.Worker)
+	assert.Nil(t, foundTask.WorkerID)
+}
+
+// Tests worker requesting a new task while it already has a task assigned.
+// In this case the manager should actually assign a new task, as the old one
+// failed/was completed/cancelled.
+func (s *SchedulerTestSuite) TestRequestNewWhenAssignedButNotActiveAnyMore(t *check.C) {
+	tasksColl := s.db.C("flamenco_tasks")
+
+	// Create some tasks in the database, all assigned to the worker.
+	task1 := ConstructTestTaskWithPrio("1aaaaaaaaaaaaaaaaaaaaaaa", "sleeping", 50)
+	task1.Status = "failed"
+	task1.WorkerID = &s.workerLnx.ID
+	task1.Worker = s.workerLnx.Identifier()
+	assert.Nil(t, tasksColl.Insert(task1))
+	task2 := ConstructTestTaskWithPrio("2aaaaaaaaaaaaaaaaaaaaaaa", "sleeping", 50)
+	task2.Status = "completed"
+	task2.WorkerID = &s.workerLnx.ID
+	task2.Worker = s.workerLnx.Identifier()
+	assert.Nil(t, tasksColl.Insert(task2))
+	task3 := ConstructTestTaskWithPrio("3aaaaaaaaaaaaaaaaaaaaaaa", "sleeping", 50)
+	task3.Status = "cancelled"
+	task3.WorkerID = &s.workerLnx.ID
+	task3.Worker = s.workerLnx.Identifier()
+	assert.Nil(t, tasksColl.Insert(task3))
+
+	// Task 2 is queued, and of lower priority.
+	task4 := ConstructTestTaskWithPrio("4aaaaaaaaaaaaaaaaaaaaaaa", "sleeping", 30)
+	task4.Status = "queued"
+	task4.Worker = ""
+	assert.Nil(t, tasksColl.Insert(task4))
+
+	// Perform HTTP request to the scheduler.
+	respRec := httptest.NewRecorder()
+	request, _ := http.NewRequest("GET", "/task", nil)
+	ar := &auth.AuthenticatedRequest{Request: *request, Username: s.workerLnx.ID.Hex()}
+	s.sched.ScheduleTask(respRec, ar)
+
+	// We should have gotten task 4, because the already-assigned tasks are not runnable.
+	jsonTask := Task{}
+	parseJSON(t, respRec, 200, &jsonTask)
+	assert.Equal(t, task4.ID.Hex(), jsonTask.ID.Hex())
+}

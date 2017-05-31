@@ -166,10 +166,28 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 		return nil
 	}
 
-	result := aggregationPipelineResult{}
 	tasksColl := db.C("flamenco_tasks")
 
+	// First check for any active tasks already assigned to the worker.
+	alreadyAssignedTask := Task{}
+	findErr := tasksColl.Find(M{
+		"status":    statusActive,
+		"worker_id": worker.ID,
+	}).One(&alreadyAssignedTask)
+	if findErr == nil {
+		// We found an already-assigned task. Just return that.
+		log.Infof("TaskScheduler: worker %s already had task %s assigned, returning that.",
+			worker.Identifier(), alreadyAssignedTask.ID)
+		return &alreadyAssignedTask
+	} else if findErr != mgo.ErrNotFound {
+		// Something went wrong, and it wasn't just an "not found" error (which we actually expect).
+		// In this case we log the error but fall through to the regular task scheduling query.
+		log.Errorf("TaskScheduler: unable to query for active tasks assigned to worker %s: %s",
+			worker.Identifier(), findErr)
+	}
 
+	// Perform the monster MongoDB aggregation query to schedule a task.
+	result := aggregationPipelineResult{}
 	pipe := tasksColl.Pipe([]M{
 		// 1: Select only tasks that have a runnable status & acceptable task type.
 		M{"$match": M{

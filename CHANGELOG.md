@@ -5,6 +5,8 @@ Changelog for Flamenco Manager
 
 - Added --factory-startup option to example Blender CLI variable. This is needed because this
   option was removed from the hard-coded values in the Flamenco Worker.
+- When worker asks for tasks, also check already assigned tasks.
+  [T51519](https://developer.blender.org/T51519)
 
 
 ## Version 2.0.9 (released 2017-05-11)
