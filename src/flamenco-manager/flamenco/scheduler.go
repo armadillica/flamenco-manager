@@ -173,7 +173,7 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 	pipe := tasksColl.Pipe([]M{
 		// 1: Select only tasks that have a runnable status & acceptable task type.
 		M{"$match": M{
-			"status":    M{"$in": []string{"queued", "claimed-by-manager"}},
+			"status":    M{"$in": []string{statusQueued, statusClaimedByManager}},
 			"task_type": M{"$in": worker.SupportedTaskTypes},
 		}},
 		// 2: Unwind the parents array, so that we can do a lookup in the next stage.
@@ -200,8 +200,8 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 			"_id": "$_id",
 			"parent_statuses": M{"$push": M{
 				"$eq": []interface{}{
-					"completed",
-					M{"$ifNull": []string{"$parent_doc.status", "completed"}}}}},
+					statusCompleted,
+					M{"$ifNull": []string{"$parent_doc.status", statusCompleted}}}}},
 			// This allows us to keep all dynamic properties of the original task document:
 			"task": M{"$first": "$$ROOT"},
 		}},

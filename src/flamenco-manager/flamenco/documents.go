@@ -8,6 +8,8 @@ import (
 
 // Some of the statuses we recognise.
 // TODO Sybren: list all used statuses here as constants, instead of using string literals.
+const statusQueued = "queued"
+const statusClaimedByManager = "claimed-by-manager"
 const statusActive = "active"
 const statusCanceled = "canceled"
 const statusFailed = "failed"
