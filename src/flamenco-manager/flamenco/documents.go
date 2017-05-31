@@ -8,13 +8,15 @@ import (
 
 // Some of the statuses we recognise.
 // TODO Sybren: list all used statuses here as constants, instead of using string literals.
-const statusQueued = "queued"
-const statusClaimedByManager = "claimed-by-manager"
-const statusActive = "active"
-const statusCanceled = "canceled"
-const statusFailed = "failed"
-const statusCompleted = "completed"
-const statusCancelRequested = "cancel-requested"
+const (
+	statusQueued           = "queued"
+	statusClaimedByManager = "claimed-by-manager"
+	statusActive           = "active"
+	statusCanceled         = "canceled"
+	statusFailed           = "failed"
+	statusCompleted        = "completed"
+	statusCancelRequested  = "cancel-requested"
+)
 
 // Command is an executable part of a Task
 type Command struct {
