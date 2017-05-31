@@ -1,6 +1,12 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.0.10 (in development)
+
+- Added --factory-startup option to example Blender CLI variable. This is needed because this
+  option was removed from the hard-coded values in the Flamenco Worker.
+
+
 ## Version 2.0.9 (released 2017-05-11)
 
 - Workers: only store host part of worker's address, and not the port number.
