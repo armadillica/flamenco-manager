@@ -123,7 +123,7 @@ func (uc *UpstreamConnection) downloadTaskLoop() {
 func downloadTasksFromUpstream(config *Conf, mongoSess *mgo.Session) {
 	db := mongoSess.DB("")
 
-	strURL := fmt.Sprintf("/api/flamenco/managers/%s/depsgraph", config.ManagerId)
+	strURL := fmt.Sprintf("/api/flamenco/managers/%s/depsgraph", config.ManagerID)
 	relURL, err := url.Parse(strURL)
 	if err != nil {
 		log.Warningf("Error parsing '%s' as URL; unable to fetch tasks.", strURL)
@@ -255,7 +255,7 @@ func (uc *UpstreamConnection) SendJSON(logprefix, method string, url *url.URL,
 // send a batch of task updates to the Server.
 func (uc *UpstreamConnection) SendTaskUpdates(updates *[]TaskUpdate) (*TaskUpdateResponse, error) {
 	url, err := uc.ResolveURL("/api/flamenco/managers/%s/task-update-batch",
-		uc.config.ManagerId)
+		uc.config.ManagerID)
 	if err != nil {
 		panic(fmt.Sprintf("SendTaskUpdates: unable to construct URL: %s\n", err))
 	}

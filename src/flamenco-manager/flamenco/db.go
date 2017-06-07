@@ -25,8 +25,8 @@ func MongoSession(config *Conf) *mgo.Session {
 	var err error
 	var session *mgo.Session
 
-	log.Infof("Connecting to MongoDB at %s", config.DatabaseUrl)
-	if session, err = mgo.Dial(config.DatabaseUrl); err != nil {
+	log.Infof("Connecting to MongoDB at %s", config.DatabaseURL)
+	if session, err = mgo.Dial(config.DatabaseURL); err != nil {
 		panic(err)
 	}
 	session.SetMode(mgo.Monotonic, true)

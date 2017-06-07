@@ -45,12 +45,12 @@ func (sn *StartupNotifier) Close() {
 // Keeps trying in a goroutine until the notification was succesful.
 func (sn *StartupNotifier) Go() {
 	notification := StartupNotification{
-		ManagerURL:         sn.config.OwnUrl,
+		ManagerURL:         sn.config.OwnURL,
 		VariablesByVarname: sn.config.VariablesByVarname,
 		NumberOfWorkers:    0,
 	}
 
-	url, err := sn.upstream.ResolveURL("/api/flamenco/managers/%s/startup", sn.config.ManagerId)
+	url, err := sn.upstream.ResolveURL("/api/flamenco/managers/%s/startup", sn.config.ManagerID)
 	if err != nil {
 		panic(fmt.Sprintf("SendStartupNotification: unable to construct URL: %s\n", err))
 	}

@@ -202,15 +202,15 @@ func main() {
 	config = flamenco.GetConf()
 	has_tls := config.TLSCert != "" && config.TLSKey != ""
 	if has_tls {
-		config.OwnUrl = strings.Replace(config.OwnUrl, "http://", "https://", 1)
+		config.OwnURL = strings.Replace(config.OwnURL, "http://", "https://", 1)
 	} else {
-		config.OwnUrl = strings.Replace(config.OwnUrl, "https://", "http://", 1)
+		config.OwnURL = strings.Replace(config.OwnURL, "https://", "http://", 1)
 		log.Warning("WARNING: TLS not enabled!")
 	}
 
-	log.Info("MongoDB database server :", config.DatabaseUrl)
+	log.Info("MongoDB database server :", config.DatabaseURL)
 	log.Info("Upstream Flamenco server:", config.Flamenco)
-	log.Info("My URL is               :", config.OwnUrl)
+	log.Info("My URL is               :", config.OwnURL)
 	log.Info("Listening at            :", config.Listen)
 
 	session = flamenco.MongoSession(&config)

@@ -14,12 +14,12 @@ import (
 
 // Conf represents the Manager's configuration file.
 type Conf struct {
-	DatabaseUrl   string   `yaml:"database_url"`
+	DatabaseURL   string   `yaml:"database_url"`
 	Listen        string   `yaml:"listen"`
-	OwnUrl        string   `yaml:"own_url"`
+	OwnURL        string   `yaml:"own_url"`
 	FlamencoStr   string   `yaml:"flamenco"`
 	Flamenco      *url.URL `yaml:"-"`
-	ManagerId     string   `yaml:"manager_id"`
+	ManagerID     string   `yaml:"manager_id"`
 	ManagerSecret string   `yaml:"manager_secret"`
 	TLSKey        string   `yaml:"tlskey"`
 	TLSCert       string   `yaml:"tlscert"`
