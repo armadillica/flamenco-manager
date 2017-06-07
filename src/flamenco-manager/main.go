@@ -30,7 +30,7 @@ var config flamenco.Conf
 var upstream *flamenco.UpstreamConnection
 var task_scheduler *flamenco.TaskScheduler
 var task_update_pusher *flamenco.TaskUpdatePusher
-var task_timeout_checker *flamenco.TaskTimeoutChecker
+var timeoutChecker *flamenco.TimeoutChecker
 var taskCleaner *flamenco.TaskCleaner
 var startupNotifier *flamenco.StartupNotifier
 var httpServer *http.Server
@@ -130,7 +130,7 @@ func shutdown(signum os.Signal) {
 			log.Warning("HTTP server was not even started yet")
 		}
 
-		task_timeout_checker.Close()
+		timeoutChecker.Close()
 		task_update_pusher.Close()
 		upstream.Close()
 		session.Close()
@@ -225,7 +225,7 @@ func main() {
 	startupNotifier = flamenco.CreateStartupNotifier(&config, upstream, session)
 	task_scheduler = flamenco.CreateTaskScheduler(&config, upstream, session)
 	task_update_pusher = flamenco.CreateTaskUpdatePusher(&config, upstream, session)
-	task_timeout_checker = flamenco.CreateTaskTimeoutChecker(&config, session)
+	timeoutChecker = flamenco.CreateTimeoutChecker(&config, session)
 	taskCleaner = flamenco.CreateTaskCleaner(&config, session)
 	reporter := flamenco.CreateReporter(&config, session, FLAMENCO_VERSION)
 	latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
@@ -245,7 +245,7 @@ func main() {
 
 	startupNotifier.Go()
 	task_update_pusher.Go()
-	task_timeout_checker.Go()
+	timeoutChecker.Go()
 	taskCleaner.Go()
 	latestImageSystem.Go()
 

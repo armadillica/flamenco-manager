@@ -1,6 +1,3 @@
-/**
- * Checks active tasks to see if their worker is still alive & running.
- */
 package flamenco
 
 import (
@@ -11,56 +8,56 @@ import (
 	mgo "gopkg.in/mgo.v2"
 )
 
-// Interval for checking all active tasks for timeouts.
-const taskTimeoutCheckInterval = 1 * time.Minute
+// Interval for checking all active tasks and workers for timeouts.
+const timeoutCheckInterval = 1 * time.Minute
 
 // Delay for the intial check. This gives workers a chance to reconnect to the Manager
 // and send updates after the Manager has started.
-const taskTimoutInitialSleep = 5 * time.Minute
+const timeoutInitialSleep = 5 * time.Minute
 
-// TaskTimeoutChecker periodically times out tasks if the worker hasn't sent any update recently.
-type TaskTimeoutChecker struct {
+// TimeoutChecker periodically times out tasks and workers if the worker hasn't sent any update recently.
+type TimeoutChecker struct {
 	closable
 	config  *Conf
 	session *mgo.Session
 }
 
-// CreateTaskTimeoutChecker creates a new TaskTimeoutChecker.
-func CreateTaskTimeoutChecker(config *Conf, session *mgo.Session) *TaskTimeoutChecker {
-	return &TaskTimeoutChecker{
+// CreateTimeoutChecker creates a new TimeoutChecker.
+func CreateTimeoutChecker(config *Conf, session *mgo.Session) *TimeoutChecker {
+	return &TimeoutChecker{
 		makeClosable(),
 		config, session,
 	}
 }
 
 // Go starts a new goroutine to perform the periodic checking.
-func (ttc *TaskTimeoutChecker) Go() {
+func (ttc *TimeoutChecker) Go() {
 	ttc.closableAdd(1)
 	go func() {
 		session := ttc.session.Copy()
 		db := session.DB("")
 		defer session.Close()
 		defer ttc.closableDone()
-		defer log.Info("TaskTimeoutChecker: shutting down.")
+		defer log.Info("TimeoutChecker: shutting down.")
 
 		// Start with a delay, so that workers get a chance to push their updates
 		// after the manager has started up.
-		timer := Timer("TaskTimeoutCheck", taskTimeoutCheckInterval, taskTimoutInitialSleep, &ttc.closable)
+		timer := Timer("TimeoutCheck", timeoutCheckInterval, timeoutInitialSleep, &ttc.closable)
 
 		for _ = range timer {
-			ttc.check(db)
+			ttc.checkTasks(db)
 		}
 	}()
 }
 
 // Close gracefully shuts down the task timeout checker goroutine.
-func (ttc *TaskTimeoutChecker) Close() {
-	log.Debug("TaskTimeoutChecker: Close() called.")
+func (ttc *TimeoutChecker) Close() {
+	log.Debug("TimeoutChecker: Close() called.")
 	ttc.closableCloseAndWait()
-	log.Debug("TaskTimeoutChecker: shutdown complete.")
+	log.Debug("TimeoutChecker: shutdown complete.")
 }
 
-func (ttc *TaskTimeoutChecker) check(db *mgo.Database) {
+func (ttc *TimeoutChecker) checkTasks(db *mgo.Database) {
 	timeoutThreshold := UtcNow().Add(-ttc.config.ActiveTaskTimeoutInterval)
 	log.Debugf("Failing all active tasks that have not been touched since %s", timeoutThreshold)
 
@@ -89,7 +86,7 @@ func (ttc *TaskTimeoutChecker) check(db *mgo.Database) {
 	}
 }
 
-func (ttc *TaskTimeoutChecker) timeoutTask(task *Task, db *mgo.Database) {
+func (ttc *TimeoutChecker) timeoutTask(task *Task, db *mgo.Database) {
 	log.Warningf("Task %s (%s) timed out", task.Name, task.ID.Hex())
 	var ident string
 
