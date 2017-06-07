@@ -11,37 +11,34 @@ tlskey: tls/privkey.pem
 tlscert: tls/cert.pem
 
 # How often the Manager should ask the Server for new tasks, regardless of how often workers ask.
-download_task_sleep_seconds: 60
+download_task_sleep_seconds: 60s
 
-# The number of seconds between rechecks when there are no more tasks for workers.
-# If set to 0, will not throttle at all.
-# If set to -1, will never check when a worker asks for a task (so only every
-# download_task_sleep_seconds seconds).
-download_task_recheck_throttle_seconds: 10
+# The duration between rechecks when there are no more tasks for workers.
+# If set to 0s, will not throttle at all.
+# If set to -1s, will never check when a worker asks for a task (so only every
+# download_task_sleep interval).
+download_task_recheck_throttle: 10s
 
 # These settings determine the task update batching behaviour. All task updates are batched,
-# and the batch is sent whenever the max seconds since the last push have passed, or when
+# and the batch is sent whenever the max interval since the last push has passed, or when
 # the batch is at its maximum size, whichever happens first.
-task_update_push_max_interval_seconds: 5
+task_update_push_max_interval: 5s
 task_update_push_max_count: 20
 
-# An empty list of task updates is pushed every `cancel_task_fetch_max_interval_seconds`,
+# An empty list of task updates is pushed every `cancel_task_fetch_max_interval`,
 # unless an actual task update push already happened within that time. This controls how
 # fast the Manager can respond to task cancel requests.
-cancel_task_fetch_max_interval_seconds: 10
+cancel_task_fetch_max_interval: 10s
 
 # When a task has status "active", but it hasn't been touched by a worker in
-# this many seconds, it will go to state "failed". Being "touched" means that
+# this duration, it will go to state "failed". Being "touched" means that
 # a worker called /may-i-run/{task-id} for this task.
-active_task_timeout_interval_seconds: 60
+active_task_timeout_interval: 60s
 
 # Tasks that have been in the local cache (i.e. the 'flamenco_tasks' collection)
-# without being updated for this many days are periodically deleted from the
+# without being updated for this duration are periodically deleted from the
 # manager's database. If the Server updates them, they will be re-downloaded.
-#
-# Days are assumed to be 24 hours long. This is not exactly accurate, but should
-# be accurate enough for this type of cleanup.
-task_cleanup_max_age_days: 14
+task_cleanup_max_age: 336h
 
 # If set, Flamenco Manager will recursively monitor this path, and show the latest
 # image placed there on the status dashboard.

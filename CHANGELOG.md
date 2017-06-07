@@ -1,12 +1,18 @@
 Changelog for Flamenco Manager
 ==============================
 
-## Version 2.0.10 (in development)
+## Version 2.x.x (in development)
 
 - Added --factory-startup option to example Blender CLI variable. This is needed because this
   option was removed from the hard-coded values in the Flamenco Worker.
 - When worker asks for tasks, also check already assigned tasks.
   [T51519](https://developer.blender.org/T51519)
+- Changes the way durations are stored in flamenco_manager.yaml. They must now be expressed
+  including units with a suffix (h, m, or s), rather than having the units in the configuration
+  variable name.
+
+    OLD: download_task_sleep_seconds = 30
+    NEW: download_task_sleep = 30s
 
 
 ## Version 2.0.9 (released 2017-05-11)

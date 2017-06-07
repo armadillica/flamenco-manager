@@ -12,6 +12,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Conf represents the Manager's configuration file.
 type Conf struct {
 	DatabaseUrl   string   `yaml:"database_url"`
 	Listen        string   `yaml:"listen"`
@@ -23,15 +24,13 @@ type Conf struct {
 	TLSKey        string   `yaml:"tlskey"`
 	TLSCert       string   `yaml:"tlscert"`
 
-	DownloadTaskSleep_ int           `yaml:"download_task_sleep_seconds"`
-	DownloadTaskSleep  time.Duration `yaml:"-"`
+	DownloadTaskSleep time.Duration `yaml:"download_task_sleep"`
 
 	/* The number of seconds between rechecks when there are no more tasks for workers.
 	 * If set to 0, will not throttle at all.
 	 * If set to -1, will never check when a worker asks for a task (so only every
 	 * download_task_sleep_seconds seconds). */
-	DownloadTaskRecheckThrottle_ int           `yaml:"download_task_recheck_throttle_seconds"`
-	DownloadTaskRecheckThrottle  time.Duration `yaml:"-"`
+	DownloadTaskRecheckThrottle time.Duration `yaml:"download_task_recheck_throttle"`
 
 	/* Variables, stored differently in YAML and these settings.
 	 * Variables:             variable name -> platform -> value
@@ -40,21 +39,19 @@ type Conf struct {
 	VariablesByVarname  map[string]map[string]string `yaml:"variables"`
 	VariablesByPlatform map[string]map[string]string `yaml:"-"`
 
-	TaskUpdatePushMaxInterval_ int           `yaml:"task_update_push_max_interval_seconds"`
-	TaskUpdatePushMaxInterval  time.Duration `yaml:"-"`
-	TaskUpdatePushMaxCount     int           `yaml:"task_update_push_max_count"`
-	CancelTaskFetchInterval_   int           `yaml:"cancel_task_fetch_max_interval_seconds"`
-	CancelTaskFetchInterval    time.Duration `yaml:"-"`
+	TaskUpdatePushMaxInterval time.Duration `yaml:"task_update_push_max_interval"`
+	TaskUpdatePushMaxCount    int           `yaml:"task_update_push_max_count"`
+	CancelTaskFetchInterval   time.Duration `yaml:"cancel_task_fetch_max_interval"`
 
-	ActiveTaskTimeoutInterval_ int           `yaml:"active_task_timeout_interval_seconds"`
-	ActiveTaskTimeoutInterval  time.Duration `yaml:"-"`
+	ActiveTaskTimeoutInterval   time.Duration `yaml:"active_task_timeout_interval"`
+	ActiveWorkerTimeoutInterval time.Duration `yaml:"active_worker_timeout_interval"`
 
-	TaskCleanupMaxAgeDays int           `yaml:"task_cleanup_max_age_days"`
-	TaskCleanupMaxAge     time.Duration `yaml:"-"`
+	TaskCleanupMaxAge time.Duration `yaml:"task_cleanup_max_age"`
 
 	WatchForLatestImage string `yaml:"watch_for_latest_image"`
 }
 
+// GetConf parses flamenco-manager.yaml and returns its contents as a Conf object.
 func GetConf() Conf {
 	yamlFile, err := ioutil.ReadFile("flamenco-manager.yaml")
 	if err != nil {
@@ -63,13 +60,16 @@ func GetConf() Conf {
 
 	// Construct the struct with some more or less sensible defaults.
 	c := Conf{
-		DownloadTaskSleep_:           300,
-		DownloadTaskRecheckThrottle_: 10,
-		TaskUpdatePushMaxInterval_:   30,
-		TaskUpdatePushMaxCount:       10,
-		CancelTaskFetchInterval_:     10,
-		ActiveTaskTimeoutInterval_:   60,
-		TaskCleanupMaxAgeDays:        14,
+		DownloadTaskSleep:           300 * time.Second,
+		DownloadTaskRecheckThrottle: 10 * time.Second,
+		TaskUpdatePushMaxInterval:   30 * time.Second,
+		TaskUpdatePushMaxCount:      10,
+		CancelTaskFetchInterval:     10 * time.Second,
+		ActiveTaskTimeoutInterval:   1 * time.Minute,
+		ActiveWorkerTimeoutInterval: 15 * time.Minute,
+		// Days are assumed to be 24 hours long. This is not exactly accurate, but should
+		// be accurate enough for this type of cleanup.
+		TaskCleanupMaxAge: 14 * 24 * time.Hour,
 	}
 	err = yaml.Unmarshal(yamlFile, &c)
 	if err != nil {
@@ -93,23 +93,10 @@ func GetConf() Conf {
 		}
 	}
 
-	// Convert durations. TODO: use actual unmarshaling code for this.
-	c.DownloadTaskSleep = time.Duration(c.DownloadTaskSleep_) * time.Second
-	c.DownloadTaskRecheckThrottle = time.Duration(c.DownloadTaskRecheckThrottle_) * time.Second
-	c.TaskUpdatePushMaxInterval = time.Duration(c.TaskUpdatePushMaxInterval_) * time.Second
-	c.CancelTaskFetchInterval = time.Duration(c.CancelTaskFetchInterval_) * time.Second
-	c.ActiveTaskTimeoutInterval = time.Duration(c.ActiveTaskTimeoutInterval_) * time.Second
-
-	// Days are assumed to be 24 hours long. This is not exactly accurate, but should
-	// be accurate enough for this type of cleanup.
-	c.TaskCleanupMaxAge = time.Duration(c.TaskCleanupMaxAgeDays) * time.Hour * 24
-
 	return c
 }
 
-/**
- * Configuration for unit tests.
- */
+// GetTestConfig returns the configuration for unit tests.
 func GetTestConfig() Conf {
 	cwd, err := os.Getwd()
 	if err != nil {
