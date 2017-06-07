@@ -64,7 +64,7 @@ func (ttc *TimeoutChecker) checkTasks(db *mgo.Database) {
 	var timedoutTasks []Task
 	// find all active tasks that either have never been pinged, or were pinged long ago.
 	query := M{
-		"status": "active",
+		"status": statusActive,
 		"$or": []M{
 			M{"last_worker_ping": M{"$lte": timeoutThreshold}},
 			M{"last_worker_ping": M{"$exists": false}},
@@ -108,7 +108,7 @@ func (ttc *TimeoutChecker) timeoutTask(task *Task, db *mgo.Database) {
 
 	tupdate := TaskUpdate{
 		TaskID:     task.ID,
-		TaskStatus: "failed",
+		TaskStatus: statusFailed,
 		Activity:   fmt.Sprintf("Task timed out on worker %s", ident),
 		Log: fmt.Sprintf(
 			"%s Task %s (%s) timed out, was active but untouched since %s. "+
