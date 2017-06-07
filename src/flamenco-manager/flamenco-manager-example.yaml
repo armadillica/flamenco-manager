@@ -35,6 +35,10 @@ cancel_task_fetch_max_interval: 10s
 # a worker called /may-i-run/{task-id} for this task.
 active_task_timeout_interval: 60s
 
+# When a worker has status "active", but it hasn't been seen in this many seconds, it
+# will go to state "timeout".
+active_worker_timeout_interval: 300s
+
 # Tasks that have been in the local cache (i.e. the 'flamenco_tasks' collection)
 # without being updated for this duration are periodically deleted from the
 # manager's database. If the Server updates them, they will be re-downloaded.

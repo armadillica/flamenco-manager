@@ -42,6 +42,16 @@ func (worker *Worker) SetCurrentTask(taskID bson.ObjectId, db *mgo.Database) err
 	return db.C("flamenco_workers").UpdateId(worker.ID, M{"$set": updates})
 }
 
+// Timeout marks the worker as timed out.
+func (worker *Worker) Timeout(db *mgo.Database) {
+	log.Warningf("Worker %s (%s) timed out", worker.Identifier(), worker.ID.Hex())
+
+	err := worker.SetStatus("timeout", db)
+	if err != nil {
+		log.Errorf("Unable to set worker status: %s", err)
+	}
+}
+
 // TimeoutOnTask marks the worker as timed out on a given task.
 // The task is just used for logging.
 func (worker *Worker) TimeoutOnTask(task *Task, db *mgo.Database) {

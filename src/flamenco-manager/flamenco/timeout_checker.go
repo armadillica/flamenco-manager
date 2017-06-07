@@ -46,6 +46,7 @@ func (ttc *TimeoutChecker) Go() {
 
 		for _ = range timer {
 			ttc.checkTasks(db)
+			ttc.checkWorkers(db)
 		}
 	}()
 }
@@ -116,4 +117,31 @@ func (ttc *TimeoutChecker) timeoutTask(task *Task, db *mgo.Database) {
 			UtcNow().Format(IsoFormat), task.Name, task.ID.Hex(), task.LastWorkerPing, ident),
 	}
 	QueueTaskUpdate(&tupdate, db)
+}
+
+func (ttc *TimeoutChecker) checkWorkers(db *mgo.Database) {
+	timeoutThreshold := UtcNow().Add(-ttc.config.ActiveWorkerTimeoutInterval)
+	log.Debugf("Failing all awake workers that have not been seen since %s", timeoutThreshold)
+
+	var timedoutWorkers []Worker
+	// find all awake workers that either have never been seen, or were seen long ago.
+	query := M{
+		"status": "awake",
+		"$or": []M{
+			M{"last_activity": M{"$lte": timeoutThreshold}},
+			M{"last_activity": M{"$exists": false}},
+		},
+	}
+	projection := M{
+		"_id":      1,
+		"nickname": 1,
+		"address":  1,
+	}
+	if err := db.C("flamenco_workers").Find(query).Select(projection).All(&timedoutWorkers); err != nil {
+		log.Warningf("Error finding timed-out workers: %s", err)
+	}
+
+	for _, worker := range timedoutWorkers {
+		worker.Timeout(db)
+	}
 }
