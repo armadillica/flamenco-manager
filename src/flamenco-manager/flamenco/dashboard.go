@@ -124,8 +124,8 @@ func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
 		}},
 		// 4: Sort.
 		M{"$sort": bson.D{
-			{"nickname", 1},
-			{"status", 1},
+			{Name: "nickname", Value: 1},
+			{Name: "status", Value: 1},
 		}},
 	})
 
