@@ -20,7 +20,7 @@ func TestStartupNotification(t *testing.T) {
 
 	timeout := make(chan bool, 1)
 	go func() {
-		time.Sleep(STARTUP_NOTIFICATION_INITIAL_DELAY + 250*time.Millisecond)
+		time.Sleep(startupNotificationInitialDelay + 250*time.Millisecond)
 		timeout <- true
 	}()
 

@@ -9,10 +9,10 @@ import (
 )
 
 // Gives the system some time to start up (and open listening HTTP port)
-const STARTUP_NOTIFICATION_INITIAL_DELAY = 500 * time.Millisecond
+const startupNotificationInitialDelay = 500 * time.Millisecond
 
 // Duration between consecutive retries of sending the startup notification.
-const STARTUP_NOTIFICATION_RETRY = 30 * time.Second
+const startupNotificationRetry = 30 * time.Second
 
 // StartupNotifier sends a signal to Flamenco Server that we've started.
 type StartupNotifier struct {
@@ -65,8 +65,8 @@ func (sn *StartupNotifier) Go() {
 
 		db := mongoSession.DB("")
 
-		timer := Timer("StartupNotifier", STARTUP_NOTIFICATION_RETRY,
-			STARTUP_NOTIFICATION_INITIAL_DELAY, &sn.closable)
+		timer := Timer("StartupNotifier", startupNotificationRetry,
+			startupNotificationInitialDelay, &sn.closable)
 
 		for _ = range timer {
 			log.Info("SendStartupNotification: trying to send notification.")
