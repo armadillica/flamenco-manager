@@ -89,4 +89,7 @@ rm -f $PREFIX/flamenco-manager
 # Clean up after ourselves
 rm -rf $PREFIX/
 
+# Create the SHA256 sum file.
+sha256sum flamenco-manager-$FLAMENCO_VERSION-* | tee flamenco-manager-$FLAMENCO_VERSION.sha256
+
 echo "Done building & packaging Flamenco Manager $FLAMENCO_VERSION."

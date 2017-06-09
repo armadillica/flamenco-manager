@@ -6,6 +6,7 @@
 /src/flamenco-manager/test_*.json
 /src/flamenco-manager/static/latest-image.*
 /src/flamenco-manager/docker/flamenco-manager
+/src/flamenco-manager/docker/flamenco-manager-*.sha256
 /src/flamenco-manager/docker/flamenco-manager-*linux*
 /src/flamenco-manager/docker/flamenco-manager-*windows*
 /src/flamenco-manager/docker/flamenco-manager-*darwin*
