@@ -54,3 +54,15 @@ variables:
         windows: c:/temp/blender.exe --enable-new-depsgraph --factory-startup
         linux: /opt/myblenderbuild/blender --enable-new-depsgraph --factory-startup
         darwin: /opt/myblenderbuild/blender --enable-new-depsgraph --factory-startup
+
+# Two-way translations of POSIX-style paths.
+path_replacement:
+    render:
+        windows: r:/
+        linux: /render
+        darwin: /Volume/render/
+    job_storage:
+        windows: s:/
+        linux: /shared/
+        darwin: /Volume/shared/
+        autumn: hey
