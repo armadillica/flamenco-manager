@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 GID=$(id -g)
-FLAMENCO_VERSION="2.0.10"
+source _version.sh
 
 cd "$(dirname "$0")"
 echo "Building into $(pwd)"
@@ -89,4 +89,4 @@ rm -f $PREFIX/flamenco-manager
 # Clean up after ourselves
 rm -rf $PREFIX/
 
-echo "Done building & packaging Flamenco Manager."
+echo "Done building & packaging Flamenco Manager $FLAMENCO_VERSION."

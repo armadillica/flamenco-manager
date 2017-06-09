@@ -6,10 +6,10 @@ if [ -z "$1" ]; then
 fi
 
 sed "s/FLAMENCO_VERSION = \"[^\"]*\"/FLAMENCO_VERSION = \"$1\"/" -i main.go
-sed "s/FLAMENCO_VERSION=\"[^\"]*\"/FLAMENCO_VERSION=\"$1\"/" -i docker/build-via-docker.sh
+sed "s/FLAMENCO_VERSION=\"[^\"]*\"/FLAMENCO_VERSION=\"$1\"/" -i docker/_version.sh
 
 git diff
 echo
 echo "Don't forget to commit and tag:"
-echo git commit -m \'Bumped version to $1\' main.go docker/build-via-docker.sh
+echo git commit -m \'Bumped version to $1\' main.go docker/_version.sh
 echo git tag -a v$1 -m \'Tagged version $1\'
