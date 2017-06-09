@@ -107,7 +107,7 @@ func (lis *LatestImageSystem) serverSideEvents(w http.ResponseWriter, r *http.Re
 func (lis *LatestImageSystem) outputProduced(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 	payload := FileProduced{}
 	defer r.Body.Close()
-	if err := DecodeJson(w, r.Body, &payload, "LatestImageSystem::outputProduced()"); err != nil {
+	if err := DecodeJSON(w, r.Body, &payload, "LatestImageSystem::outputProduced()"); err != nil {
 		return
 	}
 

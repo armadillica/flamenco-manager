@@ -111,7 +111,7 @@ func RegisterWorker(w http.ResponseWriter, r *http.Request, db *mgo.Database) {
 
 	// Parse the given worker information.
 	winfo := WorkerRegistration{}
-	if err = DecodeJson(w, r.Body, &winfo, fmt.Sprintf("%s RegisterWorker:", r.RemoteAddr)); err != nil {
+	if err = DecodeJSON(w, r.Body, &winfo, fmt.Sprintf("%s RegisterWorker:", r.RemoteAddr)); err != nil {
 		return
 	}
 
@@ -374,7 +374,7 @@ func WorkerSignOn(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.D
 
 	// Parse the given worker information.
 	winfo := WorkerSignonDoc{}
-	if err = DecodeJson(w, r.Body, &winfo, fmt.Sprintf("%s WorkerSignOn:", r.RemoteAddr)); err != nil {
+	if err = DecodeJSON(w, r.Body, &winfo, fmt.Sprintf("%s WorkerSignOn:", r.RemoteAddr)); err != nil {
 		return
 	}
 

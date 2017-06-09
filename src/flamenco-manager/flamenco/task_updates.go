@@ -1,6 +1,4 @@
-/*
- * Receives task updates from workers, queues them, and forwards them to the Flamenco Server.
- */
+// Package flamenco receives task updates from workers, queues them, and forwards them to the Flamenco Server.
 package flamenco
 
 import (
@@ -18,6 +16,7 @@ import (
 const queueMgoCollection = "task_update_queue"
 const taskQueueInspectPeriod = 1 * time.Second
 
+// TaskUpdatePusher pushes queued task updates to the Flamenco Server.
 type TaskUpdatePusher struct {
 	closable
 	config   *Conf
@@ -25,9 +24,7 @@ type TaskUpdatePusher struct {
 	session  *mgo.Session
 }
 
-/**
- * Receives a task update from a worker, and queues it for sending to Flamenco Server.
- */
+// QueueTaskUpdateFromWorker receives a task update from a worker, and queues it for sending to Flamenco Server.
 func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedRequest,
 	db *mgo.Database, taskID bson.ObjectId) {
 
@@ -47,7 +44,7 @@ func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedReque
 	// Parse the task JSON
 	tupdate := TaskUpdate{}
 	defer r.Body.Close()
-	if err := DecodeJson(w, r.Body, &tupdate, fmt.Sprintf("%s QueueTaskUpdate:", worker.Identifier())); err != nil {
+	if err := DecodeJSON(w, r.Body, &tupdate, fmt.Sprintf("%s QueueTaskUpdate:", worker.Identifier())); err != nil {
 		return
 	}
 	tupdate.TaskID = taskID
@@ -90,13 +87,13 @@ func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedReque
 	w.WriteHeader(204)
 }
 
+// QueueTaskUpdate queues the task update, without any extra updates.
 func QueueTaskUpdate(tupdate *TaskUpdate, db *mgo.Database) error {
 	return QueueTaskUpdateWithExtra(tupdate, db, bson.M{})
 }
 
-/* Same as QueueTaskUpdate(), but with extra updates to be performed on the local flamenco_tasks
- * collection.
- */
+// QueueTaskUpdateWithExtra does the same as QueueTaskUpdate(), but with extra updates to
+// the local flamenco_tasks collection.
 func QueueTaskUpdateWithExtra(tupdate *TaskUpdate, db *mgo.Database, extraUpdates bson.M) error {
 	// For ensuring the ordering of updates. time.Time has nanosecond precision.
 	tupdate.ReceivedOnManager = time.Now().UTC()
@@ -132,9 +129,8 @@ func QueueTaskUpdateWithExtra(tupdate *TaskUpdate, db *mgo.Database, extraUpdate
 		if err := taskColl.UpdateId(tupdate.TaskID, bson.M{"$set": updates}); err != nil {
 			if err != mgo.ErrNotFound {
 				return fmt.Errorf("QueueTaskUpdate: error updating local task cache: %s", err)
-			} else {
-				log.Warningf("QueueTaskUpdate: cannot find task %s to update locally", tupdate.TaskID.Hex())
 			}
+			log.Warningf("QueueTaskUpdate: cannot find task %s to update locally", tupdate.TaskID.Hex())
 		}
 	} else {
 		log.Debugf("QueueTaskUpdate: nothing to do locally for task %s", tupdate.TaskID.Hex())
@@ -143,15 +139,13 @@ func QueueTaskUpdateWithExtra(tupdate *TaskUpdate, db *mgo.Database, extraUpdate
 	return nil
 }
 
-/**
- * Performs a query on the database to determine the current status, then checks whether
- * the new status is acceptable.
- */
+// TaskStatusTransitionValid performs a query on the database to determine the current status,
+// then checks whether the new status is acceptable.
 func TaskStatusTransitionValid(taskColl *mgo.Collection, taskID bson.ObjectId, newStatus string) bool {
 	/* The only actual test we do is when the transition is from cancel-requested
 	   to something else. If the new status is valid for cancel-requeted, we don't
 	   even need to go to the database to fetch the current status. */
-	if ValidForCancelRequested(newStatus) {
+	if validForCancelRequested(newStatus) {
 		return true
 	}
 
@@ -166,7 +160,7 @@ func TaskStatusTransitionValid(taskColl *mgo.Collection, taskID bson.ObjectId, n
 	return taskCurr.Status != "cancel-requested"
 }
 
-func ValidForCancelRequested(newStatus string) bool {
+func validForCancelRequested(newStatus string) bool {
 	// Valid statuses to which a task can go after being cancel-requested
 	validStatuses := map[string]bool{
 		statusCanceled:  true, // the expected case
@@ -178,6 +172,7 @@ func ValidForCancelRequested(newStatus string) bool {
 	return valid && found
 }
 
+// CreateTaskUpdatePusher creates a new task update pusher that runs in a separate goroutine.
 func CreateTaskUpdatePusher(config *Conf, upstream *UpstreamConnection, session *mgo.Session) *TaskUpdatePusher {
 	return &TaskUpdatePusher{
 		makeClosable(),
@@ -187,22 +182,21 @@ func CreateTaskUpdatePusher(config *Conf, upstream *UpstreamConnection, session 
 	}
 }
 
-/**
- * Closes the task update pusher by stopping all timers & goroutines.
- */
-func (self *TaskUpdatePusher) Close() {
+// Close closes the task update pusher by stopping all timers & goroutines.
+func (pusher *TaskUpdatePusher) Close() {
 	log.Info("TaskUpdatePusher: shutting down, waiting for shutdown to complete.")
-	self.closableCloseAndWait()
+	pusher.closableCloseAndWait()
 	log.Info("TaskUpdatePusher: shutdown complete.")
 }
 
-func (self *TaskUpdatePusher) Go() {
+// Go starts the goroutine.
+func (pusher *TaskUpdatePusher) Go() {
 	log.Info("TaskUpdatePusher: Starting")
-	self.closableAdd(1)
+	pusher.closableAdd(1)
 	go func() {
-		defer self.closableDone()
+		defer pusher.closableDone()
 
-		mongoSess := self.session.Copy()
+		mongoSess := pusher.session.Copy()
 		defer mongoSess.Close()
 
 		var lastPush time.Time
@@ -211,7 +205,7 @@ func (self *TaskUpdatePusher) Go() {
 
 		// Investigate the queue periodically.
 		timerChan := Timer("TaskUpdatePusherTimer",
-			taskQueueInspectPeriod, 0, &self.closable)
+			taskQueueInspectPeriod, 0, &pusher.closable)
 
 		for _ = range timerChan {
 			// log.Info("TaskUpdatePusher: checking task update queue")
@@ -223,9 +217,9 @@ func (self *TaskUpdatePusher) Go() {
 
 			timeSinceLastPush := time.Now().Sub(lastPush)
 			mayRegularPush := updateCount > 0 &&
-				(updateCount >= self.config.TaskUpdatePushMaxCount ||
-					timeSinceLastPush >= self.config.TaskUpdatePushMaxInterval)
-			mayEmptyPush := timeSinceLastPush >= self.config.CancelTaskFetchInterval
+				(updateCount >= pusher.config.TaskUpdatePushMaxCount ||
+					timeSinceLastPush >= pusher.config.TaskUpdatePushMaxInterval)
+			mayEmptyPush := timeSinceLastPush >= pusher.config.CancelTaskFetchInterval
 			if !mayRegularPush && !mayEmptyPush {
 				continue
 			}
@@ -234,7 +228,7 @@ func (self *TaskUpdatePusher) Go() {
 			if updateCount > 0 {
 				log.Debugf("TaskUpdatePusher: %d updates are queued", updateCount)
 			}
-			if err := self.push(db); err != nil {
+			if err := pusher.push(db); err != nil {
 				log.Warning("TaskUpdatePusher: unable to push to upstream Flamenco Server: ", err)
 				continue
 			}
@@ -251,13 +245,13 @@ func (self *TaskUpdatePusher) Go() {
  *
  * NOTE: this function assumes there is only one thread/process doing the pushing,
  * and that we can safely leave documents in the queue until they have been pushed. */
-func (self *TaskUpdatePusher) push(db *mgo.Database) error {
+func (pusher *TaskUpdatePusher) push(db *mgo.Database) error {
 	var result []TaskUpdate
 
 	queue := db.C(queueMgoCollection)
 
 	// Figure out what to send.
-	query := queue.Find(bson.M{}).Limit(self.config.TaskUpdatePushMaxCount)
+	query := queue.Find(bson.M{}).Limit(pusher.config.TaskUpdatePushMaxCount)
 	if err := query.All(&result); err != nil {
 		return err
 	}
@@ -268,7 +262,7 @@ func (self *TaskUpdatePusher) push(db *mgo.Database) error {
 	} else {
 		log.Debugf("TaskUpdatePusher: pushing %d updates to upstream Flamenco Server", len(result))
 	}
-	response, err := self.upstream.SendTaskUpdates(&result)
+	response, err := pusher.upstream.SendTaskUpdates(&result)
 	if err != nil {
 		// TODO Sybren: implement some exponential backoff when things fail to get sent.
 		return err
@@ -286,7 +280,7 @@ func (self *TaskUpdatePusher) push(db *mgo.Database) error {
 	if len(response.HandledUpdateIds) > 0 {
 		_, errUnqueue = queue.RemoveAll(bson.M{"_id": bson.M{"$in": response.HandledUpdateIds}})
 	}
-	errCancel := self.handleIncomingCancelRequests(response.CancelTasksIds, db)
+	errCancel := pusher.handleIncomingCancelRequests(response.CancelTasksIds, db)
 
 	if errUnqueue != nil {
 		log.Warningf("TaskUpdatePusher: This is awkward; we have already sent the task updates "+
@@ -300,7 +294,7 @@ func (self *TaskUpdatePusher) push(db *mgo.Database) error {
 /**
  * Handles the canceling of tasks, as mentioned in the task batch update response.
  */
-func (self *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bson.ObjectId, db *mgo.Database) error {
+func (pusher *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bson.ObjectId, db *mgo.Database) error {
 	if len(cancelTaskIDs) == 0 {
 		return nil
 	}
@@ -331,7 +325,7 @@ func (self *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bson.
 			TaskID:     taskID,
 			TaskStatus: statusCanceled,
 		}
-		if err := QueueTaskUpdate(&tupdate, db); err != nil {
+		if updateErr := QueueTaskUpdate(&tupdate, db); updateErr != nil {
 			log.Warningf("TaskUpdatePusher: Unable to queue task update for canceled task %s, "+
 				"expect the task to hang in cancel-requested state.", taskID)
 		} else {
@@ -382,6 +376,7 @@ func (self *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bson.
 	return err
 }
 
+// LogTaskActivity creates and queues a TaskUpdate to store activity and a log line.
 func LogTaskActivity(worker *Worker, taskID bson.ObjectId, activity, logLine string, db *mgo.Database) {
 	tupdate := TaskUpdate{
 		TaskID:   taskID,

@@ -12,13 +12,11 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-// For timestamp parsing
+// IsoFormat is used for timestamp parsing
 const IsoFormat = "2006-01-02T15:04:05-0700"
 
-/**
- * Decodes JSON and writes a Bad Request status if it fails.
- */
-func DecodeJson(w http.ResponseWriter, r io.Reader, document interface{},
+// DecodeJSON decodes JSON from an io.Reader, and writes a Bad Request status if it fails.
+func DecodeJSON(w http.ResponseWriter, r io.Reader, document interface{},
 	logprefix string) error {
 	dec := json.NewDecoder(r)
 
@@ -32,26 +30,24 @@ func DecodeJson(w http.ResponseWriter, r io.Reader, document interface{},
 	return nil
 }
 
-/**
- * Sends a JSON document to some URL via HTTP.
- * :param tweakrequest: can be used to tweak the request before sending it, for
- *    example by adding authentication headers. May be nil.
- * :param responsehandler: is called when a non-error response has been read.
- *    May be nil.
- */
+// SendJSON sends a JSON document to some URL via HTTP.
+// :param tweakrequest: can be used to tweak the request before sending it, for
+//    example by adding authentication headers. May be nil.
+// :param responsehandler: is called when a non-error response has been read.
+//    May be nil.
 func SendJSON(logprefix, method string, url *url.URL,
 	payload interface{},
 	tweakrequest func(req *http.Request),
 	responsehandler func(resp *http.Response, body []byte) error,
 ) error {
-	payload_bytes, err := json.Marshal(payload)
+	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		log.Errorf("%s: Unable to marshal JSON: %s", logprefix, err)
 		return err
 	}
 
 	// TODO Sybren: enable GZip compression.
-	req, err := http.NewRequest("POST", url.String(), bytes.NewBuffer(payload_bytes))
+	req, err := http.NewRequest("POST", url.String(), bytes.NewBuffer(payloadBytes))
 	if err != nil {
 		log.Errorf("%s: Unable to create request: %s", logprefix, err)
 		return err

@@ -1,6 +1,4 @@
-/**
- * Periodically fetches new tasks from the Flamenco Server, and sends updates back.
- */
+// Package flamenco periodically fetches new tasks from the Flamenco Server, and sends updates back.
 package flamenco
 
 import (
