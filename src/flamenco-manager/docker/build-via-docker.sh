@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 GID=$(id --group)
-FLAMENCO_VERSION="2.0.9"
+FLAMENCO_VERSION="2.0.10"
 
 cd "$(dirname "$0")"
 echo "Building into $(pwd)"

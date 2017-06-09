@@ -1,7 +1,7 @@
 Changelog for Flamenco Manager
 ==============================
 
-## Version 2.x.x (in development)
+## Version 2.0.10 (released 2017-06-09)
 
 - Added --factory-startup option to example Blender CLI variable. This is needed because this
   option was removed from the hard-coded values in the Flamenco Worker.
