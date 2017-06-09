@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-GID=$(id --group)
+GID=$(id -g)
 FLAMENCO_VERSION="2.0.10"
 
 cd "$(dirname "$0")"
