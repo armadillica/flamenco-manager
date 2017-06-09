@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -38,6 +39,9 @@ type Conf struct {
 	 */
 	VariablesByVarname  map[string]map[string]string `yaml:"variables"`
 	VariablesByPlatform map[string]map[string]string `yaml:"-"`
+
+	PathReplacementByVarname  map[string]map[string]string `yaml:"path_replacement"`
+	PathReplacementByPlatform map[string]map[string]string `yaml:"-"`
 
 	TaskUpdatePushMaxInterval time.Duration `yaml:"task_update_push_max_interval"`
 	TaskUpdatePushMaxCount    int           `yaml:"task_update_push_max_count"`
@@ -82,18 +86,56 @@ func GetConf() Conf {
 		log.Fatalf("Bad Flamenco URL: %v", err)
 	}
 
-	// Transpose the variables matrix.
-	c.VariablesByPlatform = make(map[string]map[string]string)
-	for varname, perplatform := range c.VariablesByVarname {
-		for platform, varvalue := range perplatform {
-			if c.VariablesByPlatform[platform] == nil {
-				c.VariablesByPlatform[platform] = make(map[string]string)
-			}
-			c.VariablesByPlatform[platform][varname] = varvalue
+	foundDuplicate := false
+	for varname, perplatform := range c.PathReplacementByVarname {
+		// Check variable/path replacement duplicates.
+		_, found := c.VariablesByVarname[varname]
+		if found {
+			log.Errorf("Variable '%s' defined as both regular and path replacement variable", varname)
+			foundDuplicate = true
+		}
+
+		// Remove trailing slashes from replacement paths, since there should be a slash after
+		// each path replacement variable anyway.
+		for platform, value := range perplatform {
+			perplatform[platform] = strings.TrimRight(value, "/")
 		}
 	}
 
+	transposeVariableMatrix(&c.VariablesByVarname, &c.VariablesByPlatform)
+	transposeVariableMatrix(&c.PathReplacementByVarname, &c.PathReplacementByPlatform)
+
+	for platform, vars := range c.VariablesByPlatform {
+		log.Debugf("Variables for '%s'", platform)
+		for name, value := range vars {
+			log.Debugf("     %15s = %s", name, value)
+		}
+	}
+
+	for platform, vars := range c.PathReplacementByPlatform {
+		log.Debugf("Paths for '%s'", platform)
+		for name, value := range vars {
+			log.Debugf("     %15s = %s", name, value)
+		}
+	}
+
+	if foundDuplicate {
+		log.Fatalf("There were duplicate variables found, unable to continue.")
+	}
+
 	return c
+}
+
+func transposeVariableMatrix(in, out *map[string]map[string]string) {
+	*out = make(map[string]map[string]string)
+	for varname, perplatform := range *in {
+		for platform, varvalue := range perplatform {
+			if (*out)[platform] == nil {
+				(*out)[platform] = make(map[string]string)
+			}
+			(*out)[platform][varname] = varvalue
+		}
+	}
 }
 
 // GetTestConfig returns the configuration for unit tests.

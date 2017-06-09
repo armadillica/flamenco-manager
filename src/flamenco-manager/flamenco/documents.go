@@ -120,8 +120,9 @@ type Worker struct {
 // of settings (see settings.go) and information from the database.
 type StartupNotification struct {
 	// Settings
-	ManagerURL         string                       `json:"manager_url"`
-	VariablesByVarname map[string]map[string]string `json:"variables"`
+	ManagerURL               string                       `json:"manager_url"`
+	VariablesByVarname       map[string]map[string]string `json:"variables"`
+	PathReplacementByVarname map[string]map[string]string `json:"path_replacement"`
 
 	// From our local database
 	NumberOfWorkers int `json:"nr_of_workers"`

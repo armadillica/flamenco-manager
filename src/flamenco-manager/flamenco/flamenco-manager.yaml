@@ -14,3 +14,18 @@ variables:
         windows: c:/temp/blender.exe
         linux: /opt/myblenderbuild/blender
         darwin: /opt/myblenderbuild/blender
+
+path_replacement:
+    render:
+        windows: r:/
+        linux: /render
+        darwin: /Volume/render
+    render_long:
+        windows: r:/long
+        linux: /render/long
+        darwin: /Volume/render/long
+    job_storage:
+        windows: s:/
+        linux: /shared/
+        darwin: /Volume/shared/
+        autumn: hey

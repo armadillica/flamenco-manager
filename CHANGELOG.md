@@ -13,6 +13,7 @@ Changelog for Flamenco Manager
 
     OLD: download_task_sleep_seconds = 30
     NEW: download_task_sleep = 30s
+- Introduced path replacement variables, to allow Clients and Workers to run on different platforms.
 
 
 ## Version 2.0.9 (released 2017-05-11)

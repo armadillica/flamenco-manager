@@ -8,11 +8,10 @@ import (
 
 var stringType reflect.Type = reflect.TypeOf("somestring")
 
-/**
- * Variable replacement for tasks.
- */
+// ReplaceVariables performs variable and path replacement for tasks.
 func ReplaceVariables(config *Conf, task *Task, worker *Worker) {
 	varmap := config.VariablesByPlatform[worker.Platform]
+	pathmap := config.PathReplacementByPlatform[worker.Platform]
 
 	for _, cmd := range task.Commands {
 		for key, value := range cmd.Settings {
@@ -22,7 +21,13 @@ func ReplaceVariables(config *Conf, task *Task, worker *Worker) {
 			}
 
 			strvalue := reflect.ValueOf(value).String()
+			// Variable replacement
 			for varname, varvalue := range varmap {
+				placeholder := fmt.Sprintf("{%s}", varname)
+				strvalue = strings.Replace(strvalue, placeholder, varvalue, -1)
+			}
+			// Path replacement
+			for varname, varvalue := range pathmap {
 				placeholder := fmt.Sprintf("{%s}", varname)
 				strvalue = strings.Replace(strvalue, placeholder, varvalue, -1)
 			}

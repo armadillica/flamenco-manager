@@ -25,6 +25,13 @@ This describes the minimal changes you'll have to do to get Flamenco Manager run
   SSL), or remove the `tlskey` and `tlscert` options from your `flamenco-manager.yaml` file.
 - Update the `variables` for your render farm. The `blender` variable should point to the
   Blender executable where it can be found *on the workers*.
+- Update the `path_replacement` variables for your render farm. This allows you to set different
+  paths for both Clients (like the Blender Cloud Add-on) and Workers, given their respective
+  platforms.
+
+Note that `variables` and `path_replacement` share a namespace -- variable names have to be
+unique, and cannot be used in both `variables` and `path_replacement` sections. If this happens,
+Flamenco Manager will log the offending name, and refuse to start.
 
 
 ## CLI arguments
