@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"path/filepath"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // ImageWatcherHTTPPush starts a server-side events channel.

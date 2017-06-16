@@ -3,7 +3,7 @@ package flamenco
 import (
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // Timers and killable sleeps are checked with this period.

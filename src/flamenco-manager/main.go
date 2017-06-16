@@ -14,7 +14,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	auth "github.com/abbot/go-http-auth"
 
 	"flamenco-manager/flamenco"

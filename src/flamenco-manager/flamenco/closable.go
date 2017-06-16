@@ -3,7 +3,7 @@ package flamenco
 import (
 	"sync"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // closable offers a way to cleanly shut down a running goroutine.

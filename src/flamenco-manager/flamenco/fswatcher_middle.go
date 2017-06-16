@@ -8,7 +8,7 @@ import (
 
 	"flamenco-manager/flamenco/filetools"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // ConvertAndForward copies each image it reads from 'images', converts it to a browser-

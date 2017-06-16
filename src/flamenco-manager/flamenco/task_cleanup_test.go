@@ -3,7 +3,7 @@ package flamenco
 import (
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	check "gopkg.in/check.v1"
 	mgo "gopkg.in/mgo.v2"

@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	check "gopkg.in/check.v1"
 	"gopkg.in/jarcoal/httpmock.v1"
 	mgo "gopkg.in/mgo.v2"

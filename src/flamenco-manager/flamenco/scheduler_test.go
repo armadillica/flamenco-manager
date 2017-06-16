@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	auth "github.com/abbot/go-http-auth"
 	"github.com/stretchr/testify/assert"
 
