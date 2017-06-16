@@ -1,9 +1,9 @@
 #!/bin/bash -e
 
 GID=$(id -g)
-source _version.sh
 
 cd "$(dirname "$0")"
+source _version.sh
 echo "Building into $(pwd)"
 
 # Empty -> build & package for all operating systems.
