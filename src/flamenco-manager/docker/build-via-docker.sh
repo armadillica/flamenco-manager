@@ -41,7 +41,7 @@ function build {
     go get -a -ldflags '-s'
     go build -o \$TARGET
 
-    if [ \$GOOS == linux -o \$GOOS == windows ]; then
+    if [ \$GOOS == linux ]; then
         strip \$TARGET
     fi
     chown $UID:$GID \$TARGET

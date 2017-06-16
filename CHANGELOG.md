@@ -1,6 +1,11 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.0.11 (released 2017-06-16)
+
+- Fixed a compatibility issue with Windows 10.
+
+
 ## Version 2.0.10 (released 2017-06-09)
 
 - Added --factory-startup option to example Blender CLI variable. This is needed because this
