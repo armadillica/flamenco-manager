@@ -106,13 +106,26 @@ func SaveSettings(db *mgo.Database, settings *SettingsInMongo) {
 
 // CleanSlate erases all tasks in the flamenco_tasks collection.
 func CleanSlate(db *mgo.Database) {
+	collection := db.C("flamenco_tasks")
+
+	count, err := collection.Count()
+	if err != nil {
+		log.Fatalf("Unable to count number of locally cached tasks: %v", err)
+	}
+	if count == 0 {
+		log.Warning("There are no tasks locally cached, so nothing to purge.")
+		return
+	}
+
 	fmt.Println("")
 	fmt.Println("Performing Clean Slate operation, this will erase all tasks from the local DB.")
 	fmt.Println("After performing the Clean Slate, Flamenco-Manager will shut down.")
+	fmt.Println("")
+	fmt.Printf("Currently there are %d tasks locally cached.\n", count)
 	fmt.Println("Press [ENTER] to continue, [Ctrl+C] to abort.")
 	bufio.NewReader(os.Stdin).ReadLine()
 
-	info, err := db.C("flamenco_tasks").RemoveAll(bson.M{})
+	info, err := collection.RemoveAll(bson.M{})
 	if err != nil {
 		log.WithError(err).Panic("unable to erase all tasks")
 	}
