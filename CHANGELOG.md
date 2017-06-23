@@ -5,6 +5,10 @@ Changelog for Flamenco Manager
 
 - Added `-purgequeue` CLI command, which erases all queued task updates from the local MongoDB, then
   exits Flamenco Manager.
+- The `-cleanslate` CLI command now exits immediately when there are no tasks locally cached, i.e.
+  when it would be a no-op anyway.
+- The `-purgequeue` and `-cleanslate` commands now show how many items they would erase, before
+  asking the user for confirmation.
 
 
 ## Version 2.0.11 (released 2017-06-16)
