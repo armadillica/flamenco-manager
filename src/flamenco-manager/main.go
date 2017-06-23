@@ -14,22 +14,22 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
-	log "github.com/sirupsen/logrus"
 	auth "github.com/abbot/go-http-auth"
+	log "github.com/sirupsen/logrus"
 
 	"flamenco-manager/flamenco"
 
 	"github.com/gorilla/mux"
 )
 
-const FLAMENCO_VERSION = "2.0.11"
+const flamencoVersion = "2.0.11"
 
 // MongoDB session
 var session *mgo.Session
 var config flamenco.Conf
 var upstream *flamenco.UpstreamConnection
-var task_scheduler *flamenco.TaskScheduler
-var task_update_pusher *flamenco.TaskUpdatePusher
+var taskScheduler *flamenco.TaskScheduler
+var taskUpdatePusher *flamenco.TaskUpdatePusher
 var timeoutChecker *flamenco.TimeoutChecker
 var taskCleaner *flamenco.TaskCleaner
 var startupNotifier *flamenco.StartupNotifier
@@ -39,13 +39,13 @@ var shutdownComplete chan struct{}
 var httpShutdownComplete chan struct{}
 
 func http_register_worker(w http.ResponseWriter, r *http.Request) {
-	mongo_sess := session.Copy()
-	defer mongo_sess.Close()
-	flamenco.RegisterWorker(w, r, mongo_sess.DB(""))
+	mongoSess := session.Copy()
+	defer mongoSess.Close()
+	flamenco.RegisterWorker(w, r, mongoSess.DB(""))
 }
 
 func http_schedule_task(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-	task_scheduler.ScheduleTask(w, r)
+	taskScheduler.ScheduleTask(w, r)
 }
 
 func http_kick(w http.ResponseWriter, r *http.Request) {
@@ -54,59 +54,59 @@ func http_kick(w http.ResponseWriter, r *http.Request) {
 }
 
 func http_task_update(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-	mongo_sess := session.Copy()
-	defer mongo_sess.Close()
+	mongoSess := session.Copy()
+	defer mongoSess.Close()
 
 	vars := mux.Vars(&r.Request)
-	task_id := vars["task-id"]
+	taskID := vars["task-id"]
 
-	if !bson.IsObjectIdHex(task_id) {
+	if !bson.IsObjectIdHex(taskID) {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Invalid ObjectID passed as task ID: %s\n", task_id)
+		fmt.Fprintf(w, "Invalid ObjectID passed as task ID: %s\n", taskID)
 		return
 	}
 
-	flamenco.QueueTaskUpdateFromWorker(w, r, mongo_sess.DB(""), bson.ObjectIdHex(task_id))
+	flamenco.QueueTaskUpdateFromWorker(w, r, mongoSess.DB(""), bson.ObjectIdHex(taskID))
 }
 
 /**
  * Called by a worker, to check whether it is allowed to keep running this task.
  */
 func http_worker_may_run_task(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-	mongo_sess := session.Copy()
-	defer mongo_sess.Close()
+	mongoSess := session.Copy()
+	defer mongoSess.Close()
 
 	vars := mux.Vars(&r.Request)
-	task_id := vars["task-id"]
+	taskID := vars["task-id"]
 
-	if !bson.IsObjectIdHex(task_id) {
+	if !bson.IsObjectIdHex(taskID) {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Invalid ObjectID passed as task ID: %s\n", task_id)
+		fmt.Fprintf(w, "Invalid ObjectID passed as task ID: %s\n", taskID)
 		return
 	}
 
-	flamenco.WorkerMayRunTask(w, r, mongo_sess.DB(""), bson.ObjectIdHex(task_id))
+	flamenco.WorkerMayRunTask(w, r, mongoSess.DB(""), bson.ObjectIdHex(taskID))
 }
 
 func http_worker_sign_on(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-	mongo_sess := session.Copy()
-	defer mongo_sess.Close()
+	mongoSess := session.Copy()
+	defer mongoSess.Close()
 
-	flamenco.WorkerSignOn(w, r, mongo_sess.DB(""))
+	flamenco.WorkerSignOn(w, r, mongoSess.DB(""))
 }
 
 func http_worker_sign_off(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-	mongo_sess := session.Copy()
-	defer mongo_sess.Close()
+	mongoSess := session.Copy()
+	defer mongoSess.Close()
 
-	flamenco.WorkerSignOff(w, r, mongo_sess.DB(""))
+	flamenco.WorkerSignOff(w, r, mongoSess.DB(""))
 }
 
 func worker_secret(user, realm string) string {
-	mongo_sess := session.Copy()
-	defer mongo_sess.Close()
+	mongoSess := session.Copy()
+	defer mongoSess.Close()
 
-	return flamenco.WorkerSecret(user, mongo_sess.DB(""))
+	return flamenco.WorkerSecret(user, mongoSess.DB(""))
 }
 
 func shutdown(signum os.Signal) {
@@ -131,7 +131,7 @@ func shutdown(signum os.Signal) {
 		}
 
 		timeoutChecker.Close()
-		task_update_pusher.Close()
+		taskUpdatePusher.Close()
 		upstream.Close()
 		session.Close()
 		timeout <- false
@@ -185,12 +185,12 @@ func configLogging() {
 func main() {
 	parseCliArgs()
 	if cliArgs.version {
-		fmt.Println(FLAMENCO_VERSION)
+		fmt.Println(flamencoVersion)
 		return
 	}
 
 	configLogging()
-	log.Infof("Starting Flamenco Manager version %s", FLAMENCO_VERSION)
+	log.Infof("Starting Flamenco Manager version %s", flamencoVersion)
 
 	defer func() {
 		// If there was a panic, make sure we log it before quitting.
@@ -200,8 +200,8 @@ func main() {
 	}()
 
 	config = flamenco.GetConf()
-	has_tls := config.TLSCert != "" && config.TLSKey != ""
-	if has_tls {
+	hasTLS := config.TLSCert != "" && config.TLSKey != ""
+	if hasTLS {
 		config.OwnURL = strings.Replace(config.OwnURL, "http://", "https://", 1)
 	} else {
 		config.OwnURL = strings.Replace(config.OwnURL, "https://", "http://", 1)
@@ -223,28 +223,28 @@ func main() {
 
 	upstream = flamenco.ConnectUpstream(&config, session)
 	startupNotifier = flamenco.CreateStartupNotifier(&config, upstream, session)
-	task_scheduler = flamenco.CreateTaskScheduler(&config, upstream, session)
-	task_update_pusher = flamenco.CreateTaskUpdatePusher(&config, upstream, session)
+	taskScheduler = flamenco.CreateTaskScheduler(&config, upstream, session)
+	taskUpdatePusher = flamenco.CreateTaskUpdatePusher(&config, upstream, session)
 	timeoutChecker = flamenco.CreateTimeoutChecker(&config, session)
 	taskCleaner = flamenco.CreateTaskCleaner(&config, session)
-	reporter := flamenco.CreateReporter(&config, session, FLAMENCO_VERSION)
+	reporter := flamenco.CreateReporter(&config, session, flamencoVersion)
 	latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
 
 	// Set up our own HTTP server
-	worker_authenticator := auth.NewBasicAuthenticator("Flamenco Manager", worker_secret)
+	workerAuthenticator := auth.NewBasicAuthenticator("Flamenco Manager", worker_secret)
 	router := mux.NewRouter().StrictSlash(true)
 	reporter.AddRoutes(router)
-	latestImageSystem.AddRoutes(router, worker_authenticator)
+	latestImageSystem.AddRoutes(router, workerAuthenticator)
 	router.HandleFunc("/register-worker", http_register_worker).Methods("POST")
-	router.HandleFunc("/task", worker_authenticator.Wrap(http_schedule_task)).Methods("POST")
-	router.HandleFunc("/tasks/{task-id}/update", worker_authenticator.Wrap(http_task_update)).Methods("POST")
-	router.HandleFunc("/may-i-run/{task-id}", worker_authenticator.Wrap(http_worker_may_run_task)).Methods("GET")
-	router.HandleFunc("/sign-on", worker_authenticator.Wrap(http_worker_sign_on)).Methods("POST")
-	router.HandleFunc("/sign-off", worker_authenticator.Wrap(http_worker_sign_off)).Methods("POST")
+	router.HandleFunc("/task", workerAuthenticator.Wrap(http_schedule_task)).Methods("POST")
+	router.HandleFunc("/tasks/{task-id}/update", workerAuthenticator.Wrap(http_task_update)).Methods("POST")
+	router.HandleFunc("/may-i-run/{task-id}", workerAuthenticator.Wrap(http_worker_may_run_task)).Methods("GET")
+	router.HandleFunc("/sign-on", workerAuthenticator.Wrap(http_worker_sign_on)).Methods("POST")
+	router.HandleFunc("/sign-off", workerAuthenticator.Wrap(http_worker_sign_off)).Methods("POST")
 	router.HandleFunc("/kick", http_kick)
 
 	startupNotifier.Go()
-	task_update_pusher.Go()
+	taskUpdatePusher.Go()
 	timeoutChecker.Go()
 	taskCleaner.Go()
 	latestImageSystem.Go()
@@ -272,7 +272,7 @@ func main() {
 	}()
 
 	// Fall back to insecure server if TLS certificate/key is not defined.
-	if !has_tls {
+	if !hasTLS {
 		log.Warning(httpServer.ListenAndServe())
 	} else {
 		log.Warning(httpServer.ListenAndServeTLS(config.TLSCert, config.TLSKey))
