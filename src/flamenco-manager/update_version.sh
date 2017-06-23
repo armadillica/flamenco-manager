@@ -5,7 +5,7 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-sed "s/FLAMENCO_VERSION = \"[^\"]*\"/FLAMENCO_VERSION = \"$1\"/" -i main.go
+sed "s/flamencoVersion = \"[^\"]*\"/flamencoVersion = \"$1\"/" -i main.go
 sed "s/FLAMENCO_VERSION=\"[^\"]*\"/FLAMENCO_VERSION=\"$1\"/" -i docker/_version.sh
 
 git diff
