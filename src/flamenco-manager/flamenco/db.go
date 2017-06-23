@@ -27,7 +27,7 @@ func MongoSession(config *Conf) *mgo.Session {
 
 	log.Infof("Connecting to MongoDB at %s", config.DatabaseURL)
 	if session, err = mgo.Dial(config.DatabaseURL); err != nil {
-		panic(err)
+		panic(fmt.Sprintf("Unable to connect to MongoDB: %v", err))
 	}
 	session.SetMode(mgo.Monotonic, true)
 
