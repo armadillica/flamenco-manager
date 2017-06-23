@@ -38,22 +38,22 @@ var latestImageSystem *flamenco.LatestImageSystem
 var shutdownComplete chan struct{}
 var httpShutdownComplete chan struct{}
 
-func http_register_worker(w http.ResponseWriter, r *http.Request) {
+func httpRegisterWorker(w http.ResponseWriter, r *http.Request) {
 	mongoSess := session.Copy()
 	defer mongoSess.Close()
 	flamenco.RegisterWorker(w, r, mongoSess.DB(""))
 }
 
-func http_schedule_task(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
+func httpScheduleTask(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 	taskScheduler.ScheduleTask(w, r)
 }
 
-func http_kick(w http.ResponseWriter, r *http.Request) {
+func httpKick(w http.ResponseWriter, r *http.Request) {
 	upstream.KickDownloader(false)
 	fmt.Fprintln(w, "Kicked task downloader")
 }
 
-func http_task_update(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
+func httpTaskUpdate(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 	mongoSess := session.Copy()
 	defer mongoSess.Close()
 
@@ -72,7 +72,7 @@ func http_task_update(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 /**
  * Called by a worker, to check whether it is allowed to keep running this task.
  */
-func http_worker_may_run_task(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
+func httpWorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 	mongoSess := session.Copy()
 	defer mongoSess.Close()
 
@@ -88,21 +88,21 @@ func http_worker_may_run_task(w http.ResponseWriter, r *auth.AuthenticatedReques
 	flamenco.WorkerMayRunTask(w, r, mongoSess.DB(""), bson.ObjectIdHex(taskID))
 }
 
-func http_worker_sign_on(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
+func httpWorkerSignOn(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 	mongoSess := session.Copy()
 	defer mongoSess.Close()
 
 	flamenco.WorkerSignOn(w, r, mongoSess.DB(""))
 }
 
-func http_worker_sign_off(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
+func httpWorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 	mongoSess := session.Copy()
 	defer mongoSess.Close()
 
 	flamenco.WorkerSignOff(w, r, mongoSess.DB(""))
 }
 
-func worker_secret(user, realm string) string {
+func workerSecret(user, realm string) string {
 	mongoSess := session.Copy()
 	defer mongoSess.Close()
 
@@ -231,17 +231,17 @@ func main() {
 	latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
 
 	// Set up our own HTTP server
-	workerAuthenticator := auth.NewBasicAuthenticator("Flamenco Manager", worker_secret)
+	workerAuthenticator := auth.NewBasicAuthenticator("Flamenco Manager", workerSecret)
 	router := mux.NewRouter().StrictSlash(true)
 	reporter.AddRoutes(router)
 	latestImageSystem.AddRoutes(router, workerAuthenticator)
-	router.HandleFunc("/register-worker", http_register_worker).Methods("POST")
-	router.HandleFunc("/task", workerAuthenticator.Wrap(http_schedule_task)).Methods("POST")
-	router.HandleFunc("/tasks/{task-id}/update", workerAuthenticator.Wrap(http_task_update)).Methods("POST")
-	router.HandleFunc("/may-i-run/{task-id}", workerAuthenticator.Wrap(http_worker_may_run_task)).Methods("GET")
-	router.HandleFunc("/sign-on", workerAuthenticator.Wrap(http_worker_sign_on)).Methods("POST")
-	router.HandleFunc("/sign-off", workerAuthenticator.Wrap(http_worker_sign_off)).Methods("POST")
-	router.HandleFunc("/kick", http_kick)
+	router.HandleFunc("/register-worker", httpRegisterWorker).Methods("POST")
+	router.HandleFunc("/task", workerAuthenticator.Wrap(httpScheduleTask)).Methods("POST")
+	router.HandleFunc("/tasks/{task-id}/update", workerAuthenticator.Wrap(httpTaskUpdate)).Methods("POST")
+	router.HandleFunc("/may-i-run/{task-id}", workerAuthenticator.Wrap(httpWorkerMayRunTask)).Methods("GET")
+	router.HandleFunc("/sign-on", workerAuthenticator.Wrap(httpWorkerSignOn)).Methods("POST")
+	router.HandleFunc("/sign-off", workerAuthenticator.Wrap(httpWorkerSignOff)).Methods("POST")
+	router.HandleFunc("/kick", httpKick)
 
 	startupNotifier.Go()
 	taskUpdatePusher.Go()
