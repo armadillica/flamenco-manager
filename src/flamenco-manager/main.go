@@ -202,18 +202,8 @@ func main() {
 	}()
 
 	config = flamenco.GetConf()
-	hasTLS := config.TLSCert != "" && config.TLSKey != ""
-	if hasTLS {
-		config.OwnURL = strings.Replace(config.OwnURL, "http://", "https://", 1)
-	} else {
-		config.OwnURL = strings.Replace(config.OwnURL, "https://", "http://", 1)
-		log.Warning("WARNING: TLS not enabled!")
-	}
-
 	log.Info("MongoDB database server :", config.DatabaseURL)
 	log.Info("Upstream Flamenco server:", config.Flamenco)
-	log.Info("My URL is               :", config.OwnURL)
-	log.Info("Listening at            :", config.Listen)
 
 	session = flamenco.MongoSession(&config)
 
@@ -228,6 +218,16 @@ func main() {
 		log.Warning("Shutting down after performing queue purge")
 		return
 	}
+
+	hasTLS := config.TLSCert != "" && config.TLSKey != ""
+	if hasTLS {
+		config.OwnURL = strings.Replace(config.OwnURL, "http://", "https://", 1)
+	} else {
+		config.OwnURL = strings.Replace(config.OwnURL, "https://", "http://", 1)
+		log.Warning("WARNING: TLS not enabled!")
+	}
+	log.Info("My URL is               :", config.OwnURL)
+	log.Info("Listening at            :", config.Listen)
 
 	upstream = flamenco.ConnectUpstream(&config, session)
 	startupNotifier = flamenco.CreateStartupNotifier(&config, upstream, session)
