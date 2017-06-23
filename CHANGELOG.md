@@ -1,6 +1,12 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.0.12 (in development)
+
+- Added `-purgequeue` CLI command, which erases all queued task updates from the local MongoDB, then
+  exits Flamenco Manager.
+
+
 ## Version 2.0.11 (released 2017-06-16)
 
 - Fixed a compatibility issue with Windows 10.

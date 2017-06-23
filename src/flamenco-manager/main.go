@@ -151,6 +151,7 @@ var cliArgs struct {
 	debug      bool
 	jsonLog    bool
 	cleanSlate bool
+	purgeQueue bool
 	version    bool
 }
 
@@ -159,6 +160,7 @@ func parseCliArgs() {
 	flag.BoolVar(&cliArgs.debug, "debug", false, "Enable debug-level logging")
 	flag.BoolVar(&cliArgs.jsonLog, "json", false, "Log in JSON format")
 	flag.BoolVar(&cliArgs.cleanSlate, "cleanslate", false, "Start with a clean slate; erases all tasks from the local MongoDB")
+	flag.BoolVar(&cliArgs.purgeQueue, "purgequeue", false, "Purges all queued task updates from the local MongoDB")
 	flag.BoolVar(&cliArgs.version, "version", false, "Show the version of Flamenco Manager")
 	flag.Parse()
 }
@@ -218,6 +220,12 @@ func main() {
 	if cliArgs.cleanSlate {
 		flamenco.CleanSlate(session.DB(""))
 		log.Warning("Shutting down after performing clean slate")
+		return
+	}
+
+	if cliArgs.purgeQueue {
+		flamenco.PurgeOutgoingQueue(session.DB(""))
+		log.Warning("Shutting down after performing queue purge")
 		return
 	}
 

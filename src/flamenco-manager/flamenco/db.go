@@ -122,3 +122,34 @@ func CleanSlate(db *mgo.Database) {
 	settings.DepsgraphLastModified = nil
 	SaveSettings(db, settings)
 }
+
+// PurgeOutgoingQueue erases all queued task updates from the local DB
+func PurgeOutgoingQueue(db *mgo.Database) {
+	collection := db.C("task_update_queue")
+
+	count, err := collection.Count()
+	if err != nil {
+		log.Fatalf("Unable to count number of queued task updates: %v", err)
+	}
+	if count == 0 {
+		log.Warning("There are no task updates queued, so nothing to purge.")
+		return
+	}
+
+	fmt.Println("")
+	fmt.Println("Performing Purge Queue operation, this will erase all queued task updates from the local DB.")
+	fmt.Println("After performing the Purge Queue operation, Flamenco-Manager will shut down.")
+	fmt.Println("")
+	fmt.Println("NOTE: this is a lossy operation, and it may erase important task updates.")
+	fmt.Println("Only perform this when	you know what you're doing.")
+	fmt.Println("")
+	fmt.Printf("Currently there are %d task updates queued.\n", count)
+	fmt.Println("Press [ENTER] to continue, [Ctrl+C] to abort.")
+	bufio.NewReader(os.Stdin).ReadLine()
+
+	info, err := collection.RemoveAll(bson.M{})
+	if err != nil {
+		log.WithError(err).Panic("unable to purge all queued task updates")
+	}
+	log.Warningf("Purged %d queued updates", info.Removed)
+}

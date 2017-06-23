@@ -41,9 +41,12 @@ Flamenco Manager accepts the following CLI arguments:
 - `-debug`: Enable debug-level logging
 - `-verbose`: Enable info-level logging (no-op if `-debug` is also given)
 - `-json`: Log in JSON format, instead of plain text
-- `-cleanslate`: Start with a clean slate; erases all tasks from the local MongoDB,
+- `-cleanslate`: Start with a clean slate; erases all cached tasks from the local MongoDB,
   then exits Flamenco Manager. This can be run while another Flamenco Manager is
   running, but this scenario has not been well-tested yet.
+- `-purgequeue`: Erases all queued task updates from the local MongoDB, then exits Flamenco Manager.
+  NOTE: this is a lossy operation, and it may erase important task updates. Only perform this when
+  you know what you're doing.
 
 
 ## Running as service via systemd (Linux-only)
