@@ -1,7 +1,7 @@
 Changelog for Flamenco Manager
 ==============================
 
-## Version 2.0.13 (in development)
+## Version 2.0.13 (released 2017-07-04)
 
 - Added auto-discovery via UPnP/SSDP, so that Workers can automatically find this Manager on the
   network. This can be turned off by setting `ssdp_discovery` to `false`. For now only discovery via
