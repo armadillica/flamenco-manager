@@ -53,6 +53,9 @@ type Conf struct {
 	TaskCleanupMaxAge time.Duration `yaml:"task_cleanup_max_age"`
 
 	WatchForLatestImage string `yaml:"watch_for_latest_image"`
+
+	SSDPDiscovery  bool   `yaml:"ssdp_discovery"`
+	SSDPDeviceUUID string `yaml:"ssdp_device_uuid"`
 }
 
 // GetConf parses flamenco-manager.yaml and returns its contents as a Conf object.
@@ -74,6 +77,8 @@ func GetConf() Conf {
 		// Days are assumed to be 24 hours long. This is not exactly accurate, but should
 		// be accurate enough for this type of cleanup.
 		TaskCleanupMaxAge: 14 * 24 * time.Hour,
+		SSDPDiscovery:     true,
+		SSDPDeviceUUID:    "7401c189-ef69-434b-b4d8-56d00075faf5",
 	}
 	err = yaml.Unmarshal(yamlFile, &c)
 	if err != nil {

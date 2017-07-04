@@ -1,6 +1,14 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.0.13 (in development)
+
+- Added auto-discovery via UPnP/SSDP, so that Workers can automatically find this Manager on the
+  network. This can be turned off by setting `ssdp_discovery` to `false`. For now only discovery via
+  IPv4 is supported; this deficiency is reported at https://github.com/fromkeith/gossdp/issues/4,
+  and also for the alternative UPnP/SSDP implementation at https://github.com/koron/go-ssdp/issues/4
+
+
 ## Version 2.0.12 (released 2017-06-23)
 
 - Added `-purgequeue` CLI command, which erases all queued task updates from the local MongoDB, then

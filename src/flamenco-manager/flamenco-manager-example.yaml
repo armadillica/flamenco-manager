@@ -10,6 +10,11 @@ manager_secret: theworldistheworld
 #tlskey: tls/privkey.pem
 #tlscert: tls/cert.pem
 
+# Enables auto-discovery via UPnP/SSDP. Make sure the device UUID is unique.
+ssdp_discovery: true
+ssdp_device_uuid: 1e97b633-34f6-416f-abbb-853de75e5c57
+
+
 # How often the Manager should ask the Server for new tasks, regardless of how often workers ask.
 download_task_sleep: 60s
 

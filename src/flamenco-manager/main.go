@@ -19,10 +19,12 @@ import (
 
 	"flamenco-manager/flamenco"
 
+	"github.com/fromkeith/gossdp"
 	"github.com/gorilla/mux"
 )
 
 const flamencoVersion = "2.0.13"
+const ssdpServiceType = "urn:flamenco:manager:0"
 
 // MongoDB session
 var session *mgo.Session
@@ -35,6 +37,7 @@ var taskCleaner *flamenco.TaskCleaner
 var startupNotifier *flamenco.StartupNotifier
 var httpServer *http.Server
 var latestImageSystem *flamenco.LatestImageSystem
+var ssdp *gossdp.Ssdp
 var shutdownComplete chan struct{}
 var httpShutdownComplete chan struct{}
 
@@ -107,6 +110,33 @@ func workerSecret(user, realm string) string {
 	defer mongoSess.Close()
 
 	return flamenco.WorkerSecret(user, mongoSess.DB(""))
+}
+
+func startSSDPServer() *gossdp.Ssdp {
+	ssdp, err := gossdp.NewSsdp(nil)
+	if err != nil {
+		log.Errorln("Error creating ssdp server: ", err)
+		return nil
+	}
+
+	log.Info("Starting UPnP/SSDP advertisement")
+
+	// This will block until stop is called. so open it in a goroutine here
+	go func() {
+		ssdp.Start()
+		log.Info("Shut down UPnP/SSDP advertisement")
+	}()
+
+	// Define the service we want to advertise
+	serverDef := gossdp.AdvertisableServer{
+		ServiceType: "urn:flamenco:manager:0", // define the service type
+		DeviceUuid:  config.SSDPDeviceUUID,    // make this unique!
+		Location:    config.OwnURL,            // this is the location of the service we are advertising
+		MaxAge:      3600,                     // Max age this advertisment is valid for
+	}
+	ssdp.AdvertiseServer(serverDef)
+
+	return ssdp
 }
 
 func shutdown(signum os.Signal) {
@@ -265,6 +295,17 @@ func main() {
 		Handler:     router,
 		ReadTimeout: 15 * time.Second,
 	}
+
+	// Make ourselves discoverable through SSDP.
+	if config.SSDPDiscovery {
+		ssdp := startSSDPServer()
+		if ssdp != nil {
+			defer ssdp.Stop()
+		}
+	} else {
+		log.Info("UPnP/SSDP auto-discovery was disabled in the configuration file.")
+	}
+
 	shutdownComplete = make(chan struct{})
 	httpShutdownComplete = make(chan struct{})
 
