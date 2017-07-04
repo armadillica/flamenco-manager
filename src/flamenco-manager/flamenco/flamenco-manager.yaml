@@ -5,9 +5,9 @@ own_url: http://192.168.3.108:8083/
 flamenco: http://localhost:51234/
 manager_id: 5852bc5198377351f95d103e
 manager_secret: SRVwA7wAxPRfudvqTDOLXwPn1cDRIlADz5Ef9kHk7d52Us
-download_task_sleep_seconds: 300
-download_task_recheck_throttle_seconds: -1
-cancel_task_fetch_max_interval_seconds: 10
+download_task_sleep: 5m
+download_task_recheck_throttle: -1s
+cancel_task_fetch_max_interval: 10s
 
 variables:
     blender:
