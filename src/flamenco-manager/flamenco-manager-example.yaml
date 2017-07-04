@@ -11,7 +11,7 @@ manager_secret: theworldistheworld
 #tlscert: tls/cert.pem
 
 # How often the Manager should ask the Server for new tasks, regardless of how often workers ask.
-download_task_sleep_seconds: 60s
+download_task_sleep: 60s
 
 # The duration between rechecks when there are no more tasks for workers.
 # If set to 0s, will not throttle at all.
