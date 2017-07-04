@@ -22,7 +22,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-const flamencoVersion = "2.0.12"
+const flamencoVersion = "2.0.13"
 
 // MongoDB session
 var session *mgo.Session
