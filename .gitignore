@@ -1,6 +1,8 @@
 /bin/
 /pkg/
 /src/[a-eg-z]*
+/src/flamenco-manager/db/
+/src/flamenco-manager/mongodb-logs/
 /src/flamenco-manager/flamenco-manager
 /src/flamenco-manager/flamenco-manager.yaml
 /src/flamenco-manager/test_*.json

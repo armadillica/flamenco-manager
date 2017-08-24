@@ -16,6 +16,7 @@ import (
 // Conf represents the Manager's configuration file.
 type Conf struct {
 	DatabaseURL   string   `yaml:"database_url"`
+	DatabasePath  string   `yaml:"database_path"`
 	Listen        string   `yaml:"listen"`
 	OwnURL        string   `yaml:"own_url"`
 	FlamencoStr   string   `yaml:"flamenco"`
@@ -89,6 +90,14 @@ func GetConf() Conf {
 	c.Flamenco, err = url.Parse(c.FlamencoStr)
 	if err != nil {
 		log.Fatalf("Bad Flamenco URL: %v", err)
+	}
+
+	// Check that either DatabaseURL or DatabasePath is given, and not both.
+	if c.DatabasePath != "" && c.DatabaseURL != "" {
+		log.Fatal("Either configure database_path or database_url, but not both.")
+	}
+	if c.DatabasePath == "" && c.DatabaseURL == "" {
+		log.Fatal("Configure either database_path or database_url.")
 	}
 
 	foundDuplicate := false

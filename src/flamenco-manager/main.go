@@ -18,6 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"flamenco-manager/flamenco"
+	"flamenco-manager/flamenco/bundledmongo"
 
 	"github.com/armadillica/gossdp"
 	"github.com/gorilla/mux"
@@ -38,6 +39,7 @@ var startupNotifier *flamenco.StartupNotifier
 var httpServer *http.Server
 var latestImageSystem *flamenco.LatestImageSystem
 var ssdp *gossdp.Ssdp
+var mongoRunner *bundledmongo.Runner
 var shutdownComplete chan struct{}
 var httpShutdownComplete chan struct{}
 
@@ -164,6 +166,11 @@ func shutdown(signum os.Signal) {
 		taskUpdatePusher.Close()
 		upstream.Close()
 		session.Close()
+
+		if mongoRunner != nil {
+			mongoRunner.Close()
+		}
+
 		timeout <- false
 	}()
 
@@ -232,8 +239,20 @@ func main() {
 	}()
 
 	config = flamenco.GetConf()
-	log.Info("MongoDB database server :", config.DatabaseURL)
-	log.Info("Upstream Flamenco server:", config.Flamenco)
+
+	if strings.TrimSpace(config.DatabaseURL) == "" {
+		// TODO: see if we can find an available port rather than hoping for the best.
+		localMongoPort := 27019
+		config.DatabaseURL = fmt.Sprintf("mongodb://localhost:%d/flamanager", localMongoPort)
+
+		mongoRunner = bundledmongo.CreateMongoRunner(config.DatabasePath, localMongoPort)
+		if err := mongoRunner.Go(); err != nil {
+			log.Fatalf("Error starting MongoDB: %s", err)
+		}
+	}
+
+	log.Infof("MongoDB database server : %s", config.DatabaseURL)
+	log.Infof("Upstream Flamenco server: %s", config.Flamenco)
 
 	session = flamenco.MongoSession(&config)
 
