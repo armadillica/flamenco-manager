@@ -165,11 +165,11 @@ func shutdown(signum os.Signal) {
 		timeoutChecker.Close()
 		taskUpdatePusher.Close()
 		upstream.Close()
-		session.Close()
 
 		if mongoRunner != nil {
-			mongoRunner.Close()
+			mongoRunner.Close(session)
 		}
+		session.Close()
 
 		timeout <- false
 	}()

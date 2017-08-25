@@ -9,6 +9,9 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // Runner provides an interface to start & stop the mongod executable.
@@ -92,8 +95,35 @@ func (runner *Runner) Go() error {
 	return nil
 }
 
+func sendShutdownCommand(session *mgo.Session) {
+	// session.Anything() can cause a panic if the session was closed.
+	// This is fine in this case, since a close session means a shut down server.
+	defer func() {
+		e := recover()
+		if e != nil {
+			log.Errorf("Panic in sendShutdownCommand: %v", e)
+			return
+		}
+	}()
+
+	mySession := session.Clone()
+	defer mySession.Close()
+
+	log.Info("Sending shutdown command to MongoDB")
+	if err := mySession.Ping(); err != nil {
+		log.Errorf("No ping: %v", err)
+		return
+	}
+
+	// Session is alive, we can use it to tell the server to shut down.
+	var result bson.M
+	if err := mySession.DB("admin").Run("shutdown", &result); err != nil && err != io.EOF {
+		log.Infof("Unable to send MongoDB a shutdown command: %v", err)
+	}
+}
+
 // Close gracefully stops mongod.
-func (runner *Runner) Close() {
+func (runner *Runner) Close(session *mgo.Session) {
 	runner.mutex.Lock()
 	defer runner.mutex.Unlock()
 
@@ -102,19 +132,12 @@ func (runner *Runner) Close() {
 		return
 	}
 
-	if err := runner.cmd.Process.Kill(); err != nil {
-		log.Errorf("Error killing MongoDB process: %s", err)
+	// Not really checking for errors, just shut it all down.
+	go sendShutdownCommand(session)
+	if err := runner.cmd.Wait(); err != nil {
+		log.Errorf("Error waiting for mongod: %v", err)
 		return
 	}
 
-	err := runner.cmd.Wait()
-	if err != nil {
-		log.Errorf("Error waiting for MongoDB: %s", err)
-	}
-
-	if runner.cmd.ProcessState.Success() {
-		log.Info("Gracefully shut down MongoDB server")
-	} else {
-		log.Warning("MongoDB server did not shut down gracefully.")
-	}
+	log.Infof("MongoDB shut down gracefully")
 }
