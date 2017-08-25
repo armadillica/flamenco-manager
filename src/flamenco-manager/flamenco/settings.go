@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -68,6 +69,7 @@ func GetConf() Conf {
 
 	// Construct the struct with some more or less sensible defaults.
 	c := Conf{
+		DatabasePath:                "./db",
 		DownloadTaskSleep:           300 * time.Second,
 		DownloadTaskRecheckThrottle: 10 * time.Second,
 		TaskUpdatePushMaxInterval:   30 * time.Second,
@@ -92,13 +94,7 @@ func GetConf() Conf {
 		log.Fatalf("Bad Flamenco URL: %v", err)
 	}
 
-	// Check that either DatabaseURL or DatabasePath is given, and not both.
-	if c.DatabasePath != "" && c.DatabaseURL != "" {
-		log.Fatal("Either configure database_path or database_url, but not both.")
-	}
-	if c.DatabasePath == "" && c.DatabaseURL == "" {
-		log.Fatal("Configure either database_path or database_url.")
-	}
+	c.checkDatabase()
 
 	foundDuplicate := false
 	for varname, perplatform := range c.PathReplacementByVarname {
@@ -138,6 +134,22 @@ func GetConf() Conf {
 	}
 
 	return c
+}
+
+func (c *Conf) checkDatabase() {
+	// At least one of DatabasePath or DatabaseURL must be given.
+	if c.DatabasePath == "" && c.DatabaseURL == "" {
+		log.Fatal("Configure either database_path or database_url; the cannot both be empty.")
+	}
+
+	// If not empty, convert DatabasePath to an absolute path.
+	if c.DatabasePath != "" {
+		abspath, err := filepath.Abs(c.DatabasePath)
+		if err != nil {
+			log.Fatalf("Unable to make database path %s absolute: %s", c.DatabasePath, err)
+		}
+		c.DatabasePath = abspath
+	}
 }
 
 func transposeVariableMatrix(in, out *map[string]map[string]string) {

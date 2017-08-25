@@ -1,6 +1,20 @@
-database_url: mongodb://localhost/flamanager
+
+# You can leave the database_url empty to use the built-in MongoDB server, or you can
+# point Flamenco Manager to an existing MongoDB server.
+#database_url: mongodb://localhost/flamanager
+database_url:
+
+# When using the built-in MongoDB server, the database files will be stored
+# in this path. The default value is "./db".
+# database_path: ./db
+
+# Flamenco Manager listens to incoming connections from workers on this address.
+# Set to '0.0.0.0:8083' if your system does not support IPv6 but only IPv4.
 listen: '[::0]:8083'
+
+# The URL where the workers can reach this Flamenco Manager.
 own_url: http://192.168.3.108:8083/
+
 flamenco: https://cloud.blender.org/
 manager_id: 1234567899876543212345678
 manager_secret: theworldistheworld
