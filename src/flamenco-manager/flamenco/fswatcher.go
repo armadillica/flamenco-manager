@@ -145,7 +145,7 @@ func (lis *LatestImageSystem) Close() {
 	if lis.imageWatcher == nil {
 		return
 	}
-
+	close(lis.imageCreated)
 	lis.imageWatcher.Close()
 }
 
