@@ -115,7 +115,7 @@ func workerSecret(user, realm string) string {
 func startSSDPServer() *gossdp.Ssdp {
 	ssdp, err := gossdp.NewSsdp(nil)
 	if err != nil {
-		log.Errorln("Error creating ssdp server: ", err)
+		log.Fatal("Error creating ssdp server: ", err)
 		return nil
 	}
 
