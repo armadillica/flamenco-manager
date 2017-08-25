@@ -1,6 +1,11 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.0.14 (in development)
+
+- Fixed panic when auto-discovery ran on Windows.
+
+
 ## Version 2.0.13 (released 2017-07-04)
 
 - Added auto-discovery via UPnP/SSDP, so that Workers can automatically find this Manager on the

@@ -19,7 +19,7 @@ import (
 
 	"flamenco-manager/flamenco"
 
-	"github.com/fromkeith/gossdp"
+	"github.com/armadillica/gossdp"
 	"github.com/gorilla/mux"
 )
 
