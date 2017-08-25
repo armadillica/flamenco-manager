@@ -73,18 +73,21 @@ cp ../../../{README.md,LICENSE.txt,CHANGELOG.md} $PREFIX/
 echo "Creating archive for Linux"
 cp flamenco-manager-linux $PREFIX/flamenco-manager
 cp ../flamenco-manager.service $PREFIX/
+cp -ua --link mongodb-linux-x86_64-* $PREFIX/mongodb-linux
 tar zcf $PREFIX-linux.tar.gz $PREFIX/
-rm -f $PREFIX/flamenco-manager{,.service}
+rm -rf $PREFIX/flamenco-manager{,.service} $PREFIX/mongodb-linux
 
 echo "Creating archive for Windows"
 cp flamenco-manager-windows.exe $PREFIX/flamenco-manager.exe
+cp -ua --link mongodb-windows-* $PREFIX/mongodb-windows
 zip -9 -r -q $PREFIX-windows.zip $PREFIX/
-rm $PREFIX/flamenco-manager.exe
+rm -rf $PREFIX/flamenco-manager.exe $PREFIX/mongodb-windows
 
 echo "Creating archive for Darwin"
 cp flamenco-manager-darwin $PREFIX/flamenco-manager
+cp -ua --link mongodb-osx-x86_64-* $PREFIX/mongodb-darwin
 zip -9 -r -q $PREFIX-darwin.zip $PREFIX/
-rm -f $PREFIX/flamenco-manager
+rm -rf $PREFIX/flamenco-manager $PREFIX/mongodb-darwin
 
 # Clean up after ourselves
 rm -rf $PREFIX/
