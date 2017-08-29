@@ -1,6 +1,8 @@
 package flamenco
 
 import (
+	"fmt"
+	"io"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -154,6 +156,40 @@ func (c *Conf) checkDatabase() {
 		}
 		c.DatabasePath = abspath
 	}
+}
+
+// Write saves the current in-memory configuration to a YAML file.
+func (c *Conf) Write(filename string) error {
+	data, err := yaml.Marshal(c)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(f, "# Configuration file for Flamenco Manager.")
+	fmt.Fprintln(f, "# For an explanation of the fields, refer to flamenco-manager-example.yaml")
+	fmt.Fprintln(f, "#")
+	fmt.Fprintln(f, "# NOTE: this file will be overwritten by Flamenco Manager's web-based configuration system.")
+	fmt.Fprintln(f, "#")
+	now := time.Now()
+	fmt.Fprintf(f, "# This file was written on %s\n\n", now.Format("2006-01-02 15:04:05 -07:00"))
+
+	n, err := f.Write(data)
+	if err != nil {
+		return err
+	}
+	if n < len(data) {
+		return io.ErrShortWrite
+	}
+	if err = f.Close(); err != nil {
+		return err
+	}
+
+	log.Infof("Config file written to %s", filename)
+	return nil
 }
 
 func transposeVariableMatrix(in, out *map[string]map[string]string) {
