@@ -61,7 +61,12 @@ type Conf struct {
 
 // GetConf parses flamenco-manager.yaml and returns its contents as a Conf object.
 func GetConf() Conf {
-	yamlFile, err := ioutil.ReadFile("flamenco-manager.yaml")
+	return LoadConf("flamenco-manager.yaml")
+}
+
+// LoadConf parses the given file and returns its contents as a Conf object.
+func LoadConf(filename string) Conf {
+	yamlFile, err := ioutil.ReadFile(filename)
 	if err != nil {
 		log.Fatalf("GetConf err   #%v ", err)
 	}
