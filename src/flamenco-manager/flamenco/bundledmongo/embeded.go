@@ -41,18 +41,23 @@ func (runner *Runner) Go() error {
 	defer runner.mutex.Unlock()
 	var err error
 
-	log.Infof("Starting MongoDB from path %s on port %d",
-		runner.databasePath, runner.localPort)
-
 	ensureDirExists(runner.databasePath, "database path")
 	ensureDirExists("mongodb-logs", "MongoDB logs path")
 
 	localPortStr := fmt.Sprintf("%d", runner.localPort)
 	log.Debugf("Local port string is %v", localPortStr)
 
+	execPath, err := absMongoDbPath()
+	if err != nil {
+		return fmt.Errorf("Unable to determine path of MongoDB executable: %v", err)
+	}
+	log.Infof("MongoDB executable: %s", execPath)
+	log.Infof("MongoDB database path: %s", runner.databasePath)
+	log.Infof("MongoDB will be listening on port %d", runner.localPort)
+
 	runner.cmd = exec.CommandContext(
 		runner.context,
-		mongoDPath,
+		execPath,
 		"--port", localPortStr,
 		"--bind_ip", "127.0.0.1",
 		"--dbpath", runner.databasePath,

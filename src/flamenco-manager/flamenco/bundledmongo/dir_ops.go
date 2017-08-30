@@ -44,3 +44,8 @@ func relativeToExecutable(filename string) (string, error) {
 
 	return filepath.Join(exedirname, filename), nil
 }
+
+// Returns the absolute path of the mongod executable.
+func absMongoDbPath() (string, error) {
+	return relativeToExecutable(mongoDPath)
+}
