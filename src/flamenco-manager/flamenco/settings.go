@@ -62,15 +62,15 @@ type Conf struct {
 }
 
 // GetConf parses flamenco-manager.yaml and returns its contents as a Conf object.
-func GetConf() Conf {
+func GetConf() (Conf, error) {
 	return LoadConf("flamenco-manager.yaml")
 }
 
 // LoadConf parses the given file and returns its contents as a Conf object.
-func LoadConf(filename string) Conf {
+func LoadConf(filename string) (Conf, error) {
 	yamlFile, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Fatalf("GetConf err   #%v ", err)
+		return Conf{}, err
 	}
 
 	// Construct the struct with some more or less sensible defaults.
@@ -91,13 +91,13 @@ func LoadConf(filename string) Conf {
 	}
 	err = yaml.Unmarshal(yamlFile, &c)
 	if err != nil {
-		log.Fatalf("Unmarshal: %v", err)
+		return c, fmt.Errorf("unmarshal: %v", err)
 	}
 
 	// Parse URL
 	c.Flamenco, err = url.Parse(c.FlamencoStr)
 	if err != nil {
-		log.Fatalf("Bad Flamenco URL: %v", err)
+		return c, fmt.Errorf("bad Flamenco URL: %v", err)
 	}
 
 	c.checkDatabase()
@@ -136,10 +136,14 @@ func LoadConf(filename string) Conf {
 	}
 
 	if foundDuplicate {
-		log.Fatalf("There were duplicate variables found, unable to continue.")
+		return c, fmt.Errorf("duplicate variables found")
 	}
 
-	return c
+	if err := c.Write("written.yaml"); err != nil {
+		log.Fatalf("Error writing configuration file: %s", err)
+	}
+
+	return c, nil
 }
 
 func (c *Conf) checkDatabase() {
@@ -215,5 +219,10 @@ func GetTestConfig() Conf {
 		log.Fatalf("Expecting tests to run from flamenco package dir, not from %v", cwd)
 	}
 
-	return GetConf()
+	conf, err := GetConf()
+	if err != nil {
+		log.Fatalf("Unable to load config: %s", err)
+	}
+
+	return conf
 }

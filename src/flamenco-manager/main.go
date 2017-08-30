@@ -238,7 +238,10 @@ func main() {
 		}
 	}()
 
-	config = flamenco.GetConf()
+	config, err := flamenco.GetConf()
+	if err != nil {
+		log.Fatalf("Unable to load configuration: %s", err)
+	}
 
 	if strings.TrimSpace(config.DatabaseURL) == "" {
 		// TODO: see if we can find an available port rather than hoping for the best.
