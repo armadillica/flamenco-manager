@@ -59,7 +59,7 @@ func (runner *Runner) Go() error {
 		runner.context,
 		execPath,
 		"--port", localPortStr,
-		"--bind_ip", "127.0.0.1",
+		"--bind_ip", "localhost",
 		"--dbpath", runner.databasePath,
 		"--quiet",
 		"--logpath", "mongodb-logs/mongodb.log",
