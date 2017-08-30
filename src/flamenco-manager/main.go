@@ -317,8 +317,7 @@ func normalMode() (*mux.Router, error) {
 
 func setupMode() (*mux.Router, error) {
 	router := mux.NewRouter().StrictSlash(true)
-
-	err := websetup.EnterSetupMode(&config, router)
+	err := websetup.EnterSetupMode(&config, flamencoVersion, router)
 
 	return router, err
 }

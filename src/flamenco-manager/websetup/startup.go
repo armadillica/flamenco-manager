@@ -12,7 +12,7 @@ import (
 const webroot = "/setup"
 
 // EnterSetupMode registers HTTP endpoints and logs which URLs are available to visit it.
-func EnterSetupMode(config *flamenco.Conf, router *mux.Router) error {
+func EnterSetupMode(config *flamenco.Conf, flamencoVersion string, router *mux.Router) error {
 	log.Info("Entering setup mode")
 
 	urls, err := availableURLs(config)
@@ -29,6 +29,10 @@ func EnterSetupMode(config *flamenco.Conf, router *mux.Router) error {
 		log.Infof("  - %s", setupURL)
 	}
 
-	addWebSetupRoutes(router)
+	// We don't need to return a reference to this object, since it's still referred to by the
+	// muxer.
+	web := CreateWebSetup(config, flamencoVersion)
+	web.addWebSetupRoutes(router)
+
 	return nil
 }

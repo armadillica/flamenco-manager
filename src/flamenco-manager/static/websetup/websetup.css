@@ -1,0 +1,32 @@
+html, body {
+    font-family: Noto, Ubuntu, sans-serif;
+    color: white;
+    background-color: #4da7cd;
+    text-shadow: 0.2ex 0.2ex 0.1ex rgba(0, 0, 0, 0.2);
+}
+
+
+@media (min-width: 768px)
+.masthead {
+    height: 100%;
+    padding: 0;
+}
+.masthead {
+    display: table;
+    width: 100%;
+    padding: 100px 0;
+    text-align: center;
+    color: #fff;
+}
+.masthead .intro-body {
+    display: table-cell;
+    vertical-align: middle;
+}
+
+@media (min-width: 768px)
+.masthead .intro-body .brand-heading {
+    font-size: 100px;
+}
+.masthead .intro-body .brand-heading {
+    font-size: 50px;
+}
