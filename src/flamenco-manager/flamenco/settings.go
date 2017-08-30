@@ -69,12 +69,10 @@ func GetConf() (Conf, error) {
 // LoadConf parses the given file and returns its contents as a Conf object.
 func LoadConf(filename string) (Conf, error) {
 	yamlFile, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return Conf{}, err
-	}
 
 	// Construct the struct with some more or less sensible defaults.
 	c := Conf{
+		Listen:                      ":8083",
 		DatabasePath:                "./db",
 		DownloadTaskSleep:           300 * time.Second,
 		DownloadTaskRecheckThrottle: 10 * time.Second,
@@ -89,6 +87,10 @@ func LoadConf(filename string) (Conf, error) {
 		SSDPDiscovery:     true,
 		SSDPDeviceUUID:    "7401c189-ef69-434b-b4d8-56d00075faf5",
 	}
+	if err != nil {
+		return c, err
+	}
+
 	err = yaml.Unmarshal(yamlFile, &c)
 	if err != nil {
 		return c, fmt.Errorf("unmarshal: %v", err)
