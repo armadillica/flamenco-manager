@@ -150,7 +150,9 @@ func shutdown(signum os.Signal) {
 
 		// ImageWatcher allows long-living HTTP connections, so it
 		// should be shut down before the HTTP server.
-		latestImageSystem.Close()
+		if latestImageSystem != nil {
+			latestImageSystem.Close()
+		}
 
 		if httpServer != nil {
 			log.Info("Shutting down HTTP server")
@@ -162,14 +164,21 @@ func shutdown(signum os.Signal) {
 			log.Warning("HTTP server was not even started yet")
 		}
 
-		timeoutChecker.Close()
-		taskUpdatePusher.Close()
-		upstream.Close()
-
+		if timeoutChecker != nil {
+			timeoutChecker.Close()
+		}
+		if taskUpdatePusher != nil {
+			taskUpdatePusher.Close()
+		}
+		if upstream != nil {
+			upstream.Close()
+		}
 		if mongoRunner != nil {
 			mongoRunner.Close(session)
 		}
-		session.Close()
+		if session != nil {
+			session.Close()
+		}
 
 		timeout <- false
 	}()
