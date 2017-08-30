@@ -2,8 +2,10 @@ package bundledmongo
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/kardianos/osext"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -26,4 +28,19 @@ func ensureDirExists(directory, description string) {
 		log.Fatalf("%s %s exists, but is not a directory. Move it out of the way.",
 			strings.Title(description), directory)
 	}
+}
+
+// Returns the filename as an absolute path.
+// Relative paths are interpreted relative to the flamenco-manager executable.
+func relativeToExecutable(filename string) (string, error) {
+	if filepath.IsAbs(filename) {
+		return filename, nil
+	}
+
+	exedirname, err := osext.ExecutableFolder()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(exedirname, filename), nil
 }
