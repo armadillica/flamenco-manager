@@ -19,8 +19,9 @@ import (
 
 	"flamenco-manager/flamenco"
 	"flamenco-manager/flamenco/bundledmongo"
+	"flamenco-manager/websetup"
 
-	"github.com/fromkeith/gossdp"
+	"github.com/armadillica/gossdp"
 	"github.com/gorilla/mux"
 )
 
@@ -115,7 +116,7 @@ func workerSecret(user, realm string) string {
 }
 
 func startSSDPServer() *gossdp.Ssdp {
-	ssdp, err := gossdp.NewSsdp(nil)
+	ssdpServer, err := gossdp.NewSsdpWithLogger(nil, log.StandardLogger())
 	if err != nil {
 		log.Fatal("Error creating ssdp server: ", err)
 		return nil
@@ -125,7 +126,7 @@ func startSSDPServer() *gossdp.Ssdp {
 
 	// This will block until stop is called. so open it in a goroutine here
 	go func() {
-		ssdp.Start()
+		ssdpServer.Start()
 		log.Info("Shut down UPnP/SSDP advertisement")
 	}()
 
@@ -136,9 +137,9 @@ func startSSDPServer() *gossdp.Ssdp {
 		Location:    config.OwnURL,            // this is the location of the service we are advertising
 		MaxAge:      3600,                     // Max age this advertisment is valid for
 	}
-	ssdp.AdvertiseServer(serverDef)
+	ssdpServer.AdvertiseServer(serverDef)
 
-	return ssdp
+	return ssdpServer
 }
 
 func shutdown(signum os.Signal) {
@@ -152,6 +153,11 @@ func shutdown(signum os.Signal) {
 		// should be shut down before the HTTP server.
 		if latestImageSystem != nil {
 			latestImageSystem.Close()
+		}
+
+		if ssdp != nil {
+			log.Info("Shutting down UPnP/SSDP advertisement")
+			ssdp.Stop()
 		}
 
 		if httpServer != nil {
@@ -199,6 +205,7 @@ var cliArgs struct {
 	cleanSlate bool
 	purgeQueue bool
 	version    bool
+	setup      bool
 }
 
 func parseCliArgs() {
@@ -208,6 +215,7 @@ func parseCliArgs() {
 	flag.BoolVar(&cliArgs.cleanSlate, "cleanslate", false, "Start with a clean slate; erases all tasks from the local MongoDB")
 	flag.BoolVar(&cliArgs.purgeQueue, "purgequeue", false, "Purges all queued task updates from the local MongoDB")
 	flag.BoolVar(&cliArgs.version, "version", false, "Show the version of Flamenco Manager")
+	flag.BoolVar(&cliArgs.setup, "setup", false, "Enter setup mode, enabling the web-based configuration system")
 	flag.Parse()
 }
 
@@ -230,28 +238,7 @@ func configLogging() {
 	log.SetLevel(level)
 }
 
-func main() {
-	parseCliArgs()
-	if cliArgs.version {
-		fmt.Println(flamencoVersion)
-		return
-	}
-
-	configLogging()
-	log.Infof("Starting Flamenco Manager version %s", flamencoVersion)
-
-	defer func() {
-		// If there was a panic, make sure we log it before quitting.
-		if r := recover(); r != nil {
-			log.Panic(r)
-		}
-	}()
-
-	config, err := flamenco.GetConf()
-	if err != nil {
-		log.Fatalf("Unable to load configuration: %s", err)
-	}
-
+func normalMode() (*mux.Router, error) {
 	if strings.TrimSpace(config.DatabaseURL) == "" {
 		// TODO: see if we can find an available port rather than hoping for the best.
 		localMongoPort := 27019
@@ -259,7 +246,7 @@ func main() {
 
 		mongoRunner = bundledmongo.CreateMongoRunner(config.DatabasePath, localMongoPort)
 		if err := mongoRunner.Go(); err != nil {
-			log.Fatalf("Error starting MongoDB: %s", err)
+			return nil, fmt.Errorf("Error starting MongoDB: %s", err)
 		}
 	}
 
@@ -271,20 +258,21 @@ func main() {
 	if cliArgs.cleanSlate {
 		flamenco.CleanSlate(session.DB(""))
 		log.Warning("Shutting down after performing clean slate")
-		return
+		os.Exit(0)
+		return nil, nil
 	}
 
 	if cliArgs.purgeQueue {
 		flamenco.PurgeOutgoingQueue(session.DB(""))
 		log.Warning("Shutting down after performing queue purge")
-		return
+		os.Exit(0)
+		return nil, nil
 	}
 
 	if config.HasTLS() {
 		config.OwnURL = strings.Replace(config.OwnURL, "http://", "https://", 1)
 	} else {
 		config.OwnURL = strings.Replace(config.OwnURL, "https://", "http://", 1)
-		log.Warning("WARNING: TLS not enabled!")
 	}
 	log.Info("My URL is               :", config.OwnURL)
 	log.Info("Listening at            :", config.Listen)
@@ -317,6 +305,69 @@ func main() {
 	taskCleaner.Go()
 	latestImageSystem.Go()
 
+	// Make ourselves discoverable through SSDP.
+	if config.SSDPDiscovery {
+		ssdp = startSSDPServer()
+	} else {
+		log.Info("UPnP/SSDP auto-discovery was disabled in the configuration file.")
+	}
+
+	return router, nil
+}
+
+func setupMode() (*mux.Router, error) {
+	router := mux.NewRouter().StrictSlash(true)
+
+	err := websetup.EnterSetupMode(&config, router)
+
+	return router, err
+}
+
+func main() {
+	parseCliArgs()
+	if cliArgs.version {
+		fmt.Println(flamencoVersion)
+		return
+	}
+
+	// Always do verbose logging while running setup mode. It wouldn't make sense to log normal
+	// informative things (like the URLs available to access the server) at warning level just to
+	// ensure visibility.
+	if cliArgs.setup {
+		cliArgs.verbose = true
+	}
+
+	configLogging()
+	log.Infof("Starting Flamenco Manager version %s", flamencoVersion)
+
+	defer func() {
+		// If there was a panic, make sure we log it before quitting.
+		if r := recover(); r != nil {
+			log.Panic(r)
+		}
+	}()
+
+	var err error
+	config, err = flamenco.GetConf()
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Warning("Flamenco Manager configuration file not found, entering setup mode.")
+			cliArgs.setup = true
+		} else {
+			log.Fatalf("Unable to load configuration: %s", err)
+		}
+	}
+
+	var router *mux.Router
+	if cliArgs.setup {
+		router, err = setupMode()
+	} else {
+		router, err = normalMode()
+	}
+	if err != nil {
+		log.Fatalf("There was an error setting up Flamenco Manager for operation: %s", err)
+	}
+
 	// Create the HTTP server before allowing the shutdown signal Handler
 	// to exist. This prevents a race condition when Ctrl+C is pressed after
 	// the http.Server is created, but before it is assigned to httpServer.
@@ -324,16 +375,6 @@ func main() {
 		Addr:        config.Listen,
 		Handler:     router,
 		ReadTimeout: 15 * time.Second,
-	}
-
-	// Make ourselves discoverable through SSDP.
-	if config.SSDPDiscovery {
-		ssdp := startSSDPServer()
-		if ssdp != nil {
-			defer ssdp.Stop()
-		}
-	} else {
-		log.Info("UPnP/SSDP auto-discovery was disabled in the configuration file.")
 	}
 
 	shutdownComplete = make(chan struct{})
