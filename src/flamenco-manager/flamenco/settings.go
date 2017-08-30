@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -169,12 +168,10 @@ func GetTestConfig() Conf {
 	cwd, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
-		os.Exit(1)
 	}
 
-	if path.Base(cwd) != "flamenco" {
-		log.Panic("Expecting tests to run from flamenco package dir.")
-		os.Exit(2)
+	if filepath.Base(cwd) != "flamenco" {
+		log.Fatalf("Expecting tests to run from flamenco package dir, not from %v", cwd)
 	}
 
 	return GetConf()
