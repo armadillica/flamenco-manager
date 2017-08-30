@@ -7,16 +7,21 @@ Author: Sybren A. Stüvel <sybren@blender.studio>
 
 ## Getting started
 
-Install [MongoDB 3.2 or newer](https://docs.mongodb.com/manual/administration/install-community/),
-copy `flamenco-manager-example.yaml` to `flamenco-manager.yaml` and edit the file to suit your needs
-(see below), then start Flamenco Manager. Connect a browser, and you should see a (probably empty)
-status dashboard.
+To run Flamenco Manager, follow these steps:
 
-To use the "Last Rendered Image" feature, you need to have
-[ImageMagick](https://www.imagemagick.org/) installed, with support for the type of images you
-render. The Manager needs to be able to execute the `convert` command. The exact version doesn't
-matter, since the command it executes is simple:
-`convert ${rendered_image} -quality 85 latest-image.jpg`
+1. Download [Flamenco Manager](https://www.flamenco.io/download/) for your platform.
+2. Extract the downloaded file.
+3. Edit the configuration file (see "Configuration" below).
+4. Optional: Install [MongoDB 3.2 or newer](https://docs.mongodb.com/manual/administration/install-community/).
+   This is only required if you want to run using a self-installed MongoDB database. If you skip
+   this step, the MongoDB server that's bundled with Flamenco Manager will be used.
+5. Optional: To use the "Last Rendered Image" feature, you need to have
+   [ImageMagick](https://www.imagemagick.org/) installed, with support for the type of images you
+   render. The Manager needs to be able to execute the `convert` command. The exact version doesn't
+   matter, since the command it executes is simple: `convert ${rendered_image} -quality 85
+   latest-image.jpg`
+6. Start the `flamenco-manager` (Linux, macOS) or `flamenco-manager.exe` executable.
+7. Connect a browser, and you should see a (probably empty) status dashboard.
 
 
 ## Configuration
