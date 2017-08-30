@@ -6,7 +6,8 @@ Changelog for Flamenco Manager
 - Fixed panic when auto-discovery ran on Windows.
 - Bundled MongoDB itself with Flamenco Manager, so that a separate MongoDB installation is no longer
   required. When the `database_url` in `flamenco-manager.yaml` is empty, this bundled database
-  server will be used.
+  server will be used. Note that running unit tests while developing Flamenco Manager still requires
+  a separate server instance.
 
 
 ## Version 2.0.13 (released 2017-07-04)
