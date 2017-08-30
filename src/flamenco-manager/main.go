@@ -20,7 +20,7 @@ import (
 	"flamenco-manager/flamenco"
 	"flamenco-manager/flamenco/bundledmongo"
 
-	"github.com/armadillica/gossdp"
+	"github.com/fromkeith/gossdp"
 	"github.com/gorilla/mux"
 )
 
