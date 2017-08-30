@@ -196,6 +196,11 @@ func (c *Conf) Write(filename string) error {
 	return nil
 }
 
+// HasTLS returns true if both the TLS certificate and key files are configured.
+func (c *Conf) HasTLS() bool {
+	return c.TLSCert != "" && c.TLSKey != ""
+}
+
 func transposeVariableMatrix(in, out *map[string]map[string]string) {
 	*out = make(map[string]map[string]string)
 	for varname, perplatform := range *in {

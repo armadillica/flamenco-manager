@@ -271,8 +271,7 @@ func main() {
 		return
 	}
 
-	hasTLS := config.TLSCert != "" && config.TLSKey != ""
-	if hasTLS {
+	if config.HasTLS() {
 		config.OwnURL = strings.Replace(config.OwnURL, "http://", "https://", 1)
 	} else {
 		config.OwnURL = strings.Replace(config.OwnURL, "https://", "http://", 1)
@@ -343,10 +342,10 @@ func main() {
 	}()
 
 	// Fall back to insecure server if TLS certificate/key is not defined.
-	if !hasTLS {
-		log.Warning(httpServer.ListenAndServe())
+	if config.HasTLS() {
+		log.Warningf("HTTP server: %v", httpServer.ListenAndServeTLS(config.TLSCert, config.TLSKey))
 	} else {
-		log.Warning(httpServer.ListenAndServeTLS(config.TLSCert, config.TLSKey))
+		log.Warningf("HTTP server: %v", httpServer.ListenAndServe())
 	}
 	close(httpShutdownComplete)
 
