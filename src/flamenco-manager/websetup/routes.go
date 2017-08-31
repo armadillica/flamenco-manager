@@ -21,6 +21,7 @@ const (
 	apiLinkRequiredURL = "/setup/api/link-required"
 	apiLinkStartURL    = "/setup/api/link-start"
 	linkReturnURL      = "/setup/link-return"
+	linkDoneURL        = "/setup/link-done"
 )
 
 // Routes handles all HTTP routes and server-side context for the web setup wizard.
@@ -109,6 +110,7 @@ func (web *Routes) addWebSetupRoutes(router *mux.Router) {
 	router.HandleFunc(apiLinkRequiredURL, web.apiLinkRequired)
 	router.HandleFunc(apiLinkStartURL, web.apiLinkStart)
 	router.HandleFunc(linkReturnURL, web.httpReturn)
+	router.HandleFunc(linkDoneURL, web.httpLinkDone)
 
 	static := noDirListing(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	router.PathPrefix("/static/").Handler(static).Methods("GET")
@@ -230,5 +232,10 @@ func (web *Routes) httpReturn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Redirect to the "done" page
+	http.Redirect(w, r, linkDoneURL, http.StatusSeeOther)
+}
+
+func (web *Routes) httpLinkDone(w http.ResponseWriter, r *http.Request) {
 	web.showTemplate("templates/websetup/link-done.html", w, r, nil)
 }
