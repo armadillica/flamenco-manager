@@ -83,7 +83,7 @@ func sendErrorMessage(w http.ResponseWriter, r *http.Request, status int, msg st
 }
 
 func (web *Routes) showTemplate(templfname string, w http.ResponseWriter, r *http.Request, templateData TemplateData) {
-	tmpl, err := template.ParseFiles(templfname)
+	tmpl, err := template.ParseFiles("templates/websetup/layout.html", templfname)
 	if err != nil {
 		log.Errorf("Error parsing HTML template %s: %s", templfname, err)
 		http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -96,7 +96,11 @@ func (web *Routes) showTemplate(templfname string, w http.ResponseWriter, r *htt
 	}
 	merge(usedData, templateData)
 
-	tmpl.Execute(w, usedData)
+	err = tmpl.ExecuteTemplate(w, "layout", usedData)
+	if err != nil {
+		log.Errorf("Error executing HTML template %s: %s", templfname, err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+	}
 }
 
 // addWebSetupRoutes registers HTTP endpoints for setup mode.
@@ -219,4 +223,6 @@ func (web *Routes) httpReturn(w http.ResponseWriter, r *http.Request) {
 
 	// Store our ID!
 	log.Infof("Our Manager ID is %s", oid)
+
+	web.showTemplate("templates/websetup/link-done.html", w, r, nil)
 }

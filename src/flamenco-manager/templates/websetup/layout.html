@@ -1,0 +1,44 @@
+{{define "layout"}}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Flamenco Manager {{.Version}} - Setup</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css">
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="/static/bootstrap/css/bootstrap-theme.min.css">
+    <link rel='stylesheet' href='/static/websetup/websetup.css'>
+
+    <script src="/static/jquery.min.js"></script>
+    <script src="/static/bootstrap/js/bootstrap.min.js" async></script>
+    <script src="/static/clipboard.min.js" async></script>
+    <script src="/static/websetup/websetup.js" async></script>
+</head>
+<body>
+    <header class='masthead'>
+        <div class='intro-body'>
+            <div class='container'>
+                <div class='row'>
+                    <div class='col-lg-8 mx-auto'>
+                        <h1 class='brand-heading'>Flamenco Manager</h1>
+                        <p class='intro-text'>Your own render farm manager</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section class='container'>
+        <div class='row'>
+            <div class='col-lg-8 mx-auto'>
+                {{block "content" .}}{{end}}
+            </div>
+        </div>
+    </section>
+
+</body>
+</html>
+{{end}}

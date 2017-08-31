@@ -1,63 +1,17 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Flamenco Manager {{.Version}} - Setup</title>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+{{template "layout" .}}
+{{define "content"}}
+<div id='linking'>
+    <h2>Link to Flamenco Server</h2>
+    <div id='link-check-in-progress'>Link check in progress, please wait…</div>
+    <div id='link-check-result'></div>
 
-    <link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css">
-    <!-- Optional theme -->
-    <link rel="stylesheet" href="/static/bootstrap/css/bootstrap-theme.min.css">
-    <link rel='stylesheet' href='/static/websetup/websetup.css'>
-
-    <script src="/static/jquery.min.js"></script>
-    <script src="/static/bootstrap/js/bootstrap.min.js" async></script>
-    <script src="/static/clipboard.min.js" async></script>
-    <script src="/static/websetup/websetup.js" async></script>
-</head>
-<body>
-    <header class='masthead'>
-        <div class='intro-body'>
-            <div class='container'>
-                <div class='row'>
-                    <div class='col-lg-8 mx-auto'>
-                        <h1 class='brand-heading'>Flamenco Manager</h1>
-                        <p class='intro-text'>Your own render farm manager</p>
-                    </div>
-                </div>
-            </div>
+    <form id='link-required-form' class='form-inline'>
+        <div class="form-group">
+            <label for='link-server-url'>Server URL</label>
+            <input id='link-server-url' class="form-control" name='server' placeholder='Server URL to link to' value='{{.Config.Flamenco}}'>
         </div>
-    </header>
-
-    <section class='container'>
-        <div class='row'>
-            <div class='col-lg-8 mx-auto'>
-                <div id='linking'>
-                    <h2>Link to Flamenco Server</h2>
-                    <div id='link-check-in-progress'>Link check in progress, please wait…</div>
-                    <div id='link-check-result'></div>
-
-                    <form id='link-required-form' class='form-inline'>
-                        <div class="form-group">
-                            <label for='link-server-url'>Server URL</label>
-                            <input id='link-server-url' class="form-control" name='server' placeholder='Server URL to link to' value='{{.Config.Flamenco}}'>
-                        </div>
-                    </form>
-                    <button id='link-button' style='display: none' class='btn btn-default btn-primary'>Link to Flamenco Server</button>
-                    <div id='link-start-result'></div>
-                </div>
-
-                <h2>Configuration</h2>
-                <dl>
-                    <dt>Manager ID:</dt>
-                    <dd>{{.Config.ManagerID}}</dd>
-                    <dt>Authentication code:</dt>
-                    <dd>{{.Config.ManagerSecret}}</dd>
-                </dl>
-            </div>
-        </div>
-    </section>
-
-</body>
-</html>
+    </form>
+    <button id='link-button' style='display: none' class='btn btn-default btn-primary'>Link to Flamenco Server</button>
+    <div id='link-start-result'></div>
+</div>
+{{end}}
