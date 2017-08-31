@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	check "gopkg.in/check.v1"
+	httpmock "gopkg.in/jarcoal/httpmock.v1"
 )
 
 // Hook up gocheck into the "go test" runner.
@@ -41,4 +42,14 @@ func parseRequestJSON(c *check.C, req *http.Request, parsed interface{}) {
 	if err := decoder.Decode(parsed); err != nil {
 		c.Fatalf("Unable to decode JSON: %s", err)
 	}
+}
+
+// NewJSONResponder results in a JSON response and sends false to the timeout channel.
+func NewJSONResponder(status int, body interface{}, timeout chan bool) httpmock.Responder {
+	responder := func(req *http.Request) (*http.Response, error) {
+		defer func() { timeout <- false }()
+		log.Infof("%s from manager received on server, sending back response.", req.Method)
+		return httpmock.NewJsonResponse(status, body)
+	}
+	return responder
 }

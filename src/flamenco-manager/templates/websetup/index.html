@@ -14,6 +14,7 @@
     <script src="/static/jquery.min.js"></script>
     <script src="/static/bootstrap/js/bootstrap.min.js" async></script>
     <script src="/static/clipboard.min.js" async></script>
+    <script src="/static/websetup/websetup.js" async></script>
 </head>
 <body>
     <header class='masthead'>
@@ -32,6 +33,13 @@
     <section class='container'>
         <div class='row'>
             <div class='col-lg-8 mx-auto'>
+                <div id='linking'>
+                    <h2>Link to Flamenco Server</h2>
+                    <div id='link-check-in-progress'>Link check in progress, please wait…</div>
+                    <div id='link-check-result'></div>
+                    <button id='link-button' style='display: none' class='btn btn-default btn-primary'>Link to Flamenco Server</button>
+                </div>
+
                 <h2>Configuration</h2>
                 <dl>
                     <dt>Manager ID:</dt>

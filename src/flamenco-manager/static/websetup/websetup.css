@@ -5,6 +5,10 @@ html, body {
     text-shadow: 0.2ex 0.2ex 0.1ex rgba(0, 0, 0, 0.2);
 }
 
+a, a:link { color: #d0f0f7; }
+a:visited { color: #d2d0f7; }
+a:hover { color: #d0f7eb; }
+a:active { color: #f7d0d2; }
 
 @media (min-width: 768px)
 .masthead {

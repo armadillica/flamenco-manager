@@ -24,6 +24,51 @@ const (
 	keyExchangeEndpoint = "/api/flamenco/managers/link/exchange"
 )
 
+// LinkRequired returns true iff (re)linking to Flamenco Server is required.
+func LinkRequired(config *flamenco.Conf) bool {
+	// Check upstream server URL.
+	if config.Flamenco == nil {
+		log.Debug("Flamenco Server URL is nil, linking is required.")
+		return true
+	}
+
+	// Check existence of credentials.
+	if config.ManagerID == "" || config.ManagerSecret == "" {
+		log.Debug("Credentials incomplete, linking is required.")
+		return true
+	}
+
+	// Check the validity of the credentials.
+	strURL := "/api/flamenco/managers/" + config.ManagerID
+	getURL, err := config.Flamenco.Parse(strURL)
+	if err != nil {
+		log.Warningf("Error parsing '%s' as URL; unable to check credentials: %s", strURL, err)
+		return true
+	}
+
+	req, err := http.NewRequest("GET", getURL.String(), nil)
+	if err != nil {
+		log.Warningf("Unable to create GET request: %s", err)
+		return true
+	}
+	req.SetBasicAuth(config.ManagerSecret, "")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Warningf("Unable to GET %s: %s", getURL, err)
+		return true
+	}
+	if resp.StatusCode != http.StatusOK {
+		log.Warningf("HTTP status %d while fetching manager %s, linking required",
+			resp.StatusCode, config.ManagerID)
+		return true
+	}
+	log.Debugf("Credentials are still valid, no need to link.")
+
+	return false
+}
+
 // StartLinking starts the linking process by generating a secret key.
 func StartLinking(upstreamURL string) (*ServerLinker, error) {
 	upstream, err := url.Parse(upstreamURL)
