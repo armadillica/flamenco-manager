@@ -1,15 +1,26 @@
 package websetup
 
 import (
+	"crypto/hmac"
+	"encoding/hex"
 	"encoding/json"
 	"flamenco-manager/flamenco"
 	"fmt"
 	"html/template"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
+)
+
+// End points at this Manager
+const (
+	indexURL           = "/setup"
+	apiLinkRequiredURL = "/setup/api/link-required"
+	apiLinkStartURL    = "/setup/api/link-start"
+	linkReturnURL      = "/setup/link-return"
 )
 
 // Routes handles all HTTP routes and server-side context for the web setup wizard.
@@ -90,9 +101,10 @@ func (web *Routes) showTemplate(templfname string, w http.ResponseWriter, r *htt
 
 // addWebSetupRoutes registers HTTP endpoints for setup mode.
 func (web *Routes) addWebSetupRoutes(router *mux.Router) {
-	router.HandleFunc("/setup", web.httpIndex)
-	router.HandleFunc("/setup/api/link-required", web.apiLinkRequired)
-	router.HandleFunc("/setup/api/link-start", web.apiLinkStart)
+	router.HandleFunc(indexURL, web.httpIndex)
+	router.HandleFunc(apiLinkRequiredURL, web.apiLinkRequired)
+	router.HandleFunc(apiLinkStartURL, web.apiLinkStart)
+	router.HandleFunc(linkReturnURL, web.httpReturn)
 
 	static := noDirListing(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	router.PathPrefix("/static/").Handler(static).Methods("GET")
@@ -114,22 +126,33 @@ func (web *Routes) apiLinkRequired(w http.ResponseWriter, r *http.Request) {
 	sendJSONnoCheck(w, r, payload)
 }
 
+// Figure out our base URL given the request
+func (web *Routes) findOurURL(r *http.Request) (*url.URL, error) {
+	var scheme string
+	if web.config.HasTLS() {
+		scheme = "https"
+	} else {
+		scheme = "http"
+	}
+	return url.Parse(fmt.Sprintf("%s://%s/", scheme, r.Host))
+}
+
 // Starts the linking process, should result in a redirect to Server.
 func (web *Routes) apiLinkStart(w http.ResponseWriter, r *http.Request) {
-	// Refuse to run if there is already an active linker.
-	if web.linker != nil {
-		sendErrorMessage(w, r, http.StatusExpectationFailed,
-			"the linking process is already running. If this is incorrect, restart Flamenco Manager.")
-		return
-	}
-
 	serverURL := r.FormValue("server")
 	if serverURL == "" {
 		sendErrorMessage(w, r, http.StatusBadRequest, "No server URL given")
 		return
 	}
 
-	linker, err := StartLinking(serverURL)
+	ourURL, err := web.findOurURL(r)
+	if err != nil {
+		log.Errorf("Unable to parse request host %q: %s", r.Host, err)
+		sendErrorMessage(w, r, http.StatusInternalServerError, "I don't know what you're doing")
+		return
+	}
+
+	linker, err := StartLinking(serverURL, ourURL)
 	if err != nil {
 		sendErrorMessage(w, r, http.StatusInternalServerError, "the linking process cannot start: %s", err)
 		return
@@ -145,8 +168,6 @@ func (web *Routes) apiLinkStart(w http.ResponseWriter, r *http.Request) {
 	log.Infof("%s: going to link to %s", r.URL, linker.upstream)
 	redirectURL, err := linker.redirectURL()
 	if err != nil {
-		log.Errorf("ERROR: %v", err)
-		log.Errorf("r.URL: %v", r.URL)
 		sendErrorMessage(w, r, http.StatusInternalServerError, "error constructing URL to redirect to: %s", err)
 		return
 	}
@@ -156,4 +177,46 @@ func (web *Routes) apiLinkStart(w http.ResponseWriter, r *http.Request) {
 	web.linker = linker
 
 	sendJSONnoCheck(w, r, linkStartResponse{redirectURL.String()})
+}
+
+func (web *Routes) httpReturn(w http.ResponseWriter, r *http.Request) {
+	// Check the HMAC to see if we can trust this request.
+	mac := r.FormValue("hmac")
+	oid := r.FormValue("oid")
+	if mac == "" || oid == "" {
+		sendErrorMessage(w, r, http.StatusBadRequest, "no mac or oid received")
+		return
+	}
+
+	if web.linker == nil {
+		log.Warning("Flamenco Manager restarted mid link procedure, redirecting to setup again")
+		http.Redirect(w, r, indexURL, http.StatusSeeOther)
+		return
+	}
+
+	msg := []byte(web.linker.identifier + oid)
+	hash, err := web.linker.hmacObject()
+	if err != nil {
+		sendErrorMessage(w, r, http.StatusInternalServerError, "error constructing HMAC: %s", err)
+		return
+	}
+
+	if _, err = hash.Write(msg); err != nil {
+		sendErrorMessage(w, r, http.StatusInternalServerError, "error computing HMAC: %s", err)
+		return
+	}
+	receivedMac, err := hex.DecodeString(mac)
+	if err != nil {
+		log.Errorf("Unable to decode received mac: %s", err)
+		sendErrorMessage(w, r, http.StatusBadRequest, "bad HMAC")
+		return
+	}
+	computedMac := hash.Sum(nil)
+	if !hmac.Equal(receivedMac, computedMac) {
+		sendErrorMessage(w, r, http.StatusBadRequest, "bad HMAC")
+		return
+	}
+
+	// Store our ID!
+	log.Infof("Our Manager ID is %s", oid)
 }

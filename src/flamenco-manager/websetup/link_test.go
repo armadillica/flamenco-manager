@@ -16,7 +16,8 @@ import (
 
 // ServerLinkerTestSuite tests link.go
 type ServerLinkerTestSuite struct {
-	config *flamenco.Conf
+	config   *flamenco.Conf
+	localURL *url.URL
 }
 
 var _ = check.Suite(&ServerLinkerTestSuite{})
@@ -26,6 +27,10 @@ func (s *ServerLinkerTestSuite) SetUpTest(c *check.C) {
 
 	serverURL, err := url.Parse("http://cloud.localhost:5000/")
 	assert.Nil(c, err)
+
+	s.localURL, err = url.Parse("http://flamanager:8083/")
+	assert.Nil(c, err)
+
 	s.config = &flamenco.Conf{
 		Flamenco:      serverURL,
 		ManagerID:     "123",
@@ -38,7 +43,7 @@ func (s *ServerLinkerTestSuite) TearDownTest(c *check.C) {
 }
 
 func (s *ServerLinkerTestSuite) TestStartLinking(t *check.C) {
-	linker, err := StartLinking("http://cloud.localhost:5000/")
+	linker, err := StartLinking("http://cloud.localhost:5000/", nil)
 
 	assert.Nil(t, err)
 	assert.False(t, linker.HasIdentifier())
@@ -47,7 +52,7 @@ func (s *ServerLinkerTestSuite) TestStartLinking(t *check.C) {
 }
 
 func (s *ServerLinkerTestSuite) TestExchangeKeyHappy(t *check.C) {
-	linker, err := StartLinking("http://cloud.localhost:5000/")
+	linker, err := StartLinking("http://cloud.localhost:5000/", nil)
 	assert.Nil(t, err)
 
 	timeout := flamenco.TimeoutAfter(2 * time.Second)
@@ -86,7 +91,7 @@ func (s *ServerLinkerTestSuite) TestExchangeKeyHappy(t *check.C) {
 }
 
 func (s *ServerLinkerTestSuite) TestExchangeKeyNon200Response(t *check.C) {
-	linker, err := StartLinking("http://cloud.localhost:5000/")
+	linker, err := StartLinking("http://cloud.localhost:5000/", nil)
 	assert.Nil(t, err)
 
 	timeout := flamenco.TimeoutAfter(2 * time.Second)
@@ -201,6 +206,7 @@ func (s *ServerLinkerTestSuite) TestRedirectURL(t *check.C) {
 		upstream:   s.config.Flamenco,
 		identifier: "hahaha ident",
 		key:        make([]byte, 32),
+		localURL:   s.localURL,
 	}
 	_, err := rand.Read(linker.key)
 	assert.Nil(t, err, "Unable to generate secret key")
@@ -210,5 +216,6 @@ func (s *ServerLinkerTestSuite) TestRedirectURL(t *check.C) {
 
 	q := url.Query()
 	assert.Equal(t, "hahaha ident", q.Get("identifier"))
+	assert.Equal(t, "http://flamanager:8083/setup/link-return", q.Get("return"))
 	assert.True(t, len(q.Get("hmac")) > 10)
 }

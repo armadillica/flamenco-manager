@@ -47,7 +47,7 @@ function linkButtonClicked() {
             .text("Redirecting to ")
             .append($link)
             .show();
-        // window.location = response.location;
+        window.location = response.location;
     })
     .fail(function(err) {
         $result

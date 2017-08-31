@@ -18,10 +18,11 @@ import (
 
 // ServerLinker manages linking this Manager to Flamenco Server
 type ServerLinker struct {
-	upstream   *url.URL
-	key        []byte
-	identifier string
-	managerID  string
+	upstream   *url.URL // base URL of Flamenco Server, like https://cloud.blender.org/
+	localURL   *url.URL // our own URL, based on the URL the user visited to initate linking
+	key        []byte   // the secret key we'll send to Flamenco Server
+	identifier string   // the identifier we got back from Flamenco Server during key exchange
+	managerID  string   // our ObjectID at Flamenco Server
 }
 
 // End points at Flamenco Server
@@ -34,6 +35,7 @@ const (
 var (
 	errMissingKey        = errors.New("key missing, secret key exchange was not performed")
 	errMissingIdentifier = errors.New("identifier missing, secret key exchange was not performed")
+	errMissingLocalURL   = errors.New("local URL is not known")
 )
 
 // LinkRequired returns true iff (re)linking to Flamenco Server is required.
@@ -82,7 +84,7 @@ func LinkRequired(config *flamenco.Conf) bool {
 }
 
 // StartLinking starts the linking process by generating a secret key.
-func StartLinking(upstreamURL string) (*ServerLinker, error) {
+func StartLinking(upstreamURL string, localURL *url.URL) (*ServerLinker, error) {
 	upstream, err := url.Parse(upstreamURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid URL %s: %s", upstreamURL, err)
@@ -91,6 +93,7 @@ func StartLinking(upstreamURL string) (*ServerLinker, error) {
 	linker := ServerLinker{
 		upstream: upstream,
 		key:      make([]byte, 32),
+		localURL: localURL,
 	}
 
 	_, err = rand.Read(linker.key)
@@ -160,7 +163,14 @@ func (linker *ServerLinker) hmacObject() (hash.Hash, error) {
 	return hmac.New(sha256.New, linker.key), nil
 }
 
+// Returns the URL to Flamenco Server to let the user choose a Manager there (or create one).
 func (linker *ServerLinker) redirectURL() (*url.URL, error) {
+	var err error
+
+	if linker.localURL == nil {
+		return nil, errMissingLocalURL
+	}
+
 	redirectURL, err := linker.upstream.Parse(linkStartRedirectEndpoint)
 	if err != nil {
 		return nil, err
@@ -171,12 +181,30 @@ func (linker *ServerLinker) redirectURL() (*url.URL, error) {
 	if err != nil {
 		return nil, err
 	}
-	mac := identHMAC.Sum([]byte(linker.identifier))
 
 	q := redirectURL.Query()
-	q.Set("identifier", linker.identifier)
-	q.Set("hmac", hex.EncodeToString(mac))
-	redirectURL.RawQuery = q.Encode()
 
+	// Handle the identifier
+	q.Set("identifier", linker.identifier)
+	if _, err = identHMAC.Write([]byte(linker.identifier)); err != nil {
+		return nil, err
+	}
+
+	// Handle the return URL
+	returnURL, err := linker.localURL.Parse(linkReturnURL)
+	if err != nil {
+		return nil, err
+	}
+	returnStr := returnURL.String()
+	if _, err = identHMAC.Write([]byte(returnStr)); err != nil {
+		return nil, err
+	}
+
+	q.Set("return", returnStr)
+
+	mac := identHMAC.Sum(nil)
+	q.Set("hmac", hex.EncodeToString(mac))
+
+	redirectURL.RawQuery = q.Encode()
 	return redirectURL, nil
 }
