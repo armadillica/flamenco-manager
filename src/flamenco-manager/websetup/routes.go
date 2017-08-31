@@ -221,8 +221,14 @@ func (web *Routes) httpReturn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Store our ID!
+	// Store our ID and URL.
 	log.Infof("Our Manager ID is %s", oid)
+	web.config.ManagerID = oid
+	web.config.OwnURL = web.linker.localURL.String()
+	if err = web.config.Write("after-linking.yaml"); err != nil {
+		sendErrorMessage(w, r, http.StatusInternalServerError, "error saving configuration: %s", err)
+		return
+	}
 
 	web.showTemplate("templates/websetup/link-done.html", w, r, nil)
 }
