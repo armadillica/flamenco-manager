@@ -17,6 +17,9 @@ type Routes struct {
 	flamencoVersion string
 }
 
+// TemplateData is the mapping type we use to pass data to the template engine.
+type TemplateData map[string]interface{}
+
 // CreateWebSetup creates a new WebSetupRoutes object.
 func CreateWebSetup(config *flamenco.Conf, flamencoVersion string) *Routes {
 	return &Routes{
@@ -35,7 +38,14 @@ func noDirListing(h http.Handler) http.Handler {
 	})
 }
 
-func (web *Routes) showTemplate(templfname string, w http.ResponseWriter, r *http.Request) {
+// Merges 'two' into 'one'
+func merge(one map[string]interface{}, two map[string]interface{}) {
+	for key := range two {
+		one[key] = two[key]
+	}
+}
+
+func (web *Routes) showTemplate(templfname string, w http.ResponseWriter, r *http.Request, templateData TemplateData) {
 	tmpl, err := template.ParseFiles(templfname)
 	if err != nil {
 		log.Errorf("Error parsing HTML template %s: %s", templfname, err)
@@ -43,12 +53,13 @@ func (web *Routes) showTemplate(templfname string, w http.ResponseWriter, r *htt
 		return
 	}
 
-	data := map[string]interface{}{
+	usedData := TemplateData{
 		"Version": web.flamencoVersion,
 		"Config":  web.config,
 	}
+	merge(usedData, templateData)
 
-	tmpl.Execute(w, data)
+	tmpl.Execute(w, usedData)
 }
 
 // addWebSetupRoutes registers HTTP endpoints for setup mode.
@@ -61,7 +72,7 @@ func (web *Routes) addWebSetupRoutes(router *mux.Router) {
 }
 
 func (web *Routes) httpIndex(w http.ResponseWriter, r *http.Request) {
-	web.showTemplate("templates/websetup/index.html", w, r)
+	web.showTemplate("templates/websetup/index.html", w, r, nil)
 }
 
 // Check connection to Flamenco Server. Response indicates whether (re)linking is necessary.
