@@ -1,11 +1,15 @@
 package websetup
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flamenco-manager/flamenco"
 	"fmt"
+	"hash"
 	"net/http"
 	"net/url"
 
@@ -20,8 +24,16 @@ type ServerLinker struct {
 	managerID  string
 }
 
+// End points at Flamenco Server
 const (
-	keyExchangeEndpoint = "/api/flamenco/managers/link/exchange"
+	keyExchangeEndpoint       = "/api/flamenco/managers/link/exchange"
+	linkStartRedirectEndpoint = "/flamenco/managers/link/choose"
+)
+
+// Errors
+var (
+	errMissingKey        = errors.New("key missing, secret key exchange was not performed")
+	errMissingIdentifier = errors.New("identifier missing, secret key exchange was not performed")
 )
 
 // LinkRequired returns true iff (re)linking to Flamenco Server is required.
@@ -113,11 +125,8 @@ func (linker *ServerLinker) ExchangeKey() error {
 
 	responseHandler := func(resp *http.Response, body []byte) error {
 		// Parse the JSON we received.
-		decoder := json.NewDecoder(resp.Body)
-		defer resp.Body.Close()
-
 		var keyResp keyExchangeResponse
-		if err = decoder.Decode(&keyResp); err != nil {
+		if err = json.Unmarshal(body, &keyResp); err != nil {
 			return fmt.Errorf("unable to decode key exchange response from %s: %s", requestURL, err)
 		}
 
@@ -129,7 +138,7 @@ func (linker *ServerLinker) ExchangeKey() error {
 
 	err = flamenco.SendJSON("Key exchange", "POST", requestURL, &payload, nil, responseHandler)
 	if err != nil {
-		return fmt.Errorf("unable to send JSON: %s", err)
+		return err
 	}
 
 	return nil
@@ -138,4 +147,36 @@ func (linker *ServerLinker) ExchangeKey() error {
 // KeyHex returns the secret key in hexadecimal notation.
 func (linker *ServerLinker) keyHex() string {
 	return hex.EncodeToString(linker.key)
+}
+
+func (linker *ServerLinker) hmacObject() (hash.Hash, error) {
+	if len(linker.key) == 0 {
+		return nil, errMissingKey
+	}
+	if linker.identifier == "" {
+		return nil, errMissingIdentifier
+	}
+
+	return hmac.New(sha256.New, linker.key), nil
+}
+
+func (linker *ServerLinker) redirectURL() (*url.URL, error) {
+	redirectURL, err := linker.upstream.Parse(linkStartRedirectEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	// We have to add the identifier and compute the HMAC.
+	identHMAC, err := linker.hmacObject()
+	if err != nil {
+		return nil, err
+	}
+	mac := identHMAC.Sum([]byte(linker.identifier))
+
+	q := redirectURL.Query()
+	q.Set("identifier", linker.identifier)
+	q.Set("hmac", hex.EncodeToString(mac))
+	redirectURL.RawQuery = q.Encode()
+
+	return redirectURL, nil
 }

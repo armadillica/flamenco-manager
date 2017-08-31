@@ -10,6 +10,10 @@ a:visited { color: #d2d0f7; }
 a:hover { color: #d0f7eb; }
 a:active { color: #f7d0d2; }
 
+input {
+    color: black;
+}
+
 @media (min-width: 768px)
 .masthead {
     height: 100%;

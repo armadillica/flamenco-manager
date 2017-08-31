@@ -37,7 +37,15 @@
                     <h2>Link to Flamenco Server</h2>
                     <div id='link-check-in-progress'>Link check in progress, please wait…</div>
                     <div id='link-check-result'></div>
+
+                    <form id='link-required-form' class='form-inline'>
+                        <div class="form-group">
+                            <label for='link-server-url'>Server URL</label>
+                            <input id='link-server-url' class="form-control" name='server' placeholder='Server URL to link to' value='{{.Config.Flamenco}}'>
+                        </div>
+                    </form>
                     <button id='link-button' style='display: none' class='btn btn-default btn-primary'>Link to Flamenco Server</button>
+                    <div id='link-start-result'></div>
                 </div>
 
                 <h2>Configuration</h2>

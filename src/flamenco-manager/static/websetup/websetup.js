@@ -1,7 +1,3 @@
-function showLinkButton() {
-    $('#link-button').fadeIn();
-}
-
 function linkRequired() {
     var $result = $('#link-check-result');
 
@@ -25,10 +21,46 @@ function linkRequired() {
         showLinkButton();
     })
     .always(function() {
-        $('#link-check-in-progress').hide();
+        $('#link-check-in-progress').remove();
     })
 
     ;
+}
+
+// Starts the linking process when someone clicks on the link button.
+function linkButtonClicked() {
+    var $result = $('#link-start-result');
+
+    $.get(
+        "/setup/api/link-start",
+        {
+            server: $('#link-server-url').val()
+        }
+    )
+    .done(function(response) {
+        // We received an URL to direct the user to.
+        console.log(response);
+        var $link = $('<a>')
+            .attr('href', response.location)
+            .text('your Flamenco Server');
+        $result
+            .text("Redirecting to ")
+            .append($link)
+            .show();
+        // window.location = response.location;
+    })
+    .fail(function(err) {
+        $result
+            .text("Linking could not start: " + err.responseText)
+            .show();
+    })
+    ;
+}
+
+function showLinkButton() {
+    $('#link-button')
+    .on('click', linkButtonClicked)
+    .fadeIn();
 }
 
 // Stuff to run on every "page ready" event.

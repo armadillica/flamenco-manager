@@ -1,6 +1,7 @@
 package websetup
 
 import (
+	"crypto/rand"
 	"flamenco-manager/flamenco"
 	"net/http"
 	"net/url"
@@ -15,12 +16,21 @@ import (
 
 // ServerLinkerTestSuite tests link.go
 type ServerLinkerTestSuite struct {
+	config *flamenco.Conf
 }
 
 var _ = check.Suite(&ServerLinkerTestSuite{})
 
 func (s *ServerLinkerTestSuite) SetUpTest(c *check.C) {
 	httpmock.Activate()
+
+	serverURL, err := url.Parse("http://cloud.localhost:5000/")
+	assert.Nil(c, err)
+	s.config = &flamenco.Conf{
+		Flamenco:      serverURL,
+		ManagerID:     "123",
+		ManagerSecret: "jemoeder",
+	}
 }
 
 func (s *ServerLinkerTestSuite) TearDownTest(c *check.C) {
@@ -142,15 +152,6 @@ func (s *ServerLinkerTestSuite) TestLinkRequiredNon200Response(t *check.C) {
 }
 
 func (s *ServerLinkerTestSuite) TestLinkRequired200Response(t *check.C) {
-	serverURL, err := url.Parse("http://cloud.localhost:5000/")
-	assert.Nil(t, err)
-
-	config := flamenco.Conf{
-		Flamenco:      serverURL,
-		ManagerID:     "123",
-		ManagerSecret: "jemoeder",
-	}
-
 	timeout := flamenco.TimeoutAfter(1 * time.Second)
 	defer close(timeout)
 
@@ -160,7 +161,7 @@ func (s *ServerLinkerTestSuite) TestLinkRequired200Response(t *check.C) {
 		NewJSONResponder(200, bson.M{"yes": "this is you"}, timeout),
 	)
 
-	required := LinkRequired(&config)
+	required := LinkRequired(s.config)
 
 	timedout := <-timeout
 	assert.False(t, timedout, "HTTP request to Flamenco Server not performed")
@@ -193,4 +194,21 @@ func (s *ServerLinkerTestSuite) TestLinkRequiredMissingData(t *check.C) {
 	// No auth token
 	config.ManagerID = "123"
 	assert.True(t, LinkRequired(&config))
+}
+
+func (s *ServerLinkerTestSuite) TestRedirectURL(t *check.C) {
+	linker := ServerLinker{
+		upstream:   s.config.Flamenco,
+		identifier: "hahaha ident",
+		key:        make([]byte, 32),
+	}
+	_, err := rand.Read(linker.key)
+	assert.Nil(t, err, "Unable to generate secret key")
+
+	url, err := linker.redirectURL()
+	assert.Nil(t, err)
+
+	q := url.Query()
+	assert.Equal(t, "hahaha ident", q.Get("identifier"))
+	assert.True(t, len(q.Get("hmac")) > 10)
 }
