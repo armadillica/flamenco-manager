@@ -4,14 +4,78 @@
     <h2>Link to Flamenco Server</h2>
     <div id='link-check-in-progress'>Link check in progress, please wait…</div>
     <div id='link-check-result'></div>
-
-    <form id='link-required-form' class='form-inline'>
+    <form id='link-form' style='display: none' onsubmit='linkButtonClicked(); return false;'>
         <div class="form-group">
-            <label for='link-server-url'>Server URL</label>
-            <input id='link-server-url' class="form-control" name='server' placeholder='Server URL to link to' value='{{.Config.Flamenco}}'>
+            <label for='link-server-url'>URL of Flamenco Server to connect to:</label>
+            <input id='link-server-url' class="form-control" name='server' placeholder='Server URL to link to' value='{{.Config.FlamencoStr}}'>
         </div>
+        <button id='link-button' style='display: none' class='btn btn-default btn-primary' type='submit'>Link to this Flamenco Server</button>
+        <div id='link-start-result'></div>
     </form>
-    <button id='link-button' style='display: none' class='btn btn-default btn-primary'>Link to Flamenco Server</button>
-    <div id='link-start-result'></div>
+    <button id='relink-button' style='display: none' class='btn btn-primary'>Link to another server</button>
+</div>
+
+<div id='config'>
+    <h2>Flamenco Manager Configuration</h2>
+    <form id='config-form'>
+        <section>
+            <h3>Network</h3>
+
+            <div class="form-group">
+                <label for='listen'>Listen IP and port number</label>
+                <input id='listen' class="form-control" name='listen' placeholder='Address and port to listen to' value='{{.Config.Listen}}'>
+                <p class='help-block'>Address and port to listen on, such as "[::]:8083" on an IPv6-enabled
+                system (the default), or 0.0.0.0:8083 on an IPv4-only system. IP address is optional.</p>
+            </div>
+            <div class="form-group">
+                <label for='own-url'>URL you and the Workers can reach this Manager on</label>
+                <!-- TODO: style the entire select box when the currently configured URL is invalid for the network. -->
+                <input id='own-url' class="form-control" name='own-url' placeholder='URL of this Flamenco Manager' value='{{.Config.OwnURL}}'>
+                <p class='help-block'>This URL is sent to the Flamenco Server and Flamenco Workers
+                to tell them where this Manager lives. Type your own URL, or choose one from the
+                available URLs below:</p>
+
+                {{range .OwnURLs}}
+                    <a class='btn own-url-suggestion {{if .IsCurrentInConfig}}btn-success{{else}}btn-default{{end}}'
+                        data-url="{{.URL}}">
+                            {{.URL}}
+                            {{if .IsUsedForSetup}}(you are here now){{end}}
+                            {{if .IsCurrentInConfig}}(current value){{end}}
+                    </a>
+                {{end}}
+                <script>
+                $('.own-url-suggestion').click(function() {
+                    $('#own-url').val($(this).data('url'));
+                })
+                </script>
+            </div>
+
+            <div class="checkbox">
+                <label>
+                    <input id='ssdp-discovery' name='ssdp-discovery' type='checkbox' {{if .Config.SSDPDiscovery}}checked{{end}}>
+                    Enable UPnP/SSDP auto-discovery
+                </label>
+                <p class='help-block'>This allows Workers to automatically find this Manager.
+            </div>
+        </section>
+
+        <section>
+            <h3>MongoDB database</h3>
+
+            <div class="form-group">
+                <label for='database-url'>Database URL</label>
+                <input id='database-url' class="form-control" name='database-url' placeholder='MongoDB server URL' value='{{.Config.DatabaseURL}}'>
+                <p class='help-block'>Leave empty to use the built-in MongoDB server. Otherwise set
+                it to something like mongodb://servername:portnr/databasename</p>
+            </div>
+
+            <div class="form-group">
+                <label for='database-path'>Database path</label>
+                <input id='database-path' class="form-control" name='database-path' placeholder='MongoDB data path' value='{{.Config.DatabasePath}}'>
+                <p class='help-block'>Only used by the built-in MongoDB server. Default value is "./db"</p>
+            </div>
+        </section>
+
+    </form>
 </div>
 {{end}}

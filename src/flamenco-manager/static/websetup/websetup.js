@@ -14,6 +14,7 @@ function linkRequired() {
             $result
                 .text("This Flamenco Manager is linked to a Flamenco Server at ")
                 .append($link);
+            $('#relink-button').show();
         }
     })
     .fail(function(err) {
@@ -23,13 +24,13 @@ function linkRequired() {
     .always(function() {
         $('#link-check-in-progress').remove();
     })
-
     ;
 }
 
 // Starts the linking process when someone clicks on the link button.
 function linkButtonClicked() {
     var $result = $('#link-start-result');
+    $result.html('');
 
     $.get(
         "/setup/api/link-start",
@@ -58,12 +59,14 @@ function linkButtonClicked() {
 }
 
 function showLinkButton() {
-    $('#link-button')
-    .on('click', linkButtonClicked)
-    .fadeIn();
+    $('#link-button').show();
+    $('#link-form').show();
+    $('#relink-button').hide();
 }
 
 // Stuff to run on every "page ready" event.
 $(document).ready(function() {
     linkRequired();
+    $('#relink-button').click(showLinkButton);
+    // $('#link-button').click(linkButtonClicked);
 });

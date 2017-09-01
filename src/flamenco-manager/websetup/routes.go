@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -117,7 +116,11 @@ func (web *Routes) addWebSetupRoutes(router *mux.Router) {
 }
 
 func (web *Routes) httpIndex(w http.ResponseWriter, r *http.Request) {
-	web.showTemplate("templates/websetup/index.html", w, r, nil)
+	urls := urlConfigOptions(web.config, r)
+
+	web.showTemplate("templates/websetup/index.html", w, r, TemplateData{
+		"OwnURLs": urls,
+	})
 }
 
 // Check connection to Flamenco Server. Response indicates whether (re)linking is necessary.
@@ -132,17 +135,6 @@ func (web *Routes) apiLinkRequired(w http.ResponseWriter, r *http.Request) {
 	sendJSONnoCheck(w, r, payload)
 }
 
-// Figure out our base URL given the request
-func (web *Routes) findOurURL(r *http.Request) (*url.URL, error) {
-	var scheme string
-	if web.config.HasTLS() {
-		scheme = "https"
-	} else {
-		scheme = "http"
-	}
-	return url.Parse(fmt.Sprintf("%s://%s/", scheme, r.Host))
-}
-
 // Starts the linking process, should result in a redirect to Server.
 func (web *Routes) apiLinkStart(w http.ResponseWriter, r *http.Request) {
 	serverURL := r.FormValue("server")
@@ -151,7 +143,7 @@ func (web *Routes) apiLinkStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ourURL, err := web.findOurURL(r)
+	ourURL, err := ourURL(web.config, r)
 	if err != nil {
 		log.Errorf("Unable to parse request host %q: %s", r.Host, err)
 		sendErrorMessage(w, r, http.StatusInternalServerError, "I don't know what you're doing")

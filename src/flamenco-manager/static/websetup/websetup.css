@@ -38,3 +38,12 @@ input {
 .masthead .intro-body .brand-heading {
     font-size: 50px;
 }
+
+#config section {
+    margin-bottom: 30px;
+}
+
+.help-block {
+    color: #eee;
+    font-size: 90%;
+}

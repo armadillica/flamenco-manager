@@ -6,6 +6,7 @@ import (
 	"flamenco-manager/flamenco"
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -17,7 +18,14 @@ var (
 	ErrNoInterface = errors.New("No network interface found")
 )
 
-func networkInterfaces(includeLinkLocal bool) ([]net.IP, error) {
+// URLConfigOptions contains a URL with some metadata
+type URLConfigOptions struct {
+	URL               *url.URL
+	IsUsedForSetup    bool // currently in use to access the web setup
+	IsCurrentInConfig bool // currently configured as "own_url"
+}
+
+func networkInterfaces(includeLinkLocal, includeLocalhost bool) ([]net.IP, error) {
 	log.Debug("Iterating over all network interfaces.")
 
 	interfaces, err := net.Interfaces()
@@ -55,6 +63,10 @@ func networkInterfaces(includeLinkLocal bool) ([]net.IP, error) {
 				log.Debugf("    - skipping link-local %v", ip)
 				continue
 			}
+			if !includeLocalhost && ip.IsLoopback() {
+				log.Debugf("    - skipping localhost %v", ip)
+				continue
+			}
 
 			log.Debugf("    - usable %v", ip)
 			usableAddresses = append(usableAddresses, ip)
@@ -68,7 +80,7 @@ func networkInterfaces(includeLinkLocal bool) ([]net.IP, error) {
 	return usableAddresses, nil
 }
 
-func availableURLs(config *flamenco.Conf) ([]*url.URL, error) {
+func availableURLs(config *flamenco.Conf, includeLocal bool) ([]*url.URL, error) {
 	var schema string
 	if config.HasTLS() {
 		schema = "https"
@@ -130,9 +142,9 @@ func availableURLs(config *flamenco.Conf) ([]*url.URL, error) {
 
 	log.Debugf("Not listening on any specific host '%v'", host)
 
-	addrs, err := networkInterfaces(false)
+	addrs, err := networkInterfaces(false, includeLocal)
 	if err == ErrNoInterface {
-		addrs, err = networkInterfaces(true)
+		addrs, err = networkInterfaces(true, includeLocal)
 	}
 	if err != nil {
 		return nil, err
@@ -159,4 +171,44 @@ func availableURLs(config *flamenco.Conf) ([]*url.URL, error) {
 	}
 
 	return links, nil
+}
+
+// Returns the URL based on the host & port for this HTTP request.
+func ourURL(config *flamenco.Conf, r *http.Request) (*url.URL, error) {
+	var scheme string
+	if config.HasTLS() {
+		scheme = "https"
+	} else {
+		scheme = "http"
+	}
+	// r.Host includes the port number.
+	return url.Parse(fmt.Sprintf("%s://%s/", scheme, r.Host))
+}
+
+func urlConfigOptions(config *flamenco.Conf, r *http.Request) []URLConfigOptions {
+	// Figure out the available URLs, and determine which one is configured right now.
+	ownURLs, err := availableURLs(config, false)
+	if err != nil {
+		log.Errorf("Unable to find URLs to reach this Manager on: %s", err)
+	}
+
+	// Figure out which URL is now in use for this HTTP request.
+	setupURL, err := ourURL(config, r)
+	var setupURLString string
+	if err != nil {
+		log.Errorf("Unable to find URL currently in use by web config: %s", err)
+	} else {
+		setupURLString = setupURL.String()
+	}
+
+	urls := make([]URLConfigOptions, len(ownURLs))
+	for idx, url := range ownURLs {
+		urls[idx].URL = url
+
+		stringURL := url.String()
+		urls[idx].IsCurrentInConfig = stringURL == config.OwnURL
+		urls[idx].IsUsedForSetup = stringURL == setupURLString
+	}
+
+	return urls
 }
