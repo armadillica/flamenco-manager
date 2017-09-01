@@ -81,8 +81,9 @@ $(document).ready(function() {
 
     // Source: https://codepen.io/ashblue/pen/mCtuA
     $('.table-add').click(function() {
-        var $clone = $(this).closest('.table-editable').find('tr.hide').clone(true).removeClass('hide table-line');
-        $TABLE.find('table').append($clone);
+        var $parent = $(this).closest('.table-editable');
+        var $clone = $parent.find('tr.hide').clone(true).removeClass('hide table-line');
+        $parent.find('table').append($clone);
     });
 
     $('.table-remove').click(function() {
