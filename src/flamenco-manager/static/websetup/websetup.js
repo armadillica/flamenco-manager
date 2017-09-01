@@ -14,7 +14,7 @@ function linkRequired() {
             $result
                 .text("This Flamenco Manager is linked to a Flamenco Server at ")
                 .append($link);
-            $('#relink-button').show();
+            $('#relink-action').show();
         }
     })
     .fail(function(err) {
@@ -61,7 +61,7 @@ function linkButtonClicked() {
 function showLinkButton() {
     $('#link-button').show();
     $('#link-form').show();
-    $('#relink-button').hide();
+    $('#relink-action').hide();
 }
 
 function saveDataTables() {
@@ -78,7 +78,6 @@ function saveDataTables() {
 // Stuff to run on every "page ready" event.
 $(document).ready(function() {
     linkRequired();
-    $('#relink-button').click(showLinkButton);
 
     // Source: https://codepen.io/ashblue/pen/mCtuA
     $('.table-add').click(function() {
