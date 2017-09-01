@@ -48,6 +48,12 @@ input {
     font-size: 90%;
 }
 
+.own-url-suggestion {
+    /*border: 1px solid pink;*/
+    padding: 3px;
+    cursor: pointer;
+}
+
 /* Editable table stuff */
 .table-editable {
     position: relative;

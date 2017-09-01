@@ -36,7 +36,7 @@
                 available URLs below:</p>
 
                 {{range .OwnURLs}}
-                    <a class='btn own-url-suggestion {{if .IsCurrentInConfig}}btn-success{{else}}btn-default{{end}}'
+                    <a class='own-url-suggestion {{if .IsCurrentInConfig}}current-url{{end}}'
                         data-url="{{.URL}}">
                             {{.URL}}
                             {{if .IsUsedForSetup}}(you are here now){{end}}
