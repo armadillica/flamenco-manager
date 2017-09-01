@@ -85,7 +85,9 @@
             <div class="form-group">
                 <label for='database-path'>Database path</label>
                 <input id='database-path' class="form-control" name='database-path' placeholder='MongoDB data path' value='{{.Config.DatabasePath}}'>
-                <p class='help-block'>Only used by the built-in MongoDB server. Default value is "./db"</p>
+                <p class='help-block'>Only used by the built-in MongoDB server. Default value is
+                "./db". Relative paths are interpreted from the directory Flamenco Manager was
+                started from.</p>
             </div>
         </section>
 
