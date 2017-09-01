@@ -17,7 +17,7 @@
 
 <div id='config'>
     <h2>Flamenco Manager Configuration</h2>
-    <form id='config-form'>
+    <form id='config-form' method='POST' action='/setup/save-configuration'>
         <section>
             <h3>Network</h3>
 
@@ -76,6 +76,9 @@
             </div>
         </section>
 
+        <section>
+            <button class='btn btn-default'>Save configuration</button>
+        </section>
     </form>
 </div>
 {{end}}

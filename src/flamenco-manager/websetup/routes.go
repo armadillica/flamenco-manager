@@ -17,6 +17,7 @@ import (
 // End points at this Manager
 const (
 	indexURL           = "/setup"
+	saveConfigURL      = "/setup/save-configuration"
 	apiLinkRequiredURL = "/setup/api/link-required"
 	apiLinkStartURL    = "/setup/api/link-start"
 	linkReturnURL      = "/setup/link-return"
@@ -106,6 +107,7 @@ func (web *Routes) showTemplate(templfname string, w http.ResponseWriter, r *htt
 // addWebSetupRoutes registers HTTP endpoints for setup mode.
 func (web *Routes) addWebSetupRoutes(router *mux.Router) {
 	router.HandleFunc(indexURL, web.httpIndex)
+	router.HandleFunc(saveConfigURL, web.httpSaveConfig).Methods("POST")
 	router.HandleFunc(apiLinkRequiredURL, web.apiLinkRequired)
 	router.HandleFunc(apiLinkStartURL, web.apiLinkStart)
 	router.HandleFunc(linkReturnURL, web.httpReturn)
@@ -246,4 +248,18 @@ func (web *Routes) httpReturn(w http.ResponseWriter, r *http.Request) {
 
 func (web *Routes) httpLinkDone(w http.ResponseWriter, r *http.Request) {
 	web.showTemplate("templates/websetup/link-done.html", w, r, nil)
+}
+
+func (web *Routes) httpSaveConfig(w http.ResponseWriter, r *http.Request) {
+	log.Infof("Merging configuration with POST data")
+
+	web.config.DatabaseURL = r.FormValue("database-url")
+	web.config.DatabasePath = r.FormValue("database-path")
+	web.config.Listen = r.FormValue("listen")
+	web.config.OwnURL = r.FormValue("own-url")
+	web.config.SSDPDiscovery = r.FormValue("ssdp-discovery") != ""
+
+	web.config.Overwrite()
+
+	http.Redirect(w, r, indexURL, http.StatusSeeOther)
 }
