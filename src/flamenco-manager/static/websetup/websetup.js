@@ -3,7 +3,6 @@ function linkRequired() {
 
     return $.get('/setup/api/link-required')
     .done(function(response) {
-        console.log(response);
         if (response.link_required) {
             $result.text("You need to link this Flamenco Manager to a Flamenco Server.");
             showLinkButton();
@@ -40,7 +39,6 @@ function linkButtonClicked() {
     )
     .done(function(response) {
         // We received an URL to direct the user to.
-        console.log(response);
         var $link = $('<a>')
             .attr('href', response.location)
             .text('your Flamenco Server');
@@ -119,6 +117,5 @@ $(document).ready(function() {
 
         // Output the result
         return data;
-        // console.log(JSON.stringify(data));
     };
 });
