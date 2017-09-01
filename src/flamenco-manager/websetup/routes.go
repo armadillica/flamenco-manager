@@ -140,6 +140,17 @@ func (web *Routes) addWebSetupRoutes(router *mux.Router) {
 func (web *Routes) httpIndex(w http.ResponseWriter, r *http.Request) {
 	urls := urlConfigOptions(web.config, r)
 
+	// Set a default "own URL" when entering the setup.
+	if web.config.OwnURL == "" {
+		log.Infof("Own URL is not configured, choosing one based on the current request")
+		for _, url := range urls {
+			if url.IsUsedForSetup {
+				web.config.OwnURL = url.URL.String()
+				break
+			}
+		}
+	}
+
 	web.showTemplate("templates/websetup/index.html", w, r, TemplateData{
 		"OwnURLs": urls,
 	})
