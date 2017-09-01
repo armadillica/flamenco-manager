@@ -28,6 +28,7 @@ type ServerLinker struct {
 // End points at Flamenco Server
 const (
 	keyExchangeEndpoint       = "/api/flamenco/managers/link/exchange"
+	authTokenResetEndpoint    = "/api/flamenco/managers/link/reset-token"
 	linkStartRedirectEndpoint = "/flamenco/managers/link/choose"
 )
 
@@ -36,6 +37,7 @@ var (
 	errMissingKey        = errors.New("key missing, secret key exchange was not performed")
 	errMissingIdentifier = errors.New("identifier missing, secret key exchange was not performed")
 	errMissingLocalURL   = errors.New("local URL is not known")
+	errMissingManagerID  = errors.New("manager ID is missing, restart the linking process")
 )
 
 // LinkRequired returns true iff (re)linking to Flamenco Server is required.
@@ -199,4 +201,65 @@ func (linker *ServerLinker) redirectURL() (*url.URL, error) {
 
 	redirectURL.RawQuery = q.Encode()
 	return redirectURL, nil
+}
+
+// resetAuthToken uses the link info to fetch a new authentication token.
+func (linker *ServerLinker) resetAuthToken() (string, error) {
+	if linker.identifier == "" {
+		return "", errMissingIdentifier
+	}
+	if linker.managerID == "" {
+		return "", errMissingManagerID
+	}
+
+	requestURL, err := linker.upstream.Parse(authTokenResetEndpoint)
+	if err != nil {
+		return "", fmt.Errorf("error constructing token reset URL %s: %s", authTokenResetEndpoint, err)
+	}
+	log.Infof("Requesting new auth token from Flamenco Server %s", linker.upstream)
+
+	paddingBytes := make([]byte, 32)
+	if _, err = rand.Read(paddingBytes); err != nil {
+		return "", fmt.Errorf("error generating random padding: %s", err)
+	}
+	payload := authTokenResetRequest{
+		ManagerID:  linker.managerID,
+		Identifier: linker.identifier,
+		Padding:    hex.EncodeToString(paddingBytes),
+	}
+
+	// Compute the HMAC.
+	identHMAC, err := linker.hmacObject()
+	if err != nil {
+		return "", err
+	}
+	if _, err = identHMAC.Write([]byte(payload.Padding + "-" + payload.Identifier + "-" + payload.ManagerID)); err != nil {
+		return "", err
+	}
+	payload.HMAC = hex.EncodeToString(identHMAC.Sum(nil))
+
+	// Send the request and handle the response.
+	var receivedToken string
+	responseHandler := func(resp *http.Response, body []byte) error {
+		// Parse the JSON we received.
+		var tokenResp authTokenResetResponse
+		if err = json.Unmarshal(body, &tokenResp); err != nil {
+			return fmt.Errorf("unable to decode auth token response from %s: %s", requestURL, err)
+		}
+
+		if tokenResp.Token == "" {
+			return fmt.Errorf("received empty authentication token from %s", requestURL)
+		}
+
+		log.Infof("Authentication token reset at Flamenco Server succesful")
+		receivedToken = tokenResp.Token
+		return nil
+	}
+
+	err = flamenco.SendJSON("Token reset", "POST", requestURL, &payload, nil, responseHandler)
+	if err != nil {
+		return "", err
+	}
+
+	return receivedToken, nil
 }

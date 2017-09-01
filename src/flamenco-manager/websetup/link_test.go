@@ -219,3 +219,73 @@ func (s *ServerLinkerTestSuite) TestRedirectURL(t *check.C) {
 	assert.Equal(t, "http://flamanager:8083/setup/link-return", q.Get("return"))
 	assert.True(t, len(q.Get("hmac")) > 10)
 }
+
+func (s *ServerLinkerTestSuite) TestResetToken(t *check.C) {
+	linker := ServerLinker{
+		upstream:   s.config.Flamenco,
+		identifier: "hahaha ident",
+		managerID:  "aabbccddeeff",
+		key:        make([]byte, 32),
+		localURL:   s.localURL,
+	}
+	_, err := rand.Read(linker.key)
+	assert.Nil(t, err, "Unable to generate secret key")
+
+	timeout := flamenco.TimeoutAfter(1 * time.Second)
+	defer close(timeout)
+
+	var receivedIdentifier, receivedManagerID string
+
+	httpmock.RegisterResponder(
+		"POST", "http://cloud.localhost:5000/api/flamenco/managers/link/reset-token",
+		func(req *http.Request) (*http.Response, error) {
+			defer func() { timeout <- false }()
+			log.Info("POST from manager received on server, sending back response.")
+
+			// Check the payload
+			jsonRequest := authTokenResetRequest{}
+			parseRequestJSON(t, req, &jsonRequest)
+			receivedIdentifier = jsonRequest.Identifier
+			receivedManagerID = jsonRequest.ManagerID
+
+			resp := authTokenResetResponse{"new-token", "unparsed datetime"}
+			return httpmock.NewJsonResponse(200, &resp)
+		},
+	)
+
+	token, err := linker.resetAuthToken()
+	timedout := <-timeout
+	assert.False(t, timedout, "HTTP request to Flamenco Server not performed")
+
+	assert.Nil(t, err)
+	assert.Equal(t, "new-token", token)
+	assert.Equal(t, "hahaha ident", receivedIdentifier)
+	assert.Equal(t, "aabbccddeeff", receivedManagerID)
+}
+
+func (s *ServerLinkerTestSuite) TestResetTokenUnhappy(t *check.C) {
+	linker := ServerLinker{
+		upstream:   s.config.Flamenco,
+		identifier: "hahaha ident",
+		managerID:  "aabbccddeeff",
+		key:        make([]byte, 32),
+		localURL:   s.localURL,
+	}
+	_, err := rand.Read(linker.key)
+	assert.Nil(t, err, "Unable to generate secret key")
+
+	timeout := flamenco.TimeoutAfter(1 * time.Second)
+	defer close(timeout)
+
+	httpmock.RegisterResponder(
+		"POST", "http://cloud.localhost:5000/api/flamenco/managers/link/reset-token",
+		NewJSONResponder(400, bson.M{"_error": "invalid MAC"}, timeout),
+	)
+
+	token, err := linker.resetAuthToken()
+	timedout := <-timeout
+	assert.False(t, timedout, "HTTP request to Flamenco Server not performed")
+
+	assert.NotNil(t, err)
+	assert.Equal(t, "", token)
+}

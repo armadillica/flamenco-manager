@@ -223,10 +223,22 @@ func (web *Routes) httpReturn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Store our ID and URL.
+	// Remember our Manager ID and request a reset of our auth token.
 	log.Infof("Our Manager ID is %s", oid)
 	web.config.ManagerID = oid
-	web.config.OwnURL = web.linker.localURL.String()
+	web.linker.managerID = oid
+
+	log.Infof("Requesting new authentication token from Flamenco Server")
+	token, err := web.linker.resetAuthToken()
+	if err != nil {
+		sendErrorMessage(w, r, http.StatusInternalServerError,
+			"Unable to request a new authentication token from Flamenco Server: %s", err)
+		return
+	}
+	log.Infof("Received new authentication token")
+	web.config.ManagerSecret = token
+
+	// Save our configuration file.
 	if err = web.config.Write("after-linking.yaml"); err != nil {
 		sendErrorMessage(w, r, http.StatusInternalServerError, "error saving configuration: %s", err)
 		return
