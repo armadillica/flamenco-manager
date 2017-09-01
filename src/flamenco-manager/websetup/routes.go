@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flamenco-manager/flamenco"
 	"fmt"
 	"html/template"
@@ -84,7 +85,26 @@ func sendErrorMessage(w http.ResponseWriter, r *http.Request, status int, msg st
 }
 
 func (web *Routes) showTemplate(templfname string, w http.ResponseWriter, r *http.Request, templateData TemplateData) {
-	tmpl, err := template.ParseFiles("templates/websetup/layout.html", templfname)
+	tmpl, err := template.Must(template.New("").Funcs(template.FuncMap{
+		"dict": func(values ...interface{}) (map[string]interface{}, error) {
+			if len(values)%2 != 0 {
+				return nil, errors.New("invalid dict call")
+			}
+			dict := make(map[string]interface{}, len(values)/2)
+			for i := 0; i < len(values); i += 2 {
+				key, ok := values[i].(string)
+				if !ok {
+					return nil, errors.New("dict keys must be strings")
+				}
+				dict[key] = values[i+1]
+				log.Infof("dict[%q] = %q", key, values[i+1])
+			}
+			return dict, nil
+		},
+	}), nil).ParseFiles(
+		"templates/websetup/layout.html",
+		"templates/websetup/vartable.html",
+		templfname)
 	if err != nil {
 		log.Errorf("Error parsing HTML template %s: %s", templfname, err)
 		http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -250,6 +270,23 @@ func (web *Routes) httpLinkDone(w http.ResponseWriter, r *http.Request) {
 	web.showTemplate("templates/websetup/link-done.html", w, r, nil)
 }
 
+func parseVariables(formValue string) (map[string]map[string]string, error) {
+	var variables []map[string]string
+	if err := json.Unmarshal([]byte(formValue), &variables); err != nil {
+		return nil, fmt.Errorf("Unable to parse variables: %s", err)
+	}
+
+	variablesByVarName := make(map[string]map[string]string)
+	for _, variable := range variables {
+		name := variable["name"]
+		delete(variable, "name")
+		variablesByVarName[name] = variable
+	}
+	log.Debugf("Parsed variables: %v", variablesByVarName)
+
+	return variablesByVarName, nil
+}
+
 func (web *Routes) httpSaveConfig(w http.ResponseWriter, r *http.Request) {
 	log.Infof("Merging configuration with POST data")
 
@@ -259,6 +296,17 @@ func (web *Routes) httpSaveConfig(w http.ResponseWriter, r *http.Request) {
 	web.config.OwnURL = r.FormValue("own-url")
 	web.config.SSDPDiscovery = r.FormValue("ssdp-discovery") != ""
 
+	// Parse the posted variables.
+	if vars, err := parseVariables(r.FormValue("variables")); err != nil {
+		log.Error(err)
+	} else {
+		web.config.VariablesByVarname = vars
+	}
+	if vars, err := parseVariables(r.FormValue("path-variables")); err != nil {
+		log.Error(err)
+	} else {
+		web.config.PathReplacementByVarname = vars
+	}
 	web.config.Overwrite()
 
 	http.Redirect(w, r, indexURL, http.StatusSeeOther)

@@ -17,7 +17,7 @@
 
 <div id='config'>
     <h2>Flamenco Manager Configuration</h2>
-    <form id='config-form' method='POST' action='/setup/save-configuration'>
+    <form id='config-form' method='POST' action='/setup/save-configuration' onsubmit='return saveDataTables()'>
         <section>
             <h3>Network</h3>
 
@@ -57,6 +57,19 @@
                 </label>
                 <p class='help-block'>This allows Workers to automatically find this Manager.
             </div>
+        </section>
+
+        <section>
+            <h3>Variables</h3>
+            <div id='variables-table' class='table-editable'>
+                {{template "vartable" .Config.VariablesByVarname}}
+            </div>
+            <h3>Path Replacement Variables</h3>
+            <div id='path-variables-table' class='table-editable'>
+                {{template "vartable" .Config.PathReplacementByVarname}}
+            </div>
+            <input type='hidden' id='variables-field' name='variables' value=''>
+            <input type='hidden' id='path-variables-field' name='path-variables' value=''>
         </section>
 
         <section>

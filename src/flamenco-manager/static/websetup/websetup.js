@@ -64,9 +64,61 @@ function showLinkButton() {
     $('#relink-button').hide();
 }
 
+function saveDataTables() {
+    var variables = $('#variables-table').dataTable();
+    var path_variables = $('#path-variables-table').dataTable();
+
+    $('#variables-field').val(JSON.stringify(variables));
+    $('#path-variables-field').val(JSON.stringify(path_variables));
+
+    return true;
+}
+
+
 // Stuff to run on every "page ready" event.
 $(document).ready(function() {
     linkRequired();
     $('#relink-button').click(showLinkButton);
-    // $('#link-button').click(linkButtonClicked);
+
+    // Source: https://codepen.io/ashblue/pen/mCtuA
+    $('.table-add').click(function() {
+        var $clone = $(this).closest('.table-editable').find('tr.hide').clone(true).removeClass('hide table-line');
+        $TABLE.find('table').append($clone);
+    });
+
+    $('.table-remove').click(function() {
+        $(this).parents('tr').detach();
+    });
+
+    // A few jQuery helpers for exporting only
+    jQuery.fn.pop = [].pop;
+    jQuery.fn.shift = [].shift;
+
+    jQuery.fn.dataTable = function() {
+        var $rows = this.find('tr:not(:hidden)');
+        var headers = [];
+        var data = [];
+
+        // Get the headers
+        $($rows.shift()).find('th:not(:empty)').each(function() {
+            headers.push($(this).text().toLowerCase());
+        });
+
+        // Turn all existing rows into a loopable array
+        $rows.each(function() {
+            var $td = $(this).find('td');
+            var h = {};
+
+            // Use the headers from earlier to name our hash keys
+            headers.forEach(function(header, i) {
+                h[header] = $td.eq(i).text();
+            });
+
+            data.push(h);
+        });
+
+        // Output the result
+        return data;
+        // console.log(JSON.stringify(data));
+    };
 });
