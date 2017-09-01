@@ -176,32 +176,24 @@ func (linker *ServerLinker) redirectURL() (*url.URL, error) {
 		return nil, err
 	}
 
-	// We have to add the identifier and compute the HMAC.
-	identHMAC, err := linker.hmacObject()
-	if err != nil {
-		return nil, err
-	}
-
+	// Construct query string
 	q := redirectURL.Query()
-
-	// Handle the identifier
 	q.Set("identifier", linker.identifier)
-	if _, err = identHMAC.Write([]byte(linker.identifier)); err != nil {
-		return nil, err
-	}
-
-	// Handle the return URL
 	returnURL, err := linker.localURL.Parse(linkReturnURL)
 	if err != nil {
 		return nil, err
 	}
 	returnStr := returnURL.String()
-	if _, err = identHMAC.Write([]byte(returnStr)); err != nil {
-		return nil, err
-	}
-
 	q.Set("return", returnStr)
 
+	// Compute the HMAC
+	identHMAC, err := linker.hmacObject()
+	if err != nil {
+		return nil, err
+	}
+	if _, err = identHMAC.Write([]byte(linker.identifier + "-" + returnStr)); err != nil {
+		return nil, err
+	}
 	mac := identHMAC.Sum(nil)
 	q.Set("hmac", hex.EncodeToString(mac))
 

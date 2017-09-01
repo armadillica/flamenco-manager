@@ -200,7 +200,7 @@ func (web *Routes) httpReturn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg := []byte(web.linker.identifier + oid)
+	msg := []byte(web.linker.identifier + "-" + oid)
 	hash, err := web.linker.hmacObject()
 	if err != nil {
 		sendErrorMessage(w, r, http.StatusInternalServerError, "error constructing HMAC: %s", err)
