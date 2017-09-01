@@ -164,6 +164,10 @@ func (web *Routes) apiLinkStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Server URL has been parsed correctly, so we can save it to our configuration file.
+	web.config.Flamenco = linker.upstream
+	web.config.Overwrite()
+
 	err = linker.ExchangeKey()
 	if err != nil {
 		sendErrorMessage(w, r, http.StatusInternalServerError, "unable to exchange secret key: %s", err)
