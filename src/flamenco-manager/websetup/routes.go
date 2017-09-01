@@ -239,7 +239,7 @@ func (web *Routes) httpReturn(w http.ResponseWriter, r *http.Request) {
 	web.config.ManagerSecret = token
 
 	// Save our configuration file.
-	if err = web.config.Write("after-linking.yaml"); err != nil {
+	if err = web.config.Overwrite(); err != nil {
 		sendErrorMessage(w, r, http.StatusInternalServerError, "error saving configuration: %s", err)
 		return
 	}

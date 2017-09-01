@@ -15,6 +15,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+const configFilename = "flamenco-manager.yaml"
+
 // Conf represents the Manager's configuration file.
 type Conf struct {
 	DatabaseURL   string   `yaml:"database_url"`
@@ -63,7 +65,7 @@ type Conf struct {
 
 // GetConf parses flamenco-manager.yaml and returns its contents as a Conf object.
 func GetConf() (Conf, error) {
-	return LoadConf("flamenco-manager.yaml")
+	return LoadConf(configFilename)
 }
 
 // LoadConf parses the given file and returns its contents as a Conf object.
@@ -164,6 +166,22 @@ func (c *Conf) checkDatabase() {
 	}
 }
 
+// Overwrite stores this configuration object as flamenco-manager.yaml.
+func (c *Conf) Overwrite() error {
+	tempFilename := configFilename + "~"
+	if err := c.Write(tempFilename); err != nil {
+		return err
+	}
+
+	log.Debugf("Renaming %s to %s", tempFilename, configFilename)
+	if err := os.Rename(tempFilename, configFilename); err != nil {
+		return err
+	}
+
+	log.Infof("Saved configuration file to %s", configFilename)
+	return nil
+}
+
 // Write saves the current in-memory configuration to a YAML file.
 func (c *Conf) Write(filename string) error {
 	data, err := yaml.Marshal(c)
@@ -194,7 +212,7 @@ func (c *Conf) Write(filename string) error {
 		return err
 	}
 
-	log.Infof("Config file written to %s", filename)
+	log.Debugf("Config file written to %s", filename)
 	return nil
 }
 
