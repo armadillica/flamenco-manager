@@ -100,7 +100,7 @@ $(document).ready(function() {
 
         // Get the headers
         $($rows.shift()).find('th:not(:empty)').each(function() {
-            headers.push($(this).text().toLowerCase());
+            headers.push($(this).data('key'));
         });
 
         // Turn all existing rows into a loopable array

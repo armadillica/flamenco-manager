@@ -3,10 +3,10 @@
 <span class='table-add glyphicon glyphicon-plus' title='Add another variable'></span>
 <table class='table'>
     <tr>
-        <th>Name</th>
-        <th>Linux</th>
-        <th>Windows</th>
-        <th>macOS</th>
+        <th data-key='name'>Name</th>
+        <th data-key='linux'>Linux</th>
+        <th data-key='windows'>Windows</th>
+        <th data-key='darwin'>macOS</th>
         <th></th>
     </tr>
     {{range $name, $var := .}}
