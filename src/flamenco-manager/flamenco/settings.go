@@ -92,6 +92,22 @@ func LoadConf(filename string) (Conf, error) {
 		TaskCleanupMaxAge: 14 * 24 * time.Hour,
 		SSDPDiscovery:     true,
 		SSDPDeviceUUID:    "7401c189-ef69-434b-b4d8-56d00075faf5",
+
+		VariablesByVarname: map[string]map[string]string{
+			"blender": map[string]string{
+				"linux":   "/linux/path/to/blender",
+				"windows": `C:\windows\path\to\blender.exe`,
+				"darwin":  "/Volume/Applications/Blender/blender",
+			},
+		},
+
+		PathReplacementByVarname: map[string]map[string]string{
+			"render": map[string]string{
+				"linux":   "/render",
+				"windows": `R:\`,
+				"darwin":  "/render",
+			},
+		},
 	}
 	if err != nil {
 		return c, err
