@@ -316,6 +316,12 @@ func normalMode() (*mux.Router, error) {
 }
 
 func setupMode() (*mux.Router, error) {
+	// Always do verbose logging while running setup mode. It wouldn't make sense to log normal
+	// informative things (like the URLs available to access the server) at warning level just to
+	// ensure visibility.
+	cliArgs.verbose = true
+	configLogging()
+
 	router := mux.NewRouter().StrictSlash(true)
 	err := websetup.EnterSetupMode(&config, flamencoVersion, router)
 
@@ -327,13 +333,6 @@ func main() {
 	if cliArgs.version {
 		fmt.Println(flamencoVersion)
 		return
-	}
-
-	// Always do verbose logging while running setup mode. It wouldn't make sense to log normal
-	// informative things (like the URLs available to access the server) at warning level just to
-	// ensure visibility.
-	if cliArgs.setup {
-		cliArgs.verbose = true
 	}
 
 	configLogging()
