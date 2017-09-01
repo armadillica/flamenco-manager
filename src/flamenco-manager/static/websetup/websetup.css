@@ -61,9 +61,15 @@ input {
 .table-editable .glyphicon {
     font-size: 20px;
 }
+.table-editable td {
+    position: relative;
+}
 .table-remove {
     color: #700;
     cursor: pointer;
+    position: absolute;
+    top: 8px;
+    right: 0;
 }
 .table-remove:hover {
     color: #f00;
@@ -78,4 +84,13 @@ input {
 }
 .table-add:hover {
     color: #0b0;
+}
+
+.table-editable td:focus {
+    background-color: white;
+    color: black;
+}
+
+.table-editable td:hover {
+    cursor: pointer;
 }
