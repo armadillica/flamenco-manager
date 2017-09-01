@@ -15,7 +15,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const configFilename = "flamenco-manager.yaml"
+const (
+	configFilename   = "flamenco-manager.yaml"
+	defaultServerURL = "https://cloud.blender.org/"
+)
 
 // Conf represents the Manager's configuration file.
 type Conf struct {
@@ -83,6 +86,7 @@ func LoadConf(filename string) (Conf, error) {
 		CancelTaskFetchInterval:     10 * time.Second,
 		ActiveTaskTimeoutInterval:   1 * time.Minute,
 		ActiveWorkerTimeoutInterval: 15 * time.Minute,
+		FlamencoStr:                 defaultServerURL,
 		// Days are assumed to be 24 hours long. This is not exactly accurate, but should
 		// be accurate enough for this type of cleanup.
 		TaskCleanupMaxAge: 14 * 24 * time.Hour,
@@ -99,10 +103,14 @@ func LoadConf(filename string) (Conf, error) {
 	}
 
 	// Parse URL
+	if c.FlamencoStr == "" {
+		c.FlamencoStr = defaultServerURL
+	}
 	c.Flamenco, err = url.Parse(c.FlamencoStr)
 	if err != nil {
-		return c, fmt.Errorf("bad Flamenco URL: %v", err)
+		log.Errorf("bad Flamenco URL %q: %v", c.FlamencoStr, err)
 	}
+	log.Warningf("Flamenco Server URL: %v", c.Flamenco)
 
 	c.checkDatabase()
 
@@ -143,10 +151,6 @@ func LoadConf(filename string) (Conf, error) {
 		return c, fmt.Errorf("duplicate variables found")
 	}
 
-	if err := c.Write("written.yaml"); err != nil {
-		log.Fatalf("Error writing configuration file: %s", err)
-	}
-
 	return c, nil
 }
 
@@ -154,15 +158,6 @@ func (c *Conf) checkDatabase() {
 	// At least one of DatabasePath or DatabaseURL must be given.
 	if c.DatabasePath == "" && c.DatabaseURL == "" {
 		log.Fatal("Configure either database_path or database_url; the cannot both be empty.")
-	}
-
-	// If not empty, convert DatabasePath to an absolute path.
-	if c.DatabasePath != "" {
-		abspath, err := filepath.Abs(c.DatabasePath)
-		if err != nil {
-			log.Fatalf("Unable to make database path %s absolute: %s", c.DatabasePath, err)
-		}
-		c.DatabasePath = abspath
 	}
 }
 
@@ -184,6 +179,12 @@ func (c *Conf) Overwrite() error {
 
 // Write saves the current in-memory configuration to a YAML file.
 func (c *Conf) Write(filename string) error {
+	// Convert back to string representation.
+	if c.Flamenco == nil {
+		c.FlamencoStr = ""
+	} else {
+		c.FlamencoStr = c.Flamenco.String()
+	}
 	data, err := yaml.Marshal(c)
 	if err != nil {
 		return err
