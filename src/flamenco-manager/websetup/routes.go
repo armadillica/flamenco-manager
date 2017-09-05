@@ -10,6 +10,8 @@ import (
 	"html/template"
 	"net/http"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -23,6 +25,7 @@ const (
 	apiLinkStartURL    = "/setup/api/link-start"
 	linkReturnURL      = "/setup/link-return"
 	linkDoneURL        = "/setup/link-done"
+	restartURL         = "/setup/restart"
 )
 
 // Routes handles all HTTP routes and server-side context for the web setup wizard.
@@ -30,17 +33,19 @@ type Routes struct {
 	config          *flamenco.Conf
 	flamencoVersion string
 	linker          *ServerLinker
+	Restart         bool // indicates whether Flamenco Manager should restart after shutting down.
 }
 
 // TemplateData is the mapping type we use to pass data to the template engine.
 type TemplateData map[string]interface{}
 
-// CreateWebSetup creates a new WebSetupRoutes object.
-func CreateWebSetup(config *flamenco.Conf, flamencoVersion string) *Routes {
+// createWebSetup creates a new WebSetupRoutes object.
+func createWebSetup(config *flamenco.Conf, flamencoVersion string) *Routes {
 	return &Routes{
 		config,
 		flamencoVersion,
 		nil,
+		false,
 	}
 }
 
@@ -133,6 +138,7 @@ func (web *Routes) addWebSetupRoutes(router *mux.Router) {
 	router.HandleFunc(apiLinkStartURL, web.apiLinkStart)
 	router.HandleFunc(linkReturnURL, web.httpReturn)
 	router.HandleFunc(linkDoneURL, web.httpLinkDone)
+	router.HandleFunc(restartURL, web.httpRestart).Methods("GET", "POST")
 
 	static := noDirListing(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	router.PathPrefix("/static/").Handler(static).Methods("GET")
@@ -326,4 +332,25 @@ func (web *Routes) httpSaveConfig(w http.ResponseWriter, r *http.Request) {
 	web.config.Overwrite()
 
 	http.Redirect(w, r, setupURL, http.StatusSeeOther)
+}
+
+func (web *Routes) httpRestart(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		web.showTemplate("templates/websetup/restart.html", w, r, nil)
+		return
+	}
+
+	web.showTemplate("templates/websetup/restarting.html", w, r, nil)
+
+	go func() {
+		// Give the browser some time to load static files for the template, before shutting down.
+		time.Sleep(1 * time.Second)
+
+		log.Warningf("Restarting Flamenco Manager")
+		web.Restart = true
+
+		// Signal our own process to stop.
+		pid := syscall.Getpid()
+		syscall.Kill(pid, syscall.SIGTERM)
+	}()
 }

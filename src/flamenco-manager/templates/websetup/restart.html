@@ -1,0 +1,20 @@
+{{template "layout" .}}
+{{define "content"}}
+<div id='restart'>
+    <h2>Restart Flamenco Manager</h2>
+    <p>Are you sure you want to restart Flamenco Manager? This will disable the web setup and start
+    normal Flamenco Manager operations. You can always restart setup mode by running
+    "flamenco-manager -setup".</p>
+
+    <form method="POST">
+        <div class='row' style='margin: 2em'>
+            <div class='col-md-4'><a href="/setup" class='btn btn-success'>« Back to web setup</a></div>
+            <div class='col-md-offset-4 col-md-4' style='text-align: right'><button type="submit" class='btn btn-danger'>Restart</button></div>
+        </div>
+    </form>
+
+    <p>Note to advanced users: If you have integrated Flamenco Manager with SysV, systemd, or other
+    system-level service manager, do not use this option. Instead, use the system integration to
+    restart Flamenco Manager.</p>
+</div>
+{{end}}

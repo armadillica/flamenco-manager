@@ -102,3 +102,15 @@ input {
 .table-editable td:hover {
     cursor: pointer;
 }
+
+#progressbar {
+    height: 30px;
+    border: 1px solid white;
+    padding: 3px;
+}
+#progressbar div {
+    width: 10px;
+    height: 100%;
+    background-color: pink;
+    transition: width linear 3s;
+}

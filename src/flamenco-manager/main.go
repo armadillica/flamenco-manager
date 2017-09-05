@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -15,6 +16,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	auth "github.com/abbot/go-http-auth"
+	"github.com/kardianos/osext"
 	log "github.com/sirupsen/logrus"
 
 	"flamenco-manager/flamenco"
@@ -315,7 +317,7 @@ func normalMode() (*mux.Router, error) {
 	return router, nil
 }
 
-func setupMode() (*mux.Router, error) {
+func setupMode() (*websetup.Routes, *mux.Router, error) {
 	// Always do verbose logging while running setup mode. It wouldn't make sense to log normal
 	// informative things (like the URLs available to access the server) at warning level just to
 	// ensure visibility.
@@ -323,9 +325,9 @@ func setupMode() (*mux.Router, error) {
 	configLogging()
 
 	router := mux.NewRouter().StrictSlash(true)
-	err := websetup.EnterSetupMode(&config, flamencoVersion, router)
+	web, err := websetup.EnterSetupMode(&config, flamencoVersion, router)
 
-	return router, err
+	return web, router, err
 }
 
 func main() {
@@ -357,8 +359,9 @@ func main() {
 	}
 
 	var router *mux.Router
+	var setup *websetup.Routes
 	if cliArgs.setup {
-		router, err = setupMode()
+		setup, router, err = setupMode()
 	} else {
 		router, err = normalMode()
 	}
@@ -400,4 +403,26 @@ func main() {
 	log.Info("Waiting for shutdown to complete.")
 
 	<-shutdownComplete
+
+	if setup != nil && setup.Restart {
+		log.Warningf("Restarting Flamenco Server")
+		restart()
+	}
+}
+
+func restart() {
+	exename, err := osext.Executable()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	args := []string{}
+	cmd := exec.Command(exename, args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err = cmd.Start(); err != nil {
+		log.Fatalf("Failed to launch %s %v, error: %v", exename, args, err)
+	}
 }
