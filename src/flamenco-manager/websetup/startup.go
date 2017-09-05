@@ -15,7 +15,7 @@ const webroot = "/setup"
 func EnterSetupMode(config *flamenco.Conf, flamencoVersion string, router *mux.Router) error {
 	log.Info("Entering setup mode")
 
-	urls, err := availableURLs(config, true)
+	urls, err := availableURLs(config, false)
 	if err != nil {
 		return fmt.Errorf("Unable to find any network address: %s", err)
 	}
