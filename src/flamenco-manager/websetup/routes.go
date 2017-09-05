@@ -10,7 +10,6 @@ import (
 	"html/template"
 	"net/http"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -33,7 +32,7 @@ type Routes struct {
 	config          *flamenco.Conf
 	flamencoVersion string
 	linker          *ServerLinker
-	Restart         bool // indicates whether Flamenco Manager should restart after shutting down.
+	RestartFunction func()
 }
 
 // TemplateData is the mapping type we use to pass data to the template engine.
@@ -45,7 +44,7 @@ func createWebSetup(config *flamenco.Conf, flamencoVersion string) *Routes {
 		config,
 		flamencoVersion,
 		nil,
-		false,
+		nil,
 	}
 }
 
@@ -346,11 +345,12 @@ func (web *Routes) httpRestart(w http.ResponseWriter, r *http.Request) {
 		// Give the browser some time to load static files for the template, before shutting down.
 		time.Sleep(1 * time.Second)
 
-		log.Warningf("Restarting Flamenco Manager")
-		web.Restart = true
+		if web.RestartFunction == nil {
+			log.Errorf("Unable to restart Flamenco Manager, no restart function was registered.")
+			return
+		}
 
-		// Signal our own process to stop.
-		pid := syscall.Getpid()
-		syscall.Kill(pid, syscall.SIGTERM)
+		log.Warningf("Restarting Flamenco Manager by request of the web setup.")
+		web.RestartFunction()
 	}()
 }

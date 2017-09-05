@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -208,6 +209,7 @@ var cliArgs struct {
 	purgeQueue bool
 	version    bool
 	setup      bool
+	killPID    int
 }
 
 func parseCliArgs() {
@@ -218,6 +220,9 @@ func parseCliArgs() {
 	flag.BoolVar(&cliArgs.purgeQueue, "purgequeue", false, "Purges all queued task updates from the local MongoDB")
 	flag.BoolVar(&cliArgs.version, "version", false, "Show the version of Flamenco Manager")
 	flag.BoolVar(&cliArgs.setup, "setup", false, "Enter setup mode, enabling the web-based configuration system")
+	if runtime.GOOS == "windows" {
+		flag.IntVar(&cliArgs.killPID, "kill-after-start", 0, "Used on Windows for restarting the daemon")
+	}
 	flag.Parse()
 }
 
@@ -340,6 +345,8 @@ func main() {
 	configLogging()
 	log.Infof("Starting Flamenco Manager version %s", flamencoVersion)
 
+	killParentProcess()
+
 	defer func() {
 		// If there was a panic, make sure we log it before quitting.
 		if r := recover(); r != nil {
@@ -392,6 +399,15 @@ func main() {
 		}
 	}()
 
+	// Register the restart function when we're in setup mode
+	doRestartAfterShutdown := false
+	if setup != nil {
+		setup.RestartFunction = func() {
+			doRestartAfterShutdown = true
+			shutdown(os.Interrupt)
+		}
+	}
+
 	// Fall back to insecure server if TLS certificate/key is not defined.
 	if config.HasTLS() {
 		log.Warningf("HTTP server: %v", httpServer.ListenAndServeTLS(config.TLSCert, config.TLSKey))
@@ -404,7 +420,7 @@ func main() {
 
 	<-shutdownComplete
 
-	if setup != nil && setup.Restart {
+	if doRestartAfterShutdown {
 		log.Warningf("Restarting Flamenco Server")
 		restart()
 	}
@@ -416,8 +432,23 @@ func restart() {
 		log.Fatal(err)
 	}
 
+	isWindows := runtime.GOOS == "windows"
+
 	args := []string{}
+	if cliArgs.debug {
+		args = append(args, "-debug")
+	} else if cliArgs.verbose {
+		args = append(args, "-verbose")
+	}
+	if cliArgs.jsonLog {
+		args = append(args, "-json")
+	}
+	if isWindows {
+		args = append(args, "-kill-after-start")
+		args = append(args, fmt.Sprintf("%d", syscall.Getpid()))
+	}
 	cmd := exec.Command(exename, args...)
+	cmd.Env = os.Environ()
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -425,4 +456,31 @@ func restart() {
 	if err = cmd.Start(); err != nil {
 		log.Fatalf("Failed to launch %s %v, error: %v", exename, args, err)
 	}
+	log.Infof("Started another Flamenco Manager %s %v", exename, args)
+
+	// Give the other process time to start. This is required on Windows. Our child will kill us
+	// when it has started succesfully.
+	if isWindows {
+		time.Sleep(15 * time.Second)
+	}
+}
+
+func killParentProcess() {
+
+	if cliArgs.killPID == 0 {
+		return
+	}
+
+	proc, err := os.FindProcess(cliArgs.killPID)
+	if err != nil {
+		log.Debugf("Unable to find parent process %d, will not kill it.", cliArgs.killPID)
+		return
+	}
+
+	err = proc.Kill()
+	if err != nil {
+		log.Debugf("Unable to kill parent process %d: %s", cliArgs.killPID, err)
+	}
+
+	log.Debugf("Parent process %d killed.", cliArgs.killPID)
 }

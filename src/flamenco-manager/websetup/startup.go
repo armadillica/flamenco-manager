@@ -11,6 +11,9 @@ import (
 
 const webroot = "/setup"
 
+// RestartFunction is called when a restart is requested via the web interface.
+type RestartFunction func()
+
 // EnterSetupMode registers HTTP endpoints and logs which URLs are available to visit it.
 func EnterSetupMode(config *flamenco.Conf, flamencoVersion string, router *mux.Router) (*Routes, error) {
 	log.Info("Entering setup mode")
