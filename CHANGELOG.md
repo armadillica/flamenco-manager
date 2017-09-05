@@ -8,6 +8,7 @@ Changelog for Flamenco Manager
   required. When the `database_url` in `flamenco-manager.yaml` is empty, this bundled database
   server will be used. Note that running unit tests while developing Flamenco Manager still requires
   a separate server instance.
+- Added web interface for configuring Flamenco Manager. Start it using `flamenco-manager -setup`.
 
 
 ## Version 2.0.13 (released 2017-07-04)
