@@ -10,6 +10,8 @@ a:visited { color: #e6fff2; }
 a:hover { color: #d0f7eb; }
 a:active { color: #f7d0d2; }
 
+a.btn-default { color: black; }
+
 h1 img {
     width: auto;
     height: 2em;

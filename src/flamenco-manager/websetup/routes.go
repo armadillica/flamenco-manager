@@ -17,7 +17,7 @@ import (
 
 // End points at this Manager
 const (
-	indexURL           = "/setup"
+	setupURL           = "/setup"
 	saveConfigURL      = "/setup/save-configuration"
 	apiLinkRequiredURL = "/setup/api/link-required"
 	apiLinkStartURL    = "/setup/api/link-start"
@@ -126,7 +126,8 @@ func (web *Routes) showTemplate(templfname string, w http.ResponseWriter, r *htt
 
 // addWebSetupRoutes registers HTTP endpoints for setup mode.
 func (web *Routes) addWebSetupRoutes(router *mux.Router) {
-	router.HandleFunc(indexURL, web.httpIndex)
+	router.HandleFunc("/", web.httpIndex)
+	router.HandleFunc(setupURL, web.httpSetupIndex)
 	router.HandleFunc(saveConfigURL, web.httpSaveConfig).Methods("POST")
 	router.HandleFunc(apiLinkRequiredURL, web.apiLinkRequired)
 	router.HandleFunc(apiLinkStartURL, web.apiLinkStart)
@@ -138,6 +139,10 @@ func (web *Routes) addWebSetupRoutes(router *mux.Router) {
 }
 
 func (web *Routes) httpIndex(w http.ResponseWriter, r *http.Request) {
+	web.showTemplate("templates/websetup/setup-mode-enabled.html", w, r, nil)
+}
+
+func (web *Routes) httpSetupIndex(w http.ResponseWriter, r *http.Request) {
 	urls := urlConfigOptions(web.config, r)
 
 	// Set a default "own URL" when entering the setup.
@@ -225,7 +230,7 @@ func (web *Routes) httpReturn(w http.ResponseWriter, r *http.Request) {
 
 	if web.linker == nil {
 		log.Warning("Flamenco Manager restarted mid link procedure, redirecting to setup again")
-		http.Redirect(w, r, indexURL, http.StatusSeeOther)
+		http.Redirect(w, r, setupURL, http.StatusSeeOther)
 		return
 	}
 
@@ -320,5 +325,5 @@ func (web *Routes) httpSaveConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	web.config.Overwrite()
 
-	http.Redirect(w, r, indexURL, http.StatusSeeOther)
+	http.Redirect(w, r, setupURL, http.StatusSeeOther)
 }
