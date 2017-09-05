@@ -7,45 +7,36 @@ Author: Sybren A. Stüvel <sybren@blender.studio>
 
 ## Getting started
 
-To run Flamenco Manager, follow these steps:
+To run Flamenco Manager for the first time, follow these steps:
 
 1. Download [Flamenco Manager](https://www.flamenco.io/download/) for your platform.
 2. Extract the downloaded file.
-3. Edit the configuration file (see "Configuration" below).
-4. Optional: Install [MongoDB 3.2 or newer](https://docs.mongodb.com/manual/administration/install-community/).
-   This is only required if you want to run using a self-installed MongoDB database. If you skip
-   this step, the MongoDB server that's bundled with Flamenco Manager will be used.
-5. Optional: To use the "Last Rendered Image" feature, you need to have
-   [ImageMagick](https://www.imagemagick.org/) installed, with support for the type of images you
-   render. The Manager needs to be able to execute the `convert` command. The exact version doesn't
-   matter, since the command it executes is simple: `convert ${rendered_image} -quality 85
-   latest-image.jpg`
-6. Start the `flamenco-manager` (Linux, macOS) or `flamenco-manager.exe` executable.
-7. Connect a browser, and you should see a (probably empty) status dashboard.
+3. Run `./flamenco-manager -setup` (Linux/macOS) or `flamenco-manager.exe -setup` (Windows).
+4. Flamenco Manager will give you a list of URLs at which it can be reached. Open the URL that is
+   reachable both for you and the workers.
+5. Link Flamenco Manager to Blender Cloud by following the steps in the web interface.
+6. Configure Flamenco Manager via the web interface. Update the variables and path replacement
+   variables for your render farm; the `blender` variable should point to the Blender executable
+   where it can be found *on the workers*. The path replacement variables allow you to set different
+   paths for both Clients (like the Blender Cloud Add-on) and Workers, given their respective
+   platforms.
+7. Once you have completed configuration, restart Flamenco Manager through the web interface. It
+   will now run in normal (i.e. non-setup) mode.
+
+Note that `variables` and `path_replacement` share a namespace -- variable names have to be unique,
+and cannot be used in both `variables` and `path_replacement` sections. If this happens, Flamenco
+Manager will log the offending name, and refuse to start.
 
 
-## Configuration
+## Advanced Configuration
 
-This describes the minimal changes you'll have to do to get Flamenco Manager running.
+Apart from the above web-based setup, you can configure advanced settings by editing
+`flamenco-manager.yaml`. For example, you can:
 
-- Copy `flamenco-manager-example.yaml` to `flamenco-manager.yaml` if you haven't done that yet.
-- Update `own_url` to point to the IP address or hostname by which your machine can be reached
-  by the workers.
-- Set the `manager_id` and `manager_secret` to the values obtained from the [Blender Cloud
-  configuration panel](https://cloud.blender.org/flamenco/managers/). `manager_id` can be obtained
-  by clicking the "ID" button at the top. For `manager_secret` use the "Authentication token" at
-  the bottom of the page.
-- Optionally generate TLS certificates and set the path in the `tlskey` and `tlscert` configuration
+- Generate TLS certificates and set the path in the `tlskey` and `tlscert` configuration
   options. Transport Layer Security (TLS) is the we-are-no-longer-living-in-the-90ies name for SSL.
-- Update the `variables` for your render farm. The `blender` variable should point to the
-  Blender executable where it can be found *on the workers*.
-- Update the `path_replacement` variables for your render farm. This allows you to set different
-  paths for both Clients (like the Blender Cloud Add-on) and Workers, given their respective
-  platforms.
-
-Note that `variables` and `path_replacement` share a namespace -- variable names have to be
-unique, and cannot be used in both `variables` and `path_replacement` sections. If this happens,
-Flamenco Manager will log the offending name, and refuse to start.
+- Set intervals for various periodic operations. See `flamenco-manager-example.yaml` for a
+  description.
 
 Intervals (like `download_task_sleep`) can be configured in seconds, minutes, or hours, by appending
 a suffix `s`, `m`, or `h`. Such a suffix must always be used.
@@ -55,8 +46,10 @@ a suffix `s`, `m`, or `h`. Such a suffix must always be used.
 
 Flamenco Manager accepts the following CLI arguments:
 
+- `-setup`: Start in *setup mode*, which will enable the web-based setup on the `/setup` URL.
 - `-debug`: Enable debug-level logging
-- `-verbose`: Enable info-level logging (no-op if `-debug` is also given)
+- `-verbose`: Enable info-level logging (no-op if `-debug` is also given). This is automatically
+  enabled in setup mode.
 - `-json`: Log in JSON format, instead of plain text
 - `-cleanslate`: Start with a clean slate; erases all cached tasks from the local MongoDB,
   then exits Flamenco Manager. This can be run while another Flamenco Manager is
@@ -82,18 +75,17 @@ Flamenco Manager accepts the following CLI arguments:
 of this `flamenco-manager-go` directory.
 
 0. Make sure you have MongoDB up and running (on localhost)
-1. Install Go 1.8 or newer
+1. Install Go 1.9 or newer
 2. `export GOPATH=$FM`
 3. `cd $FM/src/flamenco-manager`
 4. Download all dependencies with `go get`
 5. Download Flamenco test dependencies with `go get -t ./...`
 6. Run the unittests with `go test ./...`
 7. Build your first Flamenco Manager with `go install`; this will create an executable
-   `flamenco-manager` in `$FM/bin`
-8. Copy `flamenco-manager-example.yaml` and name it `flamenco-manager.yaml` and then update
-   it with the info generated after creating a manager document on the Server
-9. Run the Manager with `$FM/bin/flamenco-manager -verbose`. It may be a good idea to add `$FM/bin`
-   to your `PATH` environment variable.
+   `flamenco-manager` in `$FM/bin`. It may be a good idea to add `$FM/bin` to your `PATH`
+   environment variable.
+8. Configure Flamenco Manager by starting it in *setup mode* (`flamenco-manager -setup`, see above).
+9. Run the Manager with `$FM/bin/flamenco-manager -verbose`.
 
 
 ### Testing
