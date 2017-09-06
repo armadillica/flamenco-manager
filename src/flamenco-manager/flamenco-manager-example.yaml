@@ -30,7 +30,7 @@ ssdp_device_uuid: 1e97b633-34f6-416f-abbb-853de75e5c57
 
 
 # How often the Manager should ask the Server for new tasks, regardless of how often workers ask.
-download_task_sleep: 60s
+download_task_sleep: 5m
 
 # The duration between rechecks when there are no more tasks for workers.
 # If set to 0s, will not throttle at all.
@@ -41,22 +41,22 @@ download_task_recheck_throttle: 10s
 # These settings determine the task update batching behaviour. All task updates are batched,
 # and the batch is sent whenever the max interval since the last push has passed, or when
 # the batch is at its maximum size, whichever happens first.
-task_update_push_max_interval: 5s
-task_update_push_max_count: 20
+task_update_push_max_interval: 30s
+task_update_push_max_count: 50
 
 # An empty list of task updates is pushed every `cancel_task_fetch_max_interval`,
 # unless an actual task update push already happened within that time. This controls how
 # fast the Manager can respond to task cancel requests.
-cancel_task_fetch_max_interval: 10s
+cancel_task_fetch_max_interval: 30s
 
 # When a task has status "active", but it hasn't been touched by a worker in
 # this duration, it will go to state "failed". Being "touched" means that
 # a worker called /may-i-run/{task-id} for this task.
-active_task_timeout_interval: 60s
+active_task_timeout_interval: 1m
 
 # When a worker has status "active", but it hasn't been seen in this many seconds, it
 # will go to state "timeout".
-active_worker_timeout_interval: 300s
+active_worker_timeout_interval: 15m
 
 # Tasks that have been in the local cache (i.e. the 'flamenco_tasks' collection)
 # without being updated for this duration are periodically deleted from the

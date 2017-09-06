@@ -79,12 +79,12 @@ func LoadConf(filename string) (Conf, error) {
 	c := Conf{
 		Listen:                      ":8083",
 		DatabasePath:                "./db",
-		DownloadTaskSleep:           300 * time.Second,
+		DownloadTaskSleep:           5 * time.Minute,
 		DownloadTaskRecheckThrottle: 10 * time.Second,
 		TaskUpdatePushMaxInterval:   30 * time.Second,
-		TaskUpdatePushMaxCount:      10,
-		CancelTaskFetchInterval:     10 * time.Second,
-		ActiveTaskTimeoutInterval:   1 * time.Minute,
+		TaskUpdatePushMaxCount:      50,
+		CancelTaskFetchInterval:     30 * time.Second,
+		ActiveTaskTimeoutInterval:   3 * time.Minute,
 		ActiveWorkerTimeoutInterval: 15 * time.Minute,
 		FlamencoStr:                 defaultServerURL,
 		// Days are assumed to be 24 hours long. This is not exactly accurate, but should
