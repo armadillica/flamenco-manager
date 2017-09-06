@@ -96,7 +96,7 @@ func LoadConf(filename string) (Conf, error) {
 		VariablesByVarname: map[string]map[string]string{
 			"blender": map[string]string{
 				"linux":   "/linux/path/to/blender",
-				"windows": `C:\windows\path\to\blender.exe`,
+				"windows": "C:/windows/path/to/blender.exe",
 				"darwin":  "/Volume/Applications/Blender/blender",
 			},
 		},
@@ -104,7 +104,7 @@ func LoadConf(filename string) (Conf, error) {
 		PathReplacementByVarname: map[string]map[string]string{
 			"render": map[string]string{
 				"linux":   "/render",
-				"windows": `R:\`,
+				"windows": "R:/",
 				"darwin":  "/render",
 			},
 		},
