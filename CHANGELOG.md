@@ -3,7 +3,7 @@ Changelog for Flamenco Manager
 
 ## Version 2.0.14 (in development)
 
-- Fixed panic when auto-discovery ran on Windows.
+- Fixed panic when enabling UPnP/SSDP auto-discovery on Windows.
 - Bundled MongoDB itself with Flamenco Manager, so that a separate MongoDB installation is no longer
   required. When the `database_url` in `flamenco-manager.yaml` is empty, this bundled database
   server will be used. Note that running unit tests while developing Flamenco Manager still requires
