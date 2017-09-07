@@ -80,7 +80,9 @@ rm -rf $PREFIX/flamenco-manager{,.service} $PREFIX/mongodb-linux
 echo "Creating archive for Windows"
 cp flamenco-manager-windows.exe $PREFIX/flamenco-manager.exe
 cp -ua --link mongodb-windows-* $PREFIX/mongodb-windows
-zip -9 -r -q $PREFIX-windows.zip $PREFIX/
+cd $PREFIX
+zip -9 -r -q ../$PREFIX-windows.zip *
+cd -
 rm -rf $PREFIX/flamenco-manager.exe $PREFIX/mongodb-windows
 
 echo "Creating archive for Darwin"
