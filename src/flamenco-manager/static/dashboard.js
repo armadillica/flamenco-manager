@@ -1,12 +1,6 @@
 var clipboard;
 
 function load_workers() {
-    var status_to_bootstrap_class = {
-        'awake': 'success',
-        'down': 'default',
-        'timeout': 'danger',
-    }
-
     $.get('/as-json')
     .done(function(info) {
         // Split workers into "current" and "idle for too long"
@@ -68,9 +62,6 @@ function load_workers() {
             var $row = $('<tr>')
                 .attr('id', worker._id)
                 .addClass("status-" + worker.status);
-
-            var status_class = status_to_bootstrap_class[worker.status];
-            if (typeof status_class != 'undefined') $row.addClass(status_class);
 
             $row.append($('<td>').text(worker.nickname));
             $row.append($('<td>').text(worker.status || '-none-').addClass('status-' + worker.status));

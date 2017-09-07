@@ -49,6 +49,10 @@ button#refresh {
     border-color: #a3d5e9;
 }
 
+tr.status-awake td, tr.status-awake th { background-color: #46bb7a; }
+tr.status-awake:nth-of-type(odd) td, tr.status-awake:nth-of-type(odd) th { background-color: #3faa6e; }
+tr.status-timeout td, tr.status-timeout th { background-color: #bb6646; }
+
 dl.dl-horizontal { margin: 0; }
 .dl-horizontal dt { width: 100px; }
 .dl-horizontal dd { margin-left: 120px; }
