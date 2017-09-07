@@ -1,19 +1,53 @@
 html, body {
     font-family: Noto, Ubuntu, sans-serif;
-    color: black;
-    background-color: white;
-
+    color: white;
+    background-color: #4da7cd;
     text-shadow: 0.2ex 0.2ex 0.1ex rgba(0, 0, 0, 0.2);
 }
 
+a, a:link { color: #aef0ff; }
+a:visited { color: #e6fff2; }
+a:hover { color: #d0f7eb; }
+a:active { color: #f7d0d2; }
+
+a.btn-default { color: black; }
+
+h1 img {
+    width: auto;
+    height: 1.1em;
+    float: left;
+    padding-right: 0.5ex;
+}
+
+#managerversion {
+    font-size: small;
+    vertical-align: top;
+    float: right;
+}
+
+input {
+    color: black;
+}
+
+
 .error {
-    color: #800;
+    color: #a92a2a;
+    background-color: #ffeaea;
+    border-radius: 0.5ex;
+    border: 2px solid #a92a2a;
+    padding: 1ex;
+    text-shadow: none;
 }
 
 button#refresh {
 }
 
 .panel-body { padding: 5px; }
+.panel { background-color: inherit; }
+.table-striped>tbody>tr:nth-of-type(odd) { background-color: #4699bb; }
+.table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th {
+    border-color: #a3d5e9;
+}
 
 dl.dl-horizontal { margin: 0; }
 .dl-horizontal dt { width: 100px; }

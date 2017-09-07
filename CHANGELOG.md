@@ -9,6 +9,7 @@ Changelog for Flamenco Manager
   server will be used. Note that running unit tests while developing Flamenco Manager still requires
   a separate server instance.
 - Added web interface for configuring Flamenco Manager. Start it using `flamenco-manager -setup`.
+- Restyled the dashboard.
 
 
 ## Version 2.0.13 (released 2017-07-04)
