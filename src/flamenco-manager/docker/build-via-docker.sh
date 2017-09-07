@@ -67,7 +67,7 @@ mkdir $PREFIX
 
 echo "Assembling files into $PREFIX/"
 git checkout -- ../static/latest-image.jpg
-rsync ../static ../templates $PREFIX -a --delete-after --exclude static/latest-image.jpg
+rsync ../static ../templates $PREFIX -a --delete-after
 cp ../flamenco-manager-example.yaml $PREFIX/
 cp ../../../{README.md,LICENSE.txt,CHANGELOG.md} $PREFIX/
 
@@ -81,6 +81,7 @@ rm -rf $PREFIX/flamenco-manager{,.service} $PREFIX/mongodb-linux
 echo "Creating archive for Windows"
 cp flamenco-manager-windows.exe $PREFIX/flamenco-manager.exe
 cp -ua --link mongodb-windows-* $PREFIX/mongodb-windows
+rm -f $PREFIX-windows.zip
 cd $PREFIX
 zip -9 -r -q ../$PREFIX-windows.zip *
 cd -
@@ -89,6 +90,7 @@ rm -rf $PREFIX/flamenco-manager.exe $PREFIX/mongodb-windows
 echo "Creating archive for Darwin"
 cp flamenco-manager-darwin $PREFIX/flamenco-manager
 cp -ua --link mongodb-osx-x86_64-* $PREFIX/mongodb-darwin
+rm -f $PREFIX-darwin.zip
 zip -9 -r -q $PREFIX-darwin.zip $PREFIX/
 rm -rf $PREFIX/flamenco-manager $PREFIX/mongodb-darwin
 
