@@ -1,7 +1,7 @@
 Changelog for Flamenco Manager
 ==============================
 
-## Version 2.0.14 (in development)
+## Version 2.0.14 (released 2017-09-07)
 
 - Fixed panic when enabling UPnP/SSDP auto-discovery on Windows.
 - Bundled MongoDB itself with Flamenco Manager, so that a separate MongoDB installation is no longer
