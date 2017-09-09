@@ -33,6 +33,7 @@ type Routes struct {
 	flamencoVersion string
 	linker          *ServerLinker
 	RestartFunction func()
+	root            string
 }
 
 // TemplateData is the mapping type we use to pass data to the template engine.
@@ -45,6 +46,7 @@ func createWebSetup(config *flamenco.Conf, flamencoVersion string) *Routes {
 		flamencoVersion,
 		nil,
 		nil,
+		flamenco.TemplatePathPrefix("templates/websetup/layout.html"),
 	}
 }
 
@@ -89,7 +91,7 @@ func sendErrorMessage(w http.ResponseWriter, r *http.Request, status int, msg st
 }
 
 func (web *Routes) showTemplate(templfname string, w http.ResponseWriter, r *http.Request, templateData TemplateData) {
-	tmpl, err := template.Must(template.New("").Funcs(template.FuncMap{
+	tmpl := template.New("").Funcs(template.FuncMap{
 		"dict": func(values ...interface{}) (map[string]interface{}, error) {
 			if len(values)%2 != 0 {
 				return nil, errors.New("invalid dict call")
@@ -105,10 +107,12 @@ func (web *Routes) showTemplate(templfname string, w http.ResponseWriter, r *htt
 			}
 			return dict, nil
 		},
-	}), nil).ParseFiles(
-		"templates/websetup/layout.html",
-		"templates/websetup/vartable.html",
-		templfname)
+	})
+
+	tmpl, err := tmpl.ParseFiles(
+		web.root+"templates/websetup/layout.html",
+		web.root+"templates/websetup/vartable.html",
+		web.root+templfname)
 	if err != nil {
 		log.Errorf("Error parsing HTML template %s: %s", templfname, err)
 		http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -139,7 +143,7 @@ func (web *Routes) addWebSetupRoutes(router *mux.Router) {
 	router.HandleFunc(linkDoneURL, web.httpLinkDone)
 	router.HandleFunc(restartURL, web.httpRestart).Methods("GET", "POST")
 
-	static := noDirListing(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	static := noDirListing(http.StripPrefix("/static/", http.FileServer(http.Dir(web.root+"static"))))
 	router.PathPrefix("/static/").Handler(static).Methods("GET")
 }
 

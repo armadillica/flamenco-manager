@@ -8,7 +8,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 
+	"github.com/kardianos/osext"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -87,4 +90,34 @@ func SendJSON(logprefix, method string, url *url.URL,
 	}
 
 	return nil
+}
+
+// TemplatePathPrefix returns the filename prefix to find template files.
+// Templates are searched for relative to the current working directory as well as relative
+// to the currently running executable.
+func TemplatePathPrefix(fileToFind string) string {
+	// Find as relative path, i.e. relative to CWD.
+	_, err := os.Stat(fileToFind)
+	if err == nil {
+		log.Debugf("Found templates in current working directory")
+		return ""
+	}
+
+	// Find relative to executable folder.
+	exedirname, err := osext.ExecutableFolder()
+	if err != nil {
+		log.Fatalf("Unable to determine the executable's directory.")
+	}
+
+	if _, err := os.Stat(filepath.Join(exedirname, fileToFind)); os.IsNotExist(err) {
+		cwd, err := os.Getwd()
+		if err != nil {
+			log.Fatalf("Unable to determine current working directory: %s", err)
+		}
+		log.Fatalf("Unable to find templates/websetup/layout.html in %s or %s", cwd, exedirname)
+	}
+
+	// Append a slash so that we can later just concatenate strings.
+	log.Debugf("Found templates in %s", exedirname)
+	return exedirname + string(os.PathSeparator)
 }

@@ -19,6 +19,7 @@ type Reporter struct {
 	config          *Conf
 	flamencoVersion string
 	server          string
+	root            string
 }
 
 // CreateReporter creates a new Reporter object.
@@ -28,6 +29,7 @@ func CreateReporter(config *Conf, session *mgo.Session, flamencoVersion string) 
 		config,
 		flamencoVersion,
 		config.FlamencoStr,
+		TemplatePathPrefix("templates/dashboard.html"),
 	}
 }
 
@@ -37,7 +39,7 @@ func (rep *Reporter) AddRoutes(router *mux.Router) {
 	router.HandleFunc("/as-json", rep.sendStatusReport).Methods("GET")
 	router.HandleFunc("/latest-image", rep.showLatestImagePage).Methods("GET")
 
-	static := noDirListing(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	static := noDirListing(http.StripPrefix("/static/", http.FileServer(http.Dir(rep.root+"static"))))
 	router.PathPrefix("/static/").Handler(static).Methods("GET")
 }
 
@@ -52,7 +54,7 @@ func noDirListing(h http.Handler) http.Handler {
 }
 
 func (rep *Reporter) showTemplate(templfname string, w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles(templfname)
+	tmpl, err := template.ParseFiles(rep.root + templfname)
 	if err != nil {
 		log.Error("Error parsing HTML template: ", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
