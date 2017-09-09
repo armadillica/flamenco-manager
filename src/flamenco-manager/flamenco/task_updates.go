@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	auth "github.com/abbot/go-http-auth"
+	log "github.com/sirupsen/logrus"
 
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"

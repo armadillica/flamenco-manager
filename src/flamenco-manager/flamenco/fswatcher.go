@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	auth "github.com/abbot/go-http-auth"
 	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 )
 
 var imageExtensions = map[string]bool{

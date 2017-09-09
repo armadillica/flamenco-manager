@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	auth "github.com/abbot/go-http-auth"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	check "gopkg.in/check.v1"
