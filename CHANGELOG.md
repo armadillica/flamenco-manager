@@ -6,6 +6,7 @@ Changelog for Flamenco Manager
 - Flamenco Manager can now be run from a different directory than the executable is in. It searches
   for web templates both relative to the current working directory and relative to the executable's
   own directory.
+- Always log which version of Flamenco is running.
 
 
 ## Version 2.0.14 (released 2017-09-07)
