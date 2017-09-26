@@ -335,6 +335,14 @@ func setupMode() (*websetup.Routes, *mux.Router, error) {
 	return web, router, err
 }
 
+func showStartup() {
+	// This *always* has to be logged.
+	oldLevel := log.GetLevel()
+	defer log.SetLevel(oldLevel)
+	log.SetLevel(log.InfoLevel)
+	log.WithField("version", flamencoVersion).Info("Starting Flamenco Manager")
+}
+
 func main() {
 	parseCliArgs()
 	if cliArgs.version {
@@ -343,8 +351,7 @@ func main() {
 	}
 
 	configLogging()
-	log.Infof("Starting Flamenco Manager version %s", flamencoVersion)
-
+	showStartup()
 	killParentProcess()
 
 	defer func() {
