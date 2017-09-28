@@ -24,7 +24,7 @@ docker run -i --rm \
     -v $(pwd):/docker \
     -v "${GOPATH}:/go-local" \
     --env GOPATH=/go-local \
-     golang /bin/bash -e << EOT
+     golang:1.9 /bin/bash -e << EOT
 echo -n "Using "
 go version
 cd \${GOPATH}/src/flamenco-manager
