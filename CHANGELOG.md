@@ -5,6 +5,7 @@ Changelog for Flamenco Manager
 
 - Always log which version of Flamenco is running.
 - Added a note that the MongoDB files should reside on a local filesystem, and not on a network.
+- Prevent squashing of last-rendered image.
 
 
 ## Version 2.0.15 (released 2017-09-09)
