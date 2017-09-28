@@ -159,8 +159,12 @@ func (ts *TaskScheduler) unassignTaskFromWorker(taskID bson.ObjectId, worker *Wo
 func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 	w http.ResponseWriter, db *mgo.Database, worker *Worker) *Task {
 
+	logFields := log.Fields{
+		"worker": worker.Identifier(),
+	}
+
 	if len(worker.SupportedTaskTypes) == 0 {
-		log.Warningf("TaskScheduler: worker %s has no supported task types.", worker.Identifier())
+		log.WithFields(logFields).Warning("TaskScheduler: worker has no supported task types")
 		w.WriteHeader(http.StatusNotAcceptable)
 		fmt.Fprintln(w, "You do not support any task types.")
 		return nil
@@ -176,14 +180,13 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 	}).One(&alreadyAssignedTask)
 	if findErr == nil {
 		// We found an already-assigned task. Just return that.
-		log.Infof("TaskScheduler: worker %s already had task %s assigned, returning that.",
-			worker.Identifier(), alreadyAssignedTask.ID)
+		logFields["task_id"] = alreadyAssignedTask.ID.Hex()
+		log.WithFields(logFields).Info("TaskScheduler: worker already had task assigned, returning that")
 		return &alreadyAssignedTask
 	} else if findErr != mgo.ErrNotFound {
 		// Something went wrong, and it wasn't just an "not found" error (which we actually expect).
 		// In this case we log the error but fall through to the regular task scheduling query.
-		log.Errorf("TaskScheduler: unable to query for active tasks assigned to worker %s: %s",
-			worker.Identifier(), findErr)
+		log.WithFields(logFields).WithError(findErr).Error("TaskScheduler: unable to query for active tasks assigned to worker")
 	}
 
 	// Perform the monster MongoDB aggregation query to schedule a task.
@@ -247,13 +250,13 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 
 	err := pipe.One(&result)
 	if err == mgo.ErrNotFound {
-		log.Debugf("TaskScheduler: no more tasks available for %s", worker.Identifier())
+		log.WithFields(logFields).Debug("TaskScheduler: no more tasks available for worker")
 		ts.maybeKickTaskDownloader()
 		w.WriteHeader(204)
 		return nil
 	}
 	if err != nil {
-		log.Errorf("TaskScheduler: Error fetching task for %s: %s", worker.Identifier(), err)
+		log.WithFields(logFields).WithError(err).Error("TaskScheduler: Error fetching task for worker")
 		w.WriteHeader(500)
 		return nil
 	}
