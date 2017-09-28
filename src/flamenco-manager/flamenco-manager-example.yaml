@@ -6,7 +6,8 @@ database_url:
 
 # When using the built-in MongoDB server, the database files will be stored
 # in this path. The default value is "./db".
-# database_path: ./db
+# NOTE: only use local filesystems, and not a CIFS/Samba/NFS mount.
+#database_path: ./db
 
 # Flamenco Manager listens to incoming connections from workers on this address.
 # Set to '0.0.0.0:8083' if your system does not support IPv6 but only IPv4.
