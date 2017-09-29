@@ -231,7 +231,7 @@ func WorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest,
 
 	logFields := log.Fields{
 		"remote_addr": r.RemoteAddr,
-		"username":    r.Username,
+		"worker_id":   r.Username,
 		"task_id":     taskID.Hex(),
 	}
 
@@ -331,7 +331,7 @@ func WorkerPingedTask(workerID bson.ObjectId, taskID bson.ObjectId, taskStatus s
 func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.Database) {
 	logFields := log.Fields{
 		"remote_addr": r.RemoteAddr,
-		"username":    r.Username,
+		"worker_id":   r.Username,
 	}
 
 	// Get the worker
@@ -342,6 +342,7 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 		return
 	}
 	workerIdent := worker.Identifier()
+	logFields["worker"] = workerIdent
 
 	log.WithFields(logFields).Warning("Worker signing off")
 
@@ -394,7 +395,7 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 func WorkerSignOn(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.Database) {
 	logFields := log.Fields{
 		"remote_addr": r.RemoteAddr,
-		"username":    r.Username,
+		"worker_id":   r.Username,
 	}
 
 	// Get the worker
