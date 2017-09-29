@@ -6,4 +6,5 @@ source.addEventListener('image', function (event) {
 
     var url = '/static/' + filename + '?' + new Date().getTime();
     $('#last_rendered_image').attr('src', url);
+    $('body.imageviewer').css('background-image', 'url(' + url + ')');
 }, false);
