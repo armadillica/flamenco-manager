@@ -340,6 +340,9 @@ func (pusher *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bso
 	goToCancelRequested := make([]bson.ObjectId, 0, len(cancelTaskIDs))
 
 	queueTaskCancel := func(taskID bson.ObjectId) {
+		msg := "Manager cancelled task by request of Flamenco Server"
+		LogTaskActivity(nil, taskID, msg, time.Now().Format(IsoFormat)+": "+msg, db)
+
 		tupdate := TaskUpdate{
 			TaskID:     taskID,
 			TaskStatus: statusCanceled,
@@ -409,10 +412,13 @@ func LogTaskActivity(worker *Worker, taskID bson.ObjectId, activity, logLine str
 		Log:      logLine,
 	}
 	if err := QueueTaskUpdate(&tupdate, db); err != nil {
-		log.WithFields(log.Fields{
+		logFields := log.Fields{
 			"task_id":    taskID.Hex(),
-			"worker":     worker.Identifier(),
 			log.ErrorKey: err,
-		}).Error("LogTaskActivity: Unable to queue task update")
+		}
+		if worker != nil {
+			logFields["worker"] = worker.Identifier()
+		}
+		log.WithFields(logFields).Error("LogTaskActivity: Unable to queue task update")
 	}
 }

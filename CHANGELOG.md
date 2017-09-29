@@ -8,6 +8,7 @@ Changelog for Flamenco Manager
 - Prevent squashing of last-rendered image.
 - Refuse task updates for tasks in non-runnable state. This means that once a task is cancelled,
   completed, etc. the worker cannot update it any more.
+- Log activity when task gets cancelled by request of Flamenco Server.
 
 
 ## Version 2.0.15 (released 2017-09-09)
