@@ -28,18 +28,22 @@ type TaskUpdatePusher struct {
 func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedRequest,
 	db *mgo.Database, taskID bson.ObjectId) {
 
+	logFields := log.Fields{
+		"remote_addr": r.RemoteAddr,
+		"worker_id":   r.Username,
+	}
+
 	// Get the worker
 	worker, err := FindWorker(r.Username, bson.M{"address": 1, "nickname": 1}, db)
 	if err != nil {
-		log.Warningf("QueueTaskUpdate: Unable to find worker %s at address: %s",
-			r.Username, r.RemoteAddr, err)
+		log.WithFields(logFields).WithError(err).Warning("QueueTaskUpdate: Unable to find worker")
 		w.WriteHeader(http.StatusForbidden)
 		fmt.Fprintf(w, "Unable to find worker address: %s", err)
 		return
 	}
 	worker.Seen(&r.Request, db)
-	log.Infof("QueueTaskUpdateFromWorker: Received task update for task %s from %s",
-		taskID.Hex(), worker.Identifier())
+	logFields["task_id"] = taskID.Hex()
+	logFields["worker"] = worker.Identifier()
 
 	// Parse the task JSON
 	tupdate := TaskUpdate{}
@@ -49,27 +53,28 @@ func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedReque
 	}
 	tupdate.TaskID = taskID
 	tupdate.Worker = worker.Identifier()
+	logFields["task_status"] = tupdate.TaskStatus
+	log.WithFields(logFields).Info("QueueTaskUpdateFromWorker: Received task update")
 
 	// Check that this worker is allowed to update this task.
 	task := Task{}
 	if err := db.C("flamenco_tasks").FindId(taskID).One(&task); err != nil {
-		log.Warningf("%s QueueTaskUpdateFromWorker: unable to find task %s for worker %s",
-			r.RemoteAddr, taskID.Hex(), worker.Identifier())
+		log.WithFields(logFields).Warning("QueueTaskUpdateFromWorker: unable to find task")
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "Task %s is unknown.", taskID.Hex())
 		return
 	}
+	logFields["current_task_status"] = task.Status
+	logFields["current_task_worker_id"] = task.WorkerID
 	if task.WorkerID != nil && *task.WorkerID != worker.ID {
-		log.Warningf("%s QueueTaskUpdateFromWorker: task %s update rejected from %s (%s), task has status \"%s\" and is assigned to %s",
-			r.RemoteAddr, taskID.Hex(), worker.ID.Hex(), worker.Identifier(), task.Status, task.WorkerID.Hex())
+		log.WithFields(logFields).Warning("QueueTaskUpdateFromWorker: task update rejected, task belongs to other worker")
 		w.WriteHeader(http.StatusConflict)
 		fmt.Fprintf(w, "Task %s is assigned to another worker.", taskID.Hex())
 		return
 	}
 	if !IsRunnableTaskStatus(task.Status) {
 		// These statuses can never be overwritten, and all task updates will be rejected.
-		log.Warningf("%s QueueTaskUpdateFromWorker: task %s update rejected from %s (%s), task has status %s",
-			r.RemoteAddr, taskID.Hex(), worker.ID.Hex(), task.Status)
+		log.WithFields(logFields).Warning("QueueTaskUpdateFromWorker: task update rejected, task has non-runnable status")
 		w.WriteHeader(http.StatusConflict)
 		fmt.Fprintf(w, "Task %s has status %s.", taskID.Hex(), task.Status)
 		return
@@ -78,7 +83,7 @@ func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedReque
 	WorkerPingedTask(worker.ID, tupdate.TaskID, tupdate.TaskStatus, db)
 
 	if err := QueueTaskUpdate(&tupdate, db); err != nil {
-		log.Warningf("%s: %s", worker.Identifier(), err)
+		log.WithFields(logFields).WithError(err).Warning("QueueTaskUpdateFromWorker: unable to update task")
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Unable to store update: %s\n", err)
 		return
@@ -112,28 +117,32 @@ func QueueTaskUpdateWithExtra(tupdate *TaskUpdate, db *mgo.Database, extraUpdate
 	updates := extraUpdates
 	updates["last_updated"] = tupdate.ReceivedOnManager
 
+	logFields := log.Fields{
+		"task_status": tupdate.TaskStatus,
+		"task_id":     tupdate.TaskID.Hex(),
+	}
+
 	if tupdate.TaskStatus != "" {
 		// Before blindly applying the task status, first check if the transition is valid.
 		if TaskStatusTransitionValid(taskColl, tupdate.TaskID, tupdate.TaskStatus) {
 			updates["status"] = tupdate.TaskStatus
 		} else {
-			log.Warningf("QueueTaskUpdate: not locally applying status=%s for %s",
-				tupdate.TaskStatus, tupdate.TaskID.Hex())
+			log.WithFields(logFields).Warning("QueueTaskUpdate: not locally applying task status")
 		}
 	}
 	if tupdate.Activity != "" {
 		updates["activity"] = tupdate.Activity
 	}
 	if len(updates) > 0 {
-		log.Debugf("QueueTaskUpdate: applying update %s to task %s", updates, tupdate.TaskID.Hex())
+		log.WithFields(logFields).WithField("updates", updates).Debug("QueueTaskUpdate: updating task")
 		if err := taskColl.UpdateId(tupdate.TaskID, bson.M{"$set": updates}); err != nil {
 			if err != mgo.ErrNotFound {
 				return fmt.Errorf("QueueTaskUpdate: error updating local task cache: %s", err)
 			}
-			log.Warningf("QueueTaskUpdate: cannot find task %s to update locally", tupdate.TaskID.Hex())
+			log.WithFields(logFields).Warning("QueueTaskUpdate: cannot find task to update locally")
 		}
 	} else {
-		log.Debugf("QueueTaskUpdate: nothing to do locally for task %s", tupdate.TaskID.Hex())
+		log.WithFields(logFields).Debug("QueueTaskUpdate: nothing to do locally")
 	}
 
 	return nil
@@ -151,7 +160,11 @@ func TaskStatusTransitionValid(taskColl *mgo.Collection, taskID bson.ObjectId, n
 
 	taskCurr := Task{}
 	if err := taskColl.FindId(taskID).Select(bson.M{"status": 1}).One(&taskCurr); err != nil {
-		log.Warningf("Unable to find task %s - not accepting status update to %s", err, newStatus)
+		log.WithFields(log.Fields{
+			"task_id":    taskID.Hex(),
+			"new_status": newStatus,
+			log.ErrorKey: err,
+		}).Warning("Unable to find task, not accepting status update")
 		return false
 	}
 
@@ -211,7 +224,7 @@ func (pusher *TaskUpdatePusher) Go() {
 			// log.Info("TaskUpdatePusher: checking task update queue")
 			updateCount, err := Count(queue)
 			if err != nil {
-				log.Warningf("TaskUpdatePusher: ERROR checking queue: %s", err)
+				log.WithError(err).Warning("TaskUpdatePusher: error checking queue")
 				continue
 			}
 
@@ -226,10 +239,10 @@ func (pusher *TaskUpdatePusher) Go() {
 
 			// Time to push!
 			if updateCount > 0 {
-				log.Debugf("TaskUpdatePusher: %d updates are queued", updateCount)
+				log.WithField("update_count", updateCount).Debug("TaskUpdatePusher: updates are queued")
 			}
 			if err := pusher.push(db); err != nil {
-				log.Warning("TaskUpdatePusher: unable to push to upstream Flamenco Server: ", err)
+				log.WithError(err).Warning("TaskUpdatePusher: unable to push to upstream Flamenco Server")
 				continue
 			}
 
@@ -256,21 +269,23 @@ func (pusher *TaskUpdatePusher) push(db *mgo.Database) error {
 		return err
 	}
 
+	logFields := log.Fields{
+		"updates_to_push": len(result),
+	}
 	// Perform the sending.
 	if len(result) > 0 {
-		log.Infof("TaskUpdatePusher: pushing %d updates to upstream Flamenco Server", len(result))
+		log.WithFields(logFields).Info("TaskUpdatePusher: pushing updates to upstream Flamenco Server")
 	} else {
-		log.Debugf("TaskUpdatePusher: pushing %d updates to upstream Flamenco Server", len(result))
+		log.WithFields(logFields).Debug("TaskUpdatePusher: pushing updates to upstream Flamenco Server")
 	}
 	response, err := pusher.upstream.SendTaskUpdates(&result)
 	if err != nil {
 		// TODO Sybren: implement some exponential backoff when things fail to get sent.
 		return err
 	}
-
+	logFields["updates_accepted"] = len(response.HandledUpdateIds)
 	if len(response.HandledUpdateIds) != len(result) {
-		log.Warningf("TaskUpdatePusher: server accepted %d of %d items.",
-			len(response.HandledUpdateIds), len(result))
+		log.WithFields(logFields).Warning("TaskUpdatePusher: server accepted only a subset of our updates")
 	}
 
 	// If succesful, remove the accepted updates from the queue.
@@ -283,8 +298,9 @@ func (pusher *TaskUpdatePusher) push(db *mgo.Database) error {
 	errCancel := pusher.handleIncomingCancelRequests(response.CancelTasksIds, db)
 
 	if errUnqueue != nil {
-		log.Warningf("TaskUpdatePusher: This is awkward; we have already sent the task updates "+
-			"upstream, but now we cannot un-queue them. Expect duplicates: %s", err)
+		log.WithFields(logFields).WithError(errUnqueue).Warning(
+			"TaskUpdatePusher: This is awkward; we have already sent the task updates " +
+				"upstream, but now we cannot un-queue them. Expect duplicates.")
 		return errUnqueue
 	}
 
@@ -299,7 +315,10 @@ func (pusher *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bso
 		return nil
 	}
 
-	log.Infof("TaskUpdatePusher: canceling %d tasks", len(cancelTaskIDs))
+	logFields := log.Fields{
+		"tasks_to_cancel": len(cancelTaskIDs),
+	}
+	log.WithFields(logFields).Info("TaskUpdatePusher: canceling tasks")
 	tasksColl := db.C("flamenco_tasks")
 
 	// Fetch all to-be-canceled tasks
@@ -311,7 +330,7 @@ func (pusher *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bso
 		"status": 1,
 	}).All(&tasksToCancel)
 	if err != nil {
-		log.Warningf("TaskUpdatePusher: ERROR unable to fetch tasks: %s", err)
+		log.WithFields(logFields).WithError(err).Error("TaskUpdatePusher: unable to fetch tasks")
 		return err
 	}
 
@@ -326,8 +345,11 @@ func (pusher *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bso
 			TaskStatus: statusCanceled,
 		}
 		if updateErr := QueueTaskUpdate(&tupdate, db); updateErr != nil {
-			log.Warningf("TaskUpdatePusher: Unable to queue task update for canceled task %s, "+
-				"expect the task to hang in cancel-requested state.", taskID)
+			log.WithFields(logFields).WithFields(log.Fields{
+				"task_id":    taskID.Hex(),
+				log.ErrorKey: updateErr,
+			}).Error("TaskUpdatePusher: Unable to queue task update for canceled task, " +
+				"expect the task to hang in cancel-requested state.")
 		} else {
 			canceledCount++
 		}
@@ -350,10 +372,13 @@ func (pusher *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bso
 		bson.M{"$set": bson.M{"status": statusCancelRequested}},
 	)
 	if err != nil {
-		log.Warningf("TaskUpdatePusher: unable to mark tasks as cancel-requested: %s", err)
+		logFields["tasks_cancel_requested"] = 0
+		log.WithFields(logFields).WithError(err).Warning("TaskUpdatePusher: unable to mark tasks as cancel-requested")
 	} else {
-		log.Infof("TaskUpdatePusher: marked %d tasks as cancel-requested: %s",
-			updateInfo.Matched, goToCancelRequested)
+		logFields["tasks_cancel_requested"] = updateInfo.Matched
+		log.WithFields(logFields).WithFields(log.Fields{
+			"task_ids": goToCancelRequested,
+		}).Debug("TaskUpdatePusher: marked tasks as cancel-requested")
 	}
 
 	// Just push a "canceled" update to the Server about tasks we know nothing about.
@@ -362,15 +387,15 @@ func (pusher *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bso
 		if seen {
 			continue
 		}
-		log.Warningf("TaskUpdatePusher: unknown task: %s", taskID.Hex())
+		log.WithFields(logFields).WithField("task_id", taskID.Hex()).Warning("TaskUpdatePusher: unknown task")
 		queueTaskCancel(taskID)
 	}
-
-	log.Infof("TaskUpdatePusher: marked %d tasks as canceled", canceledCount)
+	logFields["tasks_canceled"] = canceledCount
+	log.WithFields(logFields).Info("TaskUpdatePusher: marked tasks as canceled")
 
 	if updateInfo.Matched+canceledCount < len(cancelTaskIDs) {
-		log.Warningf("TaskUpdatePusher: I was unable to cancel %d tasks for some reason.",
-			len(cancelTaskIDs)-(updateInfo.Matched+canceledCount))
+		logFields["unable_to_cancel"] = len(cancelTaskIDs) - (updateInfo.Matched + canceledCount)
+		log.WithFields(logFields).Warning("TaskUpdatePusher: I was unable to cancel some tasks for some reason.")
 	}
 
 	return err
@@ -384,7 +409,10 @@ func LogTaskActivity(worker *Worker, taskID bson.ObjectId, activity, logLine str
 		Log:      logLine,
 	}
 	if err := QueueTaskUpdate(&tupdate, db); err != nil {
-		log.Errorf("LogTaskActivity: Unable to queue task(%s) update for worker %s: %s",
-			taskID.Hex(), worker.Identifier(), err)
+		log.WithFields(log.Fields{
+			"task_id":    taskID.Hex(),
+			"worker":     worker.Identifier(),
+			log.ErrorKey: err,
+		}).Error("LogTaskActivity: Unable to queue task update")
 	}
 }
