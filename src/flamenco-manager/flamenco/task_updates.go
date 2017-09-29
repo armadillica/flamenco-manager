@@ -66,7 +66,7 @@ func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedReque
 		fmt.Fprintf(w, "Task %s is assigned to another worker.", taskID.Hex())
 		return
 	}
-	if task.Status == statusCanceled || task.Status == statusCancelRequested {
+	if !IsRunnableTaskStatus(task.Status) {
 		// These statuses can never be overwritten, and all task updates will be rejected.
 		log.Warningf("%s QueueTaskUpdateFromWorker: task %s update rejected from %s (%s), task has status %s",
 			r.RemoteAddr, taskID.Hex(), worker.ID.Hex(), task.Status)

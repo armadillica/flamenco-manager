@@ -6,6 +6,8 @@ Changelog for Flamenco Manager
 - Always log which version of Flamenco is running.
 - Added a note that the MongoDB files should reside on a local filesystem, and not on a network.
 - Prevent squashing of last-rendered image.
+- Refuse task updates for tasks in non-runnable state. This means that once a task is cancelled,
+  completed, etc. the worker cannot update it any more.
 
 
 ## Version 2.0.15 (released 2017-09-09)
