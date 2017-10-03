@@ -120,7 +120,7 @@ func workerSecret(user, realm string) string {
 func startSSDPServer() *gossdp.Ssdp {
 	ssdpServer, err := gossdp.NewSsdpWithLogger(nil, log.StandardLogger())
 	if err != nil {
-		log.Fatal("Error creating ssdp server: ", err)
+		log.WithError(err).Fatal("Error creating UPnP/SSDP server to allow autodetection")
 		return nil
 	}
 
