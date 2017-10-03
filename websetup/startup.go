@@ -3,7 +3,7 @@ package websetup
 import (
 	"fmt"
 
-	"flamenco-manager/flamenco"
+	"github.com/armadillica/flamenco-manager/flamenco"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"

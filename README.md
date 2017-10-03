@@ -72,20 +72,20 @@ Flamenco Manager accepts the following CLI arguments:
 ## Starting development
 
 `$FM` denotes the directory containing a checkout of Flamenco Manager, that is, the absolute path
-of this `flamenco-manager-go` directory.
+of this `flamenco-manager` directory.
 
 0. Make sure you have MongoDB up and running (on localhost)
 1. Install Go 1.9 or newer
-2. `export GOPATH=$FM`
-3. `cd $FM/src/flamenco-manager`
+2. `export GOPATH=/path/to/your/workspace/for/go`
+3. `cd $FM`
 4. Download all dependencies with `go get`
 5. Download Flamenco test dependencies with `go get -t ./...`
 6. Run the unittests with `go test ./...`
 7. Build your first Flamenco Manager with `go install`; this will create an executable
-   `flamenco-manager` in `$FM/bin`. It may be a good idea to add `$FM/bin` to your `PATH`
+   `flamenco-manager` in `$GOPATH/bin`. It may be a good idea to add `$GOPATH/bin` to your `PATH`
    environment variable.
 8. Configure Flamenco Manager by starting it in *setup mode* (`flamenco-manager -setup`, see above).
-9. Run the Manager with `$FM/bin/flamenco-manager -verbose`.
+9. Run the Manager with `$GOPATH/bin/flamenco-manager -verbose`.
 
 
 ### Testing

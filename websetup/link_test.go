@@ -2,10 +2,11 @@ package websetup
 
 import (
 	"crypto/rand"
-	"flamenco-manager/flamenco"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/armadillica/flamenco-manager/flamenco"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"

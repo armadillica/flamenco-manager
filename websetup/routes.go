@@ -5,12 +5,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"flamenco-manager/flamenco"
 	"fmt"
 	"html/template"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/armadillica/flamenco-manager/flamenco"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"

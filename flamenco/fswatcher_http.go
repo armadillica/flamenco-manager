@@ -1,10 +1,11 @@
 package flamenco
 
 import (
-	"flamenco-manager/flamenco/chantools"
 	"fmt"
 	"net/http"
 	"path/filepath"
+
+	"github.com/armadillica/flamenco-manager/flamenco/chantools"
 
 	log "github.com/sirupsen/logrus"
 )

@@ -2,10 +2,11 @@ package flamenco
 
 import (
 	"encoding/json"
-	"flamenco-manager/flamenco/httperror"
 	"net/http"
 	"net/http/httptest"
 	"time"
+
+	"github.com/armadillica/flamenco-manager/flamenco/httperror"
 
 	auth "github.com/abbot/go-http-auth"
 	log "github.com/sirupsen/logrus"

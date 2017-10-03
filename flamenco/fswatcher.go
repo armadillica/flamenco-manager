@@ -1,7 +1,6 @@
 package flamenco
 
 import (
-	"flamenco-manager/flamenco/chantools"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/armadillica/flamenco-manager/flamenco/chantools"
 
 	auth "github.com/abbot/go-http-auth"
 	"github.com/fsnotify/fsnotify"

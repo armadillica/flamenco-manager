@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"flamenco-manager/flamenco/filetools"
+	"github.com/armadillica/flamenco-manager/flamenco/filetools"
 
 	log "github.com/sirupsen/logrus"
 )

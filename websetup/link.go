@@ -7,11 +7,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"flamenco-manager/flamenco"
 	"fmt"
 	"hash"
 	"net/http"
 	"net/url"
+
+	"github.com/armadillica/flamenco-manager/flamenco"
 
 	log "github.com/sirupsen/logrus"
 )

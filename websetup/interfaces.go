@@ -3,12 +3,13 @@ package websetup
 import (
 	"context"
 	"errors"
-	"flamenco-manager/flamenco"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/armadillica/flamenco-manager/flamenco"
 
 	log "github.com/sirupsen/logrus"
 )

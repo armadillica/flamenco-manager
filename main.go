@@ -20,10 +20,9 @@ import (
 	"github.com/kardianos/osext"
 	log "github.com/sirupsen/logrus"
 
-	"flamenco-manager/flamenco"
-	"flamenco-manager/flamenco/bundledmongo"
-	"flamenco-manager/websetup"
-
+	"github.com/armadillica/flamenco-manager/flamenco"
+	"github.com/armadillica/flamenco-manager/flamenco/bundledmongo"
+	"github.com/armadillica/flamenco-manager/websetup"
 	"github.com/armadillica/gossdp"
 	"github.com/gorilla/mux"
 )
