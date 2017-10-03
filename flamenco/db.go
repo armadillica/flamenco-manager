@@ -25,9 +25,10 @@ func MongoSession(config *Conf) *mgo.Session {
 	var err error
 	var session *mgo.Session
 
-	log.Infof("Connecting to MongoDB at %s", config.DatabaseURL)
+	logger := log.WithField("database_url", config.DatabaseURL)
+	logger.Info("Connecting to MongoDB")
 	if session, err = mgo.Dial(config.DatabaseURL); err != nil {
-		panic(fmt.Sprintf("Unable to connect to MongoDB: %v", err))
+		logger.WithError(err).Fatal("Unable to connect to MongoDB")
 	}
 	session.SetMode(mgo.Monotonic, true)
 
@@ -90,7 +91,7 @@ func GetSettings(db *mgo.Database) *SettingsInMongo {
 	settings := &SettingsInMongo{}
 	err := db.C("settings").Find(bson.M{}).One(settings)
 	if err != nil && err != mgo.ErrNotFound {
-		log.Panic("db.GetSettings: Unable to get settings: ", err)
+		log.WithError(err).Panic("db.GetSettings: Unable to get settings")
 	}
 
 	return settings
@@ -100,7 +101,7 @@ func GetSettings(db *mgo.Database) *SettingsInMongo {
 func SaveSettings(db *mgo.Database, settings *SettingsInMongo) {
 	_, err := db.C("settings").Upsert(bson.M{}, settings)
 	if err != nil && err != mgo.ErrNotFound {
-		log.Panic("db.SaveSettings: Unable to save settings: ", err)
+		log.WithError(err).Panic("db.SaveSettings: Unable to save settings")
 	}
 }
 
@@ -110,7 +111,7 @@ func CleanSlate(db *mgo.Database) {
 
 	count, err := collection.Count()
 	if err != nil {
-		log.Fatalf("Unable to count number of locally cached tasks: %v", err)
+		log.WithError(err).Fatal("Unable to count number of locally cached tasks")
 	}
 	if count == 0 {
 		log.Warning("There are no tasks locally cached, so nothing to purge.")
@@ -129,7 +130,7 @@ func CleanSlate(db *mgo.Database) {
 	if err != nil {
 		log.WithError(err).Panic("unable to erase all tasks")
 	}
-	log.Warningf("Erased %d tasks", info.Removed)
+	log.WithField("removed", info.Removed).Warning("Erased tasks")
 
 	settings := GetSettings(db)
 	settings.DepsgraphLastModified = nil
@@ -142,7 +143,7 @@ func PurgeOutgoingQueue(db *mgo.Database) {
 
 	count, err := collection.Count()
 	if err != nil {
-		log.Fatalf("Unable to count number of queued task updates: %v", err)
+		log.WithError(err).Fatal("Unable to count number of queued task updates")
 	}
 	if count == 0 {
 		log.Warning("There are no task updates queued, so nothing to purge.")
@@ -164,5 +165,5 @@ func PurgeOutgoingQueue(db *mgo.Database) {
 	if err != nil {
 		log.WithError(err).Panic("unable to purge all queued task updates")
 	}
-	log.Warningf("Purged %d queued updates", info.Removed)
+	log.WithField("removed", info.Removed).Warning("Purged queued updates")
 }

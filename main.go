@@ -149,7 +149,7 @@ func shutdown(signum os.Signal) {
 	timeout := flamenco.TimeoutAfter(17 * time.Second)
 
 	go func() {
-		log.Infof("Signal '%s' received, shutting down.", signum)
+		log.WithField("signal", signum).Info("Signal received, shutting down.")
 
 		// ImageWatcher allows long-living HTTP connections, so it
 		// should be shut down before the HTTP server.
@@ -256,8 +256,8 @@ func normalMode() (*mux.Router, error) {
 		}
 	}
 
-	log.Infof("MongoDB database server : %s", config.DatabaseURL)
-	log.Infof("Upstream Flamenco server: %s", config.Flamenco)
+	log.WithField("database_url", config.DatabaseURL).Info("MongoDB database server")
+	log.WithField("flamenco", config.Flamenco).Info("Upstream Flamenco server")
 
 	session = flamenco.MongoSession(&config)
 
@@ -280,8 +280,10 @@ func normalMode() (*mux.Router, error) {
 	} else {
 		config.OwnURL = strings.Replace(config.OwnURL, "https://", "http://", 1)
 	}
-	log.Info("My URL is               :", config.OwnURL)
-	log.Info("Listening at            :", config.Listen)
+	log.WithFields(log.Fields{
+		"own_url": config.OwnURL,
+		"listen":  config.Listen,
+	}).Info("Starting up subsystems.")
 
 	upstream = flamenco.ConnectUpstream(&config, session)
 	startupNotifier = flamenco.CreateStartupNotifier(&config, upstream, session)
@@ -367,7 +369,7 @@ func main() {
 			log.Warning("Flamenco Manager configuration file not found, entering setup mode.")
 			cliArgs.setup = true
 		} else {
-			log.Fatalf("Unable to load configuration: %s", err)
+			log.WithError(err).Fatal("Unable to load configuration")
 		}
 	}
 
@@ -379,7 +381,7 @@ func main() {
 		router, err = normalMode()
 	}
 	if err != nil {
-		log.Fatalf("There was an error setting up Flamenco Manager for operation: %s", err)
+		log.WithError(err).Fatal("There was an error setting up Flamenco Manager for operation")
 	}
 
 	// Create the HTTP server before allowing the shutdown signal Handler
@@ -415,11 +417,13 @@ func main() {
 	}
 
 	// Fall back to insecure server if TLS certificate/key is not defined.
+	var httpError error
 	if config.HasTLS() {
-		log.Warningf("HTTP server: %v", httpServer.ListenAndServeTLS(config.TLSCert, config.TLSKey))
+		httpError = httpServer.ListenAndServeTLS(config.TLSCert, config.TLSKey)
 	} else {
-		log.Warningf("HTTP server: %v", httpServer.ListenAndServe())
+		httpError = httpServer.ListenAndServe()
 	}
+	log.WithError(httpError).Warning("HTTP server stopped")
 	close(httpShutdownComplete)
 
 	log.Info("Waiting for shutdown to complete.")
@@ -427,7 +431,7 @@ func main() {
 	<-shutdownComplete
 
 	if doRestartAfterShutdown {
-		log.Warningf("Restarting Flamenco Server")
+		log.Warning("Restarting Flamenco Server")
 		restart()
 	}
 }
@@ -459,10 +463,14 @@ func restart() {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	if err = cmd.Start(); err != nil {
-		log.Fatalf("Failed to launch %s %v, error: %v", exename, args, err)
+	logFields := log.Fields{
+		"exename": exename,
+		"args":    args,
 	}
-	log.Infof("Started another Flamenco Manager %s %v", exename, args)
+	if err = cmd.Start(); err != nil {
+		log.WithFields(logFields).WithError(err).Fatal("Failed to launch new Manager")
+	}
+	log.WithFields(logFields).Info("Started another Flamenco Manager")
 
 	// Give the other process time to start. This is required on Windows. Our child will kill us
 	// when it has started succesfully.
@@ -477,16 +485,18 @@ func killParentProcess() {
 		return
 	}
 
+	logger := log.WithField("pid", cliArgs.killPID)
+
 	proc, err := os.FindProcess(cliArgs.killPID)
 	if err != nil {
-		log.Debugf("Unable to find parent process %d, will not kill it.", cliArgs.killPID)
+		logger.Debug("Unable to find parent process, will not terminate it.")
 		return
 	}
 
 	err = proc.Kill()
 	if err != nil {
-		log.Debugf("Unable to kill parent process %d: %s", cliArgs.killPID, err)
+		logger.WithError(err).Warning("Unable to terminate parent process.")
+	} else {
+		logger.Debug("Parent process terminated.")
 	}
-
-	log.Debugf("Parent process %d killed.", cliArgs.killPID)
 }
