@@ -27,7 +27,7 @@ docker run -i --rm \
      golang:1.9 /bin/bash -e << EOT
 echo -n "Using "
 go version
-cd \${GOPATH}/src/flamenco-manager
+cd \${GOPATH}/src/github.com/armadillica/flamenco-manager
 
 function build {
     export GOOS=\$1
@@ -69,7 +69,7 @@ echo "Assembling files into $PREFIX/"
 git checkout -- ../static/latest-image.jpg
 rsync ../static ../templates $PREFIX -a --delete-after
 cp ../flamenco-manager-example.yaml $PREFIX/
-cp ../../../{README.md,LICENSE.txt,CHANGELOG.md} $PREFIX/
+cp ../{README.md,LICENSE.txt,CHANGELOG.md} $PREFIX/
 
 echo "Creating archive for Linux"
 cp flamenco-manager-linux $PREFIX/flamenco-manager
