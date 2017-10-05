@@ -1,7 +1,7 @@
 html, body {
     font-family: Noto, Ubuntu, sans-serif;
     color: white;
-    background-color: #4da7cd;
+    background-color: #496977;
     text-shadow: 0.2ex 0.2ex 0.1ex rgba(0, 0, 0, 0.2);
 }
 
@@ -44,14 +44,15 @@ button#refresh {
 
 .panel-body { padding: 5px; }
 .panel { background-color: inherit; }
-.table-striped>tbody>tr:nth-of-type(odd) { background-color: #4699bb; }
+.table-striped>tbody>tr:nth-of-type(odd) { background-color: #578498; }
 .table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th {
-    border-color: #a3d5e9;
+    border-color: #6398af;
 }
 
-tr.status-awake td, tr.status-awake th { background-color: #46bb7a; }
-tr.status-awake:nth-of-type(odd) td, tr.status-awake:nth-of-type(odd) th { background-color: #3faa6e; }
-tr.status-timeout td, tr.status-timeout th { background-color: #bb6646; }
+tr.status-awake td, tr.status-awake th { background-color: #3faa6e; }
+tr.status-awake:nth-of-type(odd) td, tr.status-awake:nth-of-type(odd) th { background-color: #3f9465; }
+tr.status-timeout td, tr.status-timeout th { background-color: #a77239; }
+tr.status-timeout:nth-of-type(odd) td, tr.status-timeout:nth-of-type(odd) th { background-color: #d09c4a; }
 
 dl.dl-horizontal { margin: 0; }
 .dl-horizontal dt { width: 100px; }
