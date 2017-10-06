@@ -9,6 +9,7 @@ Changelog for Flamenco Manager
 - Refuse task updates for tasks in non-runnable state. This means that once a task is cancelled,
   completed, etc. the worker cannot update it any more.
 - Log activity when task gets cancelled by request of Flamenco Server.
+- Tweaked the colour scheme of the web interface to be a bit more muted and easier to read.
 
 
 ## Version 2.0.15 (released 2017-09-09)
