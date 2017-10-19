@@ -43,18 +43,23 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	mongoSess := ts.session.Copy()
 	defer mongoSess.Close()
 	db := mongoSess.DB("")
+	logger := log.WithFields(log.Fields{
+		"remote_addr": r.RemoteAddr,
+		"worker_id":   r.Username,
+	})
 
 	// Fetch the worker's info
 	projection := bson.M{"platform": 1, "supported_task_types": 1, "address": 1, "nickname": 1}
 	worker, err := FindWorker(r.Username, projection, db)
 	if err != nil {
-		log.Warningf("ScheduleTask: Unable to find worker, requested from %s: %s", r.RemoteAddr, err)
+		logger.WithError(err).Warning("ScheduleTask: Unable to find worker")
 		w.WriteHeader(http.StatusForbidden)
 		fmt.Fprintf(w, "Unable to find worker: %s", err)
 		return
 	}
+	logger = logger.WithField("worker", worker.Identifier())
 	worker.Seen(&r.Request, db)
-	log.Debugf("ScheduleTask: Worker %s asking for a task", worker.Identifier())
+	logger.Debug("ScheduleTask: Worker asking for a task")
 
 	// From here on, things should be locked. This prevents multiple workers from
 	// getting assigned the same task.
@@ -82,16 +87,16 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 			break
 		}
 
-		log.Debugf("Task %s was changed, reexamining queue.", task.ID.Hex())
+		logger.WithField("task", task.ID.Hex()).Debug("Task was changed, reexamining queue.")
 	}
 	if wasChanged {
-		log.Errorf("Infinite loop detected, tried 1000 tasks and they all changed...")
+		logger.Error("Infinite loop detected, tried 1000 tasks and they all changed...")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	log.Infof("ScheduleTask: assigning task %s to worker %s",
-		task.ID.Hex(), worker.Identifier())
+	logger = logger.WithField("task_id", task.ID.Hex())
+	logger.Info("ScheduleTask: assigning task to worker")
 
 	// Update the task status to "active", pushing it as a task update to the manager too.
 	task.Status = "active"
@@ -102,8 +107,7 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 		"last_worker_ping": UtcNow(),
 	}
 	if err := QueueTaskUpdateWithExtra(&tupdate, db, localUpdates); err != nil {
-		log.Errorf("Unable to queue task update while assigning task %s to worker %s: %s",
-			task.ID.Hex(), worker.Identifier(), err)
+		logger.WithError(err).Error("Unable to queue task update while assigning task")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -118,13 +122,12 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	w.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
 	if err := encoder.Encode(task); err != nil {
-		log.Warningf("ScheduleTask: error encoding & sending task to worker: %s", err)
+		logger.WithError(err).Warning("ScheduleTask: error encoding & sending task to worker")
 		ts.unassignTaskFromWorker(task.ID, worker, err, db)
 		return
 	}
 
-	log.Infof("ScheduleTask: assigned task %s to worker %s",
-		task.ID.Hex(), worker.Identifier())
+	logger.Info("ScheduleTask: assigned task to worker")
 
 	// Push a task log line stating we've assigned this task to the given worker.
 	// This is done here, instead of by the worker, so that it's logged even if the worker fails.
@@ -134,8 +137,12 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 
 func (ts *TaskScheduler) unassignTaskFromWorker(taskID bson.ObjectId, worker *Worker, reason error, db *mgo.Database) {
 	wIdent := worker.Identifier()
+	logger := log.WithFields(log.Fields{
+		"task_id": taskID.Hex(),
+		"worker":  wIdent,
+	})
 
-	log.Warningf("unassignTaskFromWorker: un-assigning task %s from worker %s", taskID.Hex(), wIdent)
+	logger.Warning("unassignTaskFromWorker: un-assigning task from worker")
 
 	tupdate := TaskUpdate{
 		TaskID:     taskID,
@@ -147,8 +154,7 @@ func (ts *TaskScheduler) unassignTaskFromWorker(taskID bson.ObjectId, worker *Wo
 	}
 
 	if err := QueueTaskUpdate(&tupdate, db); err != nil {
-		log.Errorf("unassignTaskFromWorker: unable to update task %s unassigned from worker %s in MongoDB: %s",
-			taskID.Hex(), wIdent, err)
+		logger.WithError(err).Error("unassignTaskFromWorker: unable to update MongoDB for task just unassigned from worker")
 		return
 	}
 }
