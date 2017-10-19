@@ -12,6 +12,7 @@ Changelog for Flamenco Manager
 - Tweaked the colour scheme of the web interface to be a bit more muted and easier to read.
 - Limit latest image system queue to 3 images, and discard newer ones until the queue shrinks.
 - Scale latest images down to max full HD size (maintains aspect ratio).
+- Renamed worker status "down" to "offline"
 
 
 ## Version 2.0.15 (released 2017-09-09)

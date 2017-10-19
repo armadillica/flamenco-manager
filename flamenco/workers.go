@@ -381,7 +381,7 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 
 	// Update the worker itself, to show it's down in the DB too.
 
-	if err := worker.SetStatus(workerStatusDown, db); err != nil {
+	if err := worker.SetStatus(workerStatusOffline, db); err != nil {
 		if !sentHeader {
 			w.WriteHeader(http.StatusInternalServerError)
 		}

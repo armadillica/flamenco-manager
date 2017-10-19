@@ -20,7 +20,7 @@ const (
 
 // Possible worker statuses.
 const (
-	workerStatusDown    = "down"
+	workerStatusOffline = "offline"
 	workerStatusAwake   = "awake"
 	workerStatusTimeout = "timeout"
 )
