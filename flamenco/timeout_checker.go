@@ -126,7 +126,7 @@ func (ttc *TimeoutChecker) checkWorkers(db *mgo.Database) {
 	var timedoutWorkers []Worker
 	// find all awake workers that either have never been seen, or were seen long ago.
 	query := M{
-		"status": "awake",
+		"status": workerStatusAwake,
 		"$or": []M{
 			M{"last_activity": M{"$lte": timeoutThreshold}},
 			M{"last_activity": M{"$exists": false}},

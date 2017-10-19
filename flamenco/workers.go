@@ -50,7 +50,7 @@ func (worker *Worker) Timeout(db *mgo.Database) {
 	}
 	log.WithFields(logFields).Warning("Worker timed out")
 
-	err := worker.SetStatus("timeout", db)
+	err := worker.SetStatus(workerStatusTimeout, db)
 	if err != nil {
 		log.WithFields(logFields).WithError(err).Error("Unable to set worker status")
 	}
@@ -66,7 +66,7 @@ func (worker *Worker) TimeoutOnTask(task *Task, db *mgo.Database) {
 	}
 	log.WithFields(logFields).Warning("Worker timed out on task")
 
-	err := worker.SetStatus("timeout", db)
+	err := worker.SetStatus(workerStatusTimeout, db)
 	if err != nil {
 		log.WithFields(logFields).WithError(err).Error("Unable to set worker status")
 	}
@@ -92,7 +92,7 @@ func (worker *Worker) SeenEx(r *http.Request, db *mgo.Database, set bson.M, unse
 	}
 
 	set["last_activity"] = worker.LastActivity
-	set["status"] = "awake"
+	set["status"] = workerStatusAwake
 
 	remoteHost, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
@@ -381,7 +381,7 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 
 	// Update the worker itself, to show it's down in the DB too.
 
-	if err := worker.SetStatus("down", db); err != nil {
+	if err := worker.SetStatus(workerStatusDown, db); err != nil {
 		if !sentHeader {
 			w.WriteHeader(http.StatusInternalServerError)
 		}

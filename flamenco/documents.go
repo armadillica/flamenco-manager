@@ -18,6 +18,13 @@ const (
 	statusCancelRequested  = "cancel-requested"
 )
 
+// Possible worker statuses.
+const (
+	workerStatusDown    = "down"
+	workerStatusAwake   = "awake"
+	workerStatusTimeout = "timeout"
+)
+
 // Command is an executable part of a Task
 type Command struct {
 	Name     string `bson:"name" json:"name"`
