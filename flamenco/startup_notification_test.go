@@ -2,16 +2,20 @@ package flamenco
 
 import (
 	"net/http"
-	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	log "github.com/sirupsen/logrus"
+	check "gopkg.in/check.v1"
 	httpmock "gopkg.in/jarcoal/httpmock.v1"
 )
 
-func TestStartupNotification(t *testing.T) {
+type StartupNotificationTestSuite struct{}
+
+var _ = check.Suite(&StartupNotificationTestSuite{})
+
+func (s *StartupNotificationTestSuite) TestStartupNotification(t *check.C) {
 	config := GetTestConfig()
 	session := MongoSession(&config)
 
