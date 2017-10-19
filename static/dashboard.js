@@ -2,6 +2,8 @@ var clipboard;
 var load_workers_timeout_handle;
 
 function show_action(action_status, worker) {
+    if (worker.status == 'offline')
+        return false;
     if (worker.status == action_status && worker.status_requested == '')
         return false;
     if (worker.status_requested == action_status)
