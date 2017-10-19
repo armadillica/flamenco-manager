@@ -4,9 +4,6 @@ import (
 	"bytes"
 	"os/exec"
 	"path/filepath"
-	"strings"
-
-	"github.com/armadillica/flamenco-manager/flamenco/filetools"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -22,26 +19,21 @@ func ConvertAndForward(images <-chan string, storagePath string) <-chan string {
 		var outname string
 
 		for path := range images {
-			basename := filepath.Base(path)
-			ext := strings.ToLower(filepath.Ext(basename))
 			outname = filepath.Join(storagePath, "latest-image.jpg")
 
-			if ext == ".jpg" {
-				log.Infof("ConvertAndForward: Copying %s to %s", path, outname)
-				filetools.CopyFile(path, outname)
-			} else {
-				log.Infof("ConvertAndForward: Converting %s to %s", path, outname)
-				cmd := exec.Command("convert", path, "-quality", "85", outname)
+			log.Infof("ConvertAndForward: Converting %s to %s", path, outname)
+			cmd := exec.Command("convert", path,
+				"-quality", "85",
+				"-resize", "1920x1080>", // convert to 2MPixels max, but never enlarge.
+				outname)
 
-				var out bytes.Buffer
-				cmd.Stdout = &out
+			var out bytes.Buffer
+			cmd.Stdout = &out
 
-				if err := cmd.Run(); err != nil {
-					log.Errorf("ConvertAndForward: error converting %s: %s", path, err)
-					log.Errorf("ConvertAndForward: conversion output: %s", out.String())
-					continue
-				}
-
+			if err := cmd.Run(); err != nil {
+				log.Errorf("ConvertAndForward: error converting %s: %s", path, err)
+				log.Errorf("ConvertAndForward: conversion output: %s", out.String())
+				continue
 			}
 
 			output <- outname
