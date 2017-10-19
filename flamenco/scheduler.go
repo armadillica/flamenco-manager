@@ -49,7 +49,7 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	})
 
 	// Fetch the worker's info
-	projection := bson.M{"platform": 1, "supported_task_types": 1, "address": 1, "nickname": 1}
+	projection := M{"platform": 1, "supported_task_types": 1, "address": 1, "nickname": 1, "status_requested": 1}
 	worker, err := FindWorker(r.Username, projection, db)
 	if err != nil {
 		logger.WithError(err).Warning("ScheduleTask: Unable to find worker")
@@ -58,7 +58,26 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 		return
 	}
 	logger = logger.WithField("worker", worker.Identifier())
+	if worker.StatusRequested != "" {
+		logger = logger.WithField("status_requested", worker.StatusRequested)
+	}
 	worker.Seen(&r.Request, db)
+
+	// If a status change was requested, refuse to schedule a task.
+	// The worker should handle this status change first.
+	if worker.StatusRequested != "" {
+		logger.Warning("ScheduleTask: status change requested for this worker, refusing to give a task.")
+		resp := WorkerStatus{worker.StatusRequested}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusLocked)
+		encoder := json.NewEncoder(w)
+		if err := encoder.Encode(resp); err != nil {
+			logger.WithError(err).Warning("ScheduleTask: error encoding worker status request")
+		}
+		return
+	}
+
 	logger.Debug("ScheduleTask: Worker asking for a task")
 
 	// From here on, things should be locked. This prevents multiple workers from

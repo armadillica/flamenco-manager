@@ -1,6 +1,17 @@
 var clipboard;
+var load_workers_timeout_handle;
+
+function show_action(action_status, worker) {
+    if (worker.status == action_status && worker.status_requested == '')
+        return false;
+    if (worker.status_requested == action_status)
+        return false;
+    return true;
+}
 
 function load_workers() {
+    window.clearTimeout(load_workers_timeout_handle);
+
     $.get('/as-json')
     .done(function(info) {
         // Split workers into "current" and "idle for too long"
@@ -63,8 +74,34 @@ function load_workers() {
                 .attr('id', worker._id)
                 .addClass("status-" + worker.status);
 
+            var actionrow = $('<td>');
+            if (show_action('asleep', worker)) {
+                actionrow.append($('<a>').workerAction(worker._id, {
+                        action: 'set-status',
+                        status: 'asleep',
+                    })
+                    .text('😴')
+                    .attr('title', 'Let the worker sleep')
+                );
+            }
+            if (show_action('awake', worker)) {
+                actionrow.append($('<a>').workerAction(worker._id, {
+                        action: 'set-status',
+                        status: 'awake',
+                    })
+                    .text('😃')
+                    .attr('title', 'Wake the worker up')
+                );
+            }
+            $row.append(actionrow);
+
             $row.append($('<td>').text(worker.nickname));
-            $row.append($('<td>').text(worker.status || '-none-').addClass('status-' + worker.status));
+
+            var status_text = worker.status || '-none-';
+            if (worker.status_requested) {
+                status_text += ' → ' + worker.status_requested;
+            }
+            $row.append($('<td>').text(status_text).addClass('status-' + worker.status));
 
             $task_td = $('<td>');
             if (typeof worker.current_task != 'undefined') {
@@ -116,7 +153,7 @@ function load_workers() {
         $('#workers').replaceWith($tbody);
 
         // Everything went fine, let's try it again soon.
-        setTimeout(load_workers, 2000);
+        load_workers_timeout_handle = setTimeout(load_workers, 2000);
     })
     .fail(function(error) {
         var $section = $('#status');
@@ -130,7 +167,7 @@ function load_workers() {
         $section.html($p);
 
         // Everything is bugging out, let's try it again soon-ish.
-        setTimeout(load_workers, 10000);
+        load_workers_timeout_handle = setTimeout(load_workers, 10000);
     })
     .always(function() {
         if (typeof clipboard != 'undefined') {
@@ -142,9 +179,6 @@ function load_workers() {
     })
     ;
 }
-
-$(load_workers);
-
 
 function time_diff(timestamp) {
     if (typeof timestamp == 'undefined') {
@@ -190,6 +224,31 @@ function downloadkick() {
     });
 }
 
+
 $(function() {
+    toastr.options.closeButton = true;
+    toastr.options.progressBar = true;
+    toastr.options.positionClass = 'toast-bottom-left';
+    toastr.options.hideMethod = 'slideUp';
+
+    $.fn.workerAction = function(workerID, payload) {
+        this.click(function() {
+            $.post('/worker-action/' + workerID, payload)
+            .done(function(resp) {
+                if (!resp) resp = "Request confirmed"
+                toastr.success(resp);
+                load_workers();
+            })
+            .fail(function(resp) {
+                console.log(resp);
+                toastr.error(resp.responseText);
+            })
+            ;
+        })
+        this.addClass('worker-action');
+        return this;
+    }
+
+    load_workers();
     $('#downloadkick').on('click', downloadkick);
 })

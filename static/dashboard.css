@@ -93,3 +93,10 @@ button#downloadkick {
     white-space: nowrap;
     min-width: 8ex;
 }
+
+.worker-action {
+    cursor: pointer;
+    font-size: 150%;
+    margin-right: 15px;
+    border-bottom: none;
+}

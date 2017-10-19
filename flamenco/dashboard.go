@@ -39,6 +39,8 @@ func (rep *Reporter) AddRoutes(router *mux.Router) {
 	router.HandleFunc("/as-json", rep.sendStatusReport).Methods("GET")
 	router.HandleFunc("/latest-image", rep.showLatestImagePage).Methods("GET")
 
+	router.HandleFunc("/worker-action/{worker-id}", rep.workerAction).Methods("POST")
+
 	static := noDirListing(http.StripPrefix("/static/", http.FileServer(http.Dir(rep.root+"static"))))
 	router.PathPrefix("/static/").Handler(static).Methods("GET")
 }
@@ -122,6 +124,7 @@ func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
 			"platform":             1,
 			"software":             1,
 			"status":               1,
+			"status_requested":     1,
 			"supported_task_types": 1,
 		}},
 		// 4: Sort.
@@ -152,5 +155,63 @@ func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
 	if err := encoder.Encode(statusreport); err != nil {
 		// This is probably fine; broken connections are bound to happen.
 		log.Debugf("Unable to send dashboard data to %s: %s", r.RemoteAddr, err)
+	}
+}
+
+func (rep *Reporter) workerAction(w http.ResponseWriter, r *http.Request) {
+	workerIDstr := mux.Vars(r)["worker-id"]
+	action := r.FormValue("action")
+
+	logger := log.WithFields(log.Fields{
+		"remote_addr": r.RemoteAddr,
+		"worker_id":   workerIDstr,
+		"action":      action,
+	})
+
+	if !bson.IsObjectIdHex(workerIDstr) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Invalid worker ID")
+		logger.Warning("workerAction: called with bad worker ID")
+		return
+	}
+
+	session := rep.session.Clone()
+	defer session.Close()
+
+	db := session.DB("")
+	worker, err := FindWorker(workerIDstr, M{}, db)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, "Worker not found")
+		logger.WithError(err).Warning("workerAction: error finding worker")
+		return
+	}
+
+	var actionErr error
+	actionHandlers := map[string]func(){
+		"set-status": func() {
+			requestedStatus := r.FormValue("status")
+			logger = logger.WithField("requested_status", requestedStatus)
+			actionErr = worker.RequestStatusChange(requestedStatus, db)
+		},
+	}
+
+	handler, ok := actionHandlers[action]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Invalid action")
+		logger.Warning("workerAction: invalid action requested")
+		return
+	}
+
+	handler()
+
+	if actionErr != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, actionErr)
+		logger.WithError(err).Warning("workerAction: error occurred")
+	} else {
+		w.WriteHeader(http.StatusNoContent)
+		logger.Info("workerAction: action OK")
 	}
 }

@@ -96,6 +96,23 @@ func httpWorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 	flamenco.WorkerMayRunTask(w, r, mongoSess.DB(""), bson.ObjectIdHex(taskID))
 }
 
+func httpWorkerAckStatusChange(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
+	mongoSess := session.Copy()
+	defer mongoSess.Close()
+
+	vars := mux.Vars(&r.Request)
+	ackStatus := vars["ack-status"]
+
+	flamenco.WorkerAckStatusChange(w, r, mongoSess.DB(""), ackStatus)
+}
+
+func httpWorkerGetStatusChange(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
+	mongoSess := session.Copy()
+	defer mongoSess.Close()
+
+	flamenco.WorkerGetStatusChange(w, r, mongoSess.DB(""))
+}
+
 func httpWorkerSignOn(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 	mongoSess := session.Copy()
 	defer mongoSess.Close()
@@ -303,6 +320,8 @@ func normalMode() (*mux.Router, error) {
 	router.HandleFunc("/task", workerAuthenticator.Wrap(httpScheduleTask)).Methods("POST")
 	router.HandleFunc("/tasks/{task-id}/update", workerAuthenticator.Wrap(httpTaskUpdate)).Methods("POST")
 	router.HandleFunc("/may-i-run/{task-id}", workerAuthenticator.Wrap(httpWorkerMayRunTask)).Methods("GET")
+	router.HandleFunc("/status-change", workerAuthenticator.Wrap(httpWorkerGetStatusChange)).Methods("GET")
+	router.HandleFunc("/ack-status-change/{ack-status}", workerAuthenticator.Wrap(httpWorkerAckStatusChange)).Methods("POST")
 	router.HandleFunc("/sign-on", workerAuthenticator.Wrap(httpWorkerSignOn)).Methods("POST")
 	router.HandleFunc("/sign-off", workerAuthenticator.Wrap(httpWorkerSignOff)).Methods("POST")
 	router.HandleFunc("/kick", httpKick)

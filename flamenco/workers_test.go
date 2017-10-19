@@ -42,6 +42,7 @@ func (s *WorkerTestSuite) SetUpTest(c *check.C) {
 		Platform:           "linux",
 		SupportedTaskTypes: []string{"sleeping"},
 		Nickname:           "workerLnx",
+		Status:             workerStatusAwake,
 	}
 	if err := StoreNewWorker(&s.workerLnx, s.db); err != nil {
 		c.Fatal("Unable to insert test workerLnx", err)
@@ -81,6 +82,7 @@ func WorkerTestRequestWithBody(workerID bson.ObjectId, body io.Reader, method, u
 	if request == nil {
 		panic("WorkerTestRequest: request is nil")
 	}
+	request.RemoteAddr = "[::1]:65532"
 
 	ar := &auth.AuthenticatedRequest{Request: *request, Username: workerID.Hex()}
 	if ar == nil {
@@ -184,4 +186,78 @@ func (s *WorkerTestSuite) TestWorkerSignOn(t *check.C) {
 	signon("{}")
 	getworker()
 	assert.Nil(t, found.CurrentTask)
+}
+
+// Tests receiving the status change via /may-i-run and /task
+func (s *WorkerTestSuite) TestStatusChangeReceiving(t *check.C) {
+	// Requesting a new status should set it both on the instance and on the database.
+	err := s.workerLnx.RequestStatusChange(workerStatusAsleep, s.db)
+	assert.Nil(t, err)
+	assert.Equal(t, workerStatusAsleep, s.workerLnx.StatusRequested)
+	assert.Equal(t, workerStatusAwake, s.workerLnx.Status)
+
+	found := Worker{}
+	err = s.db.C("flamenco_workers").FindId(s.workerLnx.ID).One(&found)
+	assert.Nil(t, err, "Unable to find workerLnx")
+	assert.Equal(t, workerStatusAsleep, found.StatusRequested)
+	assert.Equal(t, workerStatusAwake, found.Status)
+
+	// The worker should get this status when either calling may-i-run or asking for a new task.
+	// TODO(sybren) determine what to do upon sign-on.
+
+	// Store task in DB and ask if we're allowed to keep running it.
+	task := ConstructTestTask("aaaaaaaaaaaaaaaaaaaaaaaa", "sleeping")
+	if err := s.db.C("flamenco_tasks").Insert(task); err != nil {
+		t.Fatal("Unable to insert test task", err)
+	}
+	respRec, ar := WorkerTestRequest(s.workerLnx.ID, "GET", "/may-i-run/%s", task.ID.Hex())
+	WorkerMayRunTask(respRec, ar, s.db, task.ID)
+	assert.Equal(t, http.StatusOK, respRec.Code)
+
+	resp := MayKeepRunningResponse{}
+	parseJSON(t, respRec, 200, &resp)
+	assert.Equal(t, false, resp.MayKeepRunning)
+	assert.Equal(t, "asleep", resp.StatusRequested)
+	assert.NotEqual(t, "", resp.Reason)
+
+	// Try fetching a new task, this should also fail with the new status in there.
+	respRec, ar = WorkerTestRequest(s.workerLnx.ID, "POST", "/task")
+	s.sched.ScheduleTask(respRec, ar)
+	schedResp := WorkerStatus{}
+	parseJSON(t, respRec, http.StatusLocked, &schedResp)
+	assert.Equal(t, workerStatusAsleep, schedResp.StatusRequested)
+}
+
+func (s *WorkerTestSuite) TestAckStatusChange(t *check.C) {
+	err := s.workerLnx.RequestStatusChange(workerStatusAsleep, s.db)
+	assert.Nil(t, err)
+	err = s.workerLnx.AckStatusChange(workerStatusAsleep, s.db)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "", s.workerLnx.StatusRequested)
+	assert.Equal(t, workerStatusAsleep, s.workerLnx.Status)
+
+	found := Worker{}
+	err = s.db.C("flamenco_workers").FindId(s.workerLnx.ID).One(&found)
+	assert.Nil(t, err, "Unable to find workerLnx")
+	assert.Equal(t, "", found.StatusRequested)
+	assert.Equal(t, workerStatusAsleep, found.Status)
+}
+
+func (s *WorkerTestSuite) TestStatusChangeNotRequestable(t *check.C) {
+	teststatus := func(status string) {
+		err := s.workerLnx.RequestStatusChange(status, s.db)
+		assert.NotNil(t, err)
+		assert.Equal(t, "", s.workerLnx.StatusRequested)
+		assert.Equal(t, workerStatusAwake, s.workerLnx.Status)
+
+		found := Worker{}
+		err = s.db.C("flamenco_workers").FindId(s.workerLnx.ID).One(&found)
+		assert.Nil(t, err, "Unable to find workerLnx")
+		assert.Equal(t, "", found.StatusRequested)
+		assert.Equal(t, workerStatusAwake, found.Status)
+	}
+
+	teststatus(workerStatusOffline)
+	teststatus(workerStatusTimeout)
 }

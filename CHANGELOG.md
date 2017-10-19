@@ -13,6 +13,7 @@ Changelog for Flamenco Manager
 - Limit latest image system queue to 3 images, and discard newer ones until the queue shrinks.
 - Scale latest images down to max full HD size (maintains aspect ratio).
 - Renamed worker status "down" to "offline"
+- Added ability to send workers to sleep (and wake them up again) to the dashboard.
 
 
 ## Version 2.0.15 (released 2017-09-09)

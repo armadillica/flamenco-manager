@@ -23,6 +23,7 @@ const (
 	workerStatusOffline = "offline"
 	workerStatusAwake   = "awake"
 	workerStatusTimeout = "timeout"
+	workerStatusAsleep  = "asleep" // listens to a wakeup call, but performs no tasks.
 )
 
 // Command is an executable part of a Task
@@ -102,6 +103,13 @@ type WorkerSignonDoc struct {
 	Nickname           string   `json:"nickname,omitempty"`
 }
 
+// WorkerStatus indicates that a status change was requested on the worker.
+// It is sent as response by the scheduler when a worker is not allowed to receive a new task.
+type WorkerStatus struct {
+	// For controlling sleeping & waking up. For values, see the workerStatusXXX constants.
+	StatusRequested string `bson:"status_requested" json:"status_requested"`
+}
+
 // Worker contains all information about a specific Worker.
 // Some fields come from the WorkerRegistration, whereas others are filled by us.
 type Worker struct {
@@ -121,6 +129,9 @@ type Worker struct {
 	// For dashboard
 	CurrentTaskStatus  string     `bson:"current_task_status,omitempty" json:"current_task_status,omitempty"`
 	CurrentTaskUpdated *time.Time `bson:"current_task_updated,omitempty" json:"current_task_updated,omitempty"`
+
+	// For controlling sleeping & waking up. For values, see the workerStatusXXX constants.
+	StatusRequested string `bson:"status_requested" json:"status_requested"`
 }
 
 // StartupNotification sent to upstream Flamenco Server upon startup. This is a combination
@@ -139,6 +150,9 @@ type StartupNotification struct {
 type MayKeepRunningResponse struct {
 	MayKeepRunning bool   `json:"may_keep_running"`
 	Reason         string `json:"reason,omitempty"`
+
+	// For controlling sleeping & waking up. For values, see the workerStatusXXX constants.
+	StatusRequested string `json:"status_requested,omitempty"`
 }
 
 // SettingsInMongo contains settings we want to be able to update from

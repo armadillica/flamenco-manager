@@ -17,6 +17,18 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+// Set of worker statuses that can be requested with RequestStatusChange()
+var workerStatusRequestable = map[string]bool{
+	workerStatusAsleep: true,
+	workerStatusAwake:  true,
+}
+
+// Set of worker statuses that allow the worker to keep running tasks.
+var workerStatusRunnable = map[string]bool{
+	workerStatusAwake: true,
+	"":                true, // no status change was requested
+}
+
 // Identifier returns the worker's address, with the nickname in parentheses (if set).
 //
 // Make sure that you include the nickname in the projection when you fetch
@@ -40,6 +52,29 @@ func (worker *Worker) SetCurrentTask(taskID bson.ObjectId, db *mgo.Database) err
 	worker.CurrentTask = &taskID
 	updates := M{"current_task": taskID}
 	return db.C("flamenco_workers").UpdateId(worker.ID, M{"$set": updates})
+}
+
+// RequestStatusChange stores the new requested status in MongoDB, so that it gets picked up
+// by the worker the next time it asks for it.
+func (worker *Worker) RequestStatusChange(newStatus string, db *mgo.Database) error {
+	if !workerStatusRequestable[newStatus] {
+		return fmt.Errorf("RequestStatusChange(%q): status cannot be requested", newStatus)
+	}
+
+	worker.StatusRequested = newStatus
+	updates := M{"status_requested": newStatus}
+	return db.C("flamenco_workers").UpdateId(worker.ID, M{"$set": updates})
+}
+
+// AckStatusChange acknowledges the requested status change by moving it to the actual status.
+func (worker *Worker) AckStatusChange(newStatus string, db *mgo.Database) error {
+	worker.Status = newStatus
+	worker.StatusRequested = ""
+
+	return db.C("flamenco_workers").UpdateId(worker.ID, M{
+		"$set":   M{"status": newStatus},
+		"$unset": M{"status_requested": true},
+	})
 }
 
 // Timeout marks the worker as timed out.
@@ -216,6 +251,25 @@ func FindWorkerByID(workerID bson.ObjectId, db *mgo.Database) (*Worker, error) {
 	return &worker, err
 }
 
+func findWorkerForHTTP(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.Database) (*Worker, log.Fields) {
+	logFields := log.Fields{
+		"remote_addr": r.RemoteAddr,
+		"worker_id":   r.Username,
+	}
+	logger := log.WithFields(logFields)
+
+	// Get the worker
+	worker, err := FindWorker(r.Username, M{}, db)
+	if err != nil {
+		logger.WithField("url", r.URL).WithError(err).Warning("unable to find worker")
+		w.WriteHeader(http.StatusForbidden)
+		return nil, nil
+	}
+	logFields["worker"] = worker.Identifier()
+
+	return worker, logFields
+}
+
 // WorkerCount returns the number of registered workers.
 func WorkerCount(db *mgo.Database) int {
 	count, err := Count(db.C("flamenco_workers"))
@@ -229,25 +283,18 @@ func WorkerCount(db *mgo.Database) int {
 func WorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest,
 	db *mgo.Database, taskID bson.ObjectId) {
 
-	logFields := log.Fields{
-		"remote_addr": r.RemoteAddr,
-		"worker_id":   r.Username,
-		"task_id":     taskID.Hex(),
-	}
+	worker, logFields := findWorkerForHTTP(w, r, db)
+	logFields["task_id"] = taskID.Hex()
 
-	// Get the worker
-	worker, err := FindWorker(r.Username, M{"_id": 1, "address": 1, "nickname": 1}, db)
-	if err != nil {
-		log.WithFields(logFields).WithError(err).Warning("WorkerMayRunTask: Unable to find worker")
-		w.WriteHeader(http.StatusForbidden)
-		fmt.Fprintf(w, "Unable to find worker: %s", err)
-		return
+	if worker.StatusRequested != "" {
+		logFields["worker_status_requested"] = worker.StatusRequested
 	}
-	logFields["worker"] = worker.Identifier()
 	worker.Seen(&r.Request, db)
 	log.WithFields(logFields).Debug("WorkerMayRunTask: asking if it is allowed to keep running task")
 
-	response := MayKeepRunningResponse{}
+	response := MayKeepRunningResponse{
+		StatusRequested: worker.StatusRequested,
+	}
 
 	// Get the task and check its status.
 	task := Task{}
@@ -262,6 +309,9 @@ func WorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest,
 		logFields["task_status"] = task.Status
 		log.WithFields(logFields).Warning("WorkerMayRunTask: task is in not-runnable status, worker will stop")
 		response.Reason = fmt.Sprintf("task %s in non-runnable status %s", taskID.Hex(), task.Status)
+	} else if !workerStatusRunnable[worker.StatusRequested] {
+		log.WithFields(logFields).Warning("WorkerMayRunTask: worker was requested to go to non-active status; will stop its current task")
+		response.Reason = fmt.Sprintf("worker status change to %s requested", worker.StatusRequested)
 	} else {
 		response.MayKeepRunning = true
 		WorkerPingedTask(worker.ID, taskID, "", db)
@@ -329,20 +379,8 @@ func WorkerPingedTask(workerID bson.ObjectId, taskID bson.ObjectId, taskStatus s
 
 // WorkerSignOff re-queues all active tasks (should be only one) that are assigned to this worker.
 func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.Database) {
-	logFields := log.Fields{
-		"remote_addr": r.RemoteAddr,
-		"worker_id":   r.Username,
-	}
-
-	// Get the worker
-	worker, err := FindWorker(r.Username, bson.M{"_id": 1, "address": 1, "nickname": 1}, db)
-	if err != nil {
-		log.WithFields(logFields).WithError(err).Warning("WorkerSignOff: Unable to find worker")
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
+	worker, logFields := findWorkerForHTTP(w, r, db)
 	workerIdent := worker.Identifier()
-	logFields["worker"] = workerIdent
 
 	log.WithFields(logFields).Warning("Worker signing off")
 
@@ -393,24 +431,12 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 // It also clears the worker's "current" task from the dashboard, so that it's clear that the
 // now-active worker is not actually working on that task.
 func WorkerSignOn(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.Database) {
-	logFields := log.Fields{
-		"remote_addr": r.RemoteAddr,
-		"worker_id":   r.Username,
-	}
-
-	// Get the worker
-	worker, err := FindWorker(r.Username, bson.M{"_id": 1, "address": 1, "nickname": 1}, db)
-	if err != nil {
-		log.WithFields(logFields).WithError(err).Warning("WorkerSignOn: Unable to find worker")
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
-	logFields["worker"] = worker.Identifier()
+	worker, logFields := findWorkerForHTTP(w, r, db)
 	log.WithFields(logFields).Info("Worker signed on")
 
 	// Parse the given worker information.
 	winfo := WorkerSignonDoc{}
-	if err = DecodeJSON(w, r.Body, &winfo, fmt.Sprintf("%s WorkerSignOn:", r.RemoteAddr)); err != nil {
+	if err := DecodeJSON(w, r.Body, &winfo, fmt.Sprintf("%s WorkerSignOn:", r.RemoteAddr)); err != nil {
 		return
 	}
 
@@ -430,11 +456,51 @@ func WorkerSignOn(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.D
 	}
 	worker.CurrentTask = nil
 
-	if err = worker.SeenEx(&r.Request, db, updateSet, updateUnset); err != nil {
+	if err := worker.SeenEx(&r.Request, db, updateSet, updateUnset); err != nil {
 		log.WithFields(logFields).WithError(err).Error("WorkerSignOn: Unable to update worker")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// WorkerAckStatusChange allows a Worker to acknowledge a requested status change.
+func WorkerAckStatusChange(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.Database, ackStatus string) {
+	worker, logFields := findWorkerForHTTP(w, r, db)
+	logFields["ack_status"] = ackStatus
+	logFields["previous_status"] = worker.Status
+	logFields["status_requested"] = worker.StatusRequested
+
+	if ackStatus != worker.StatusRequested {
+		log.Warning("WorkerAckStatusChange: acknowledged status is not the same as requested status. Accepting anyway.")
+	} else {
+		log.Info("WorkerAckStatusChange: worker acknowledged requested status")
+	}
+	worker.AckStatusChange(ackStatus, db)
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// WorkerGetStatusChange allows a Worker to fetch any pending status change.
+func WorkerGetStatusChange(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.Database) {
+	worker, logFields := findWorkerForHTTP(w, r, db)
+	logFields["status"] = worker.Status
+	logFields["status_requested"] = worker.StatusRequested
+
+	if worker.StatusRequested == "" {
+		w.WriteHeader(http.StatusNoContent)
+		log.WithFields(logFields).Debug("no worker status change requested")
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	enc := json.NewEncoder(w)
+	err := enc.Encode(WorkerStatus{worker.StatusRequested})
+	if err != nil {
+		log.WithFields(logFields).WithError(err).Error("unable to marshal WorkerStatus response")
+		return
+	}
+
+	log.WithFields(logFields).Info("sent requested status change to worker")
 }
