@@ -27,7 +27,9 @@ var imageExtensions = map[string]bool{
 // it's considered "old enough" to be considered "written".
 const fileAgeThreshold = 2 * time.Second
 
-const imageQueueSize = 50
+// Maximum number of images to queue up for conversion. The output channel returned
+// by ConvertAndForward() will block after this many.
+const imageQueueSize = 3
 
 // LatestImageSystem ties an ImageWatcher to a the fswatcher_middle and fswatcher_http stuff,
 // allowing the results to be pushed via HTTP to browsers.
@@ -106,10 +108,22 @@ func (lis *LatestImageSystem) serverSideEvents(w http.ResponseWriter, r *http.Re
 }
 
 func (lis *LatestImageSystem) outputProduced(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
+	if r.Body == nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "No HTTP body received")
+		return
+	}
 	payload := FileProduced{}
 	defer r.Body.Close()
 	if err := DecodeJSON(w, r.Body, &payload, "LatestImageSystem::outputProduced()"); err != nil {
 		return
+	}
+
+	// I don't want to hook up MongoDB to the LatestImageSystem, so we can't find
+	// the worker's nickname.
+	logFields := log.Fields{
+		"worker":      r.Username,
+		"remote_addr": r.RemoteAddr,
 	}
 
 	if len(payload.Paths) == 0 {
@@ -118,15 +132,17 @@ func (lis *LatestImageSystem) outputProduced(w http.ResponseWriter, r *auth.Auth
 		return
 	}
 
-	log.Infof("LatestImageSystem: %d files were produced on worker %s", len(payload.Paths), r.Username)
-
+	log.WithFields(logFields).WithField("image_count", len(payload.Paths)).Debug("LatestImageSystem: files were produced on worker")
 	for _, path := range payload.Paths {
-		// I don't want to hook up MongoDB to the LatestImageSystem, so we can't find
-		// the worker's nickname.
-		log.Infof("LatestImageSystem: output was produced on worker %s: %s", r.Username, path)
+		logFields["path"] = path
 
 		// Send the path to the channel to push it through the conversion & to the browser.
-		lis.imageCreated <- path
+		select {
+		case lis.imageCreated <- path:
+			log.WithFields(logFields).Info("LatestImageSystem: output was queued for conversion")
+		default:
+			log.WithFields(logFields).Warning("LatestImageSystem: output was discarded, conversion queue is full")
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
