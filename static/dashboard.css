@@ -49,10 +49,10 @@ button#refresh {
     border-color: #6398af;
 }
 
-tr.status-awake td, tr.status-awake th { background-color: #3faa6e; }
-tr.status-awake:nth-of-type(odd) td, tr.status-awake:nth-of-type(odd) th { background-color: #3f9465; }
+tr.status-awake td, tr.status-awake th { background-color: #3f9465; }
+tr:nth-of-type(odd).status-awake td, tr:nth-of-type(odd).status-awake th { background-color: #3faa6e; }
 tr.status-timeout td, tr.status-timeout th { background-color: #a77239; }
-tr.status-timeout:nth-of-type(odd) td, tr.status-timeout:nth-of-type(odd) th { background-color: #d09c4a; }
+tr:nth-of-type(odd).status-timeout td, tr:nth-of-type(odd).status-timeout th { background-color: #d09c4a; }
 tr.status-offline td, tr.status-offline th { color: #bbb; }
 
 dl.dl-horizontal { margin: 0; }
