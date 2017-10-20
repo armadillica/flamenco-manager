@@ -146,7 +146,6 @@ func (worker *Worker) SeenEx(r *http.Request, db *mgo.Database, set bson.M, unse
 	}
 
 	set["last_activity"] = worker.LastActivity
-	set["status"] = workerStatusAwake
 
 	remoteHost, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
@@ -308,6 +307,7 @@ func WorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest,
 	if worker.StatusRequested != "" {
 		logFields["worker_status_requested"] = worker.StatusRequested
 	}
+	worker.SetStatus(workerStatusAwake, db)
 	worker.Seen(&r.Request, db)
 	log.WithFields(logFields).Debug("WorkerMayRunTask: asking if it is allowed to keep running task")
 
@@ -478,6 +478,7 @@ func WorkerSignOn(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.D
 		"current_task": 1,
 	}
 	worker.CurrentTask = nil
+	worker.SetStatus(workerStatusStarting, db)
 
 	if err := worker.SeenEx(&r.Request, db, updateSet, updateUnset); err != nil {
 		log.WithFields(logFields).WithError(err).Error("WorkerSignOn: Unable to update worker")
@@ -511,6 +512,8 @@ func WorkerGetStatusChange(w http.ResponseWriter, r *auth.AuthenticatedRequest, 
 	worker, logFields := findWorkerForHTTP(w, r, db)
 	logFields["status"] = worker.Status
 	logFields["status_requested"] = worker.StatusRequested
+
+	worker.Seen(&r.Request, db)
 
 	if worker.StatusRequested == "" {
 		w.WriteHeader(http.StatusNoContent)

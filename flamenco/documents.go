@@ -20,6 +20,7 @@ const (
 
 // Possible worker statuses.
 const (
+	workerStatusStarting = "starting" // signed on but not done anything yet
 	workerStatusOffline  = "offline"
 	workerStatusShutdown = "shutdown" // will go offline soon
 	workerStatusAwake    = "awake"

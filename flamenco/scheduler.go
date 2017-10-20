@@ -61,6 +61,7 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	if worker.StatusRequested != "" {
 		logger = logger.WithField("status_requested", worker.StatusRequested)
 	}
+	worker.SetStatus(workerStatusAwake, db)
 	worker.Seen(&r.Request, db)
 
 	// If a status change was requested, refuse to schedule a task.
