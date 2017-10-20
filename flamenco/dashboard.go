@@ -209,7 +209,7 @@ func (rep *Reporter) workerAction(w http.ResponseWriter, r *http.Request) {
 	if actionErr != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, actionErr)
-		logger.WithError(err).Warning("workerAction: error occurred")
+		logger.WithError(actionErr).Warning("workerAction: error occurred")
 	} else {
 		w.WriteHeader(http.StatusNoContent)
 		logger.Info("workerAction: action OK")

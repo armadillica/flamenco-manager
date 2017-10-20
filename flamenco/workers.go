@@ -471,11 +471,12 @@ func WorkerAckStatusChange(w http.ResponseWriter, r *auth.AuthenticatedRequest, 
 	logFields["ack_status"] = ackStatus
 	logFields["previous_status"] = worker.Status
 	logFields["status_requested"] = worker.StatusRequested
+	logger := log.WithFields(logFields)
 
 	if ackStatus != worker.StatusRequested {
-		log.Warning("WorkerAckStatusChange: acknowledged status is not the same as requested status. Accepting anyway.")
+		logger.Warning("WorkerAckStatusChange: acknowledged status is not the same as requested status. Accepting anyway.")
 	} else {
-		log.Info("WorkerAckStatusChange: worker acknowledged requested status")
+		logger.Info("WorkerAckStatusChange: worker acknowledged requested status")
 	}
 	worker.AckStatusChange(ackStatus, db)
 
