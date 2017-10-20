@@ -60,7 +60,7 @@ function load_workers() {
         if (idle_workers.length > 0) {
             $dl.append($('<dt>')
                 .text('Old workers')
-                .attr('title', 'Workers not seen in over a month.'));
+                .attr('title', 'Workers not seen in a long time.'));
             $dd = $('<dd>');
             for (worker of idle_workers) {
                 $dd.append($('<span>')
