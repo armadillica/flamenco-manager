@@ -147,9 +147,7 @@ func (s *WorkerTestSuite) TestWorkerSignOn(t *check.C) {
 	found := Worker{}
 	getworker := func() {
 		err := s.db.C("flamenco_workers").FindId(s.workerLnx.ID).One(&found)
-		if err != nil {
-			t.Fatal("Unable to find workerLnx: ", err)
-		}
+		assert.Nil(t, err, "unable to find workerLnx: %s", err)
 	}
 
 	// Empty signon doc -> no change
@@ -186,6 +184,65 @@ func (s *WorkerTestSuite) TestWorkerSignOn(t *check.C) {
 	signon("{}")
 	getworker()
 	assert.Nil(t, found.CurrentTask)
+}
+
+func (s *WorkerTestSuite) TestWorkerSignOff(t *check.C) {
+	signoff := func() {
+		respRec, ar := WorkerTestRequest(s.workerLnx.ID, "POST", "/sign-off")
+		WorkerSignOff(respRec, ar, s.db)
+		assert.Equal(t, 204, respRec.Code)
+	}
+
+	found := Worker{}
+	getworker := func() {
+		err := s.db.C("flamenco_workers").FindId(s.workerLnx.ID).One(&found)
+		assert.Nil(t, err, "unable to find workerLnx: %s", err)
+	}
+
+	// Signing off when awake
+	s.workerLnx.SetStatus(workerStatusAwake, s.db)
+	signoff()
+	getworker()
+	assert.Equal(t, workerStatusOffline, found.Status)
+	assert.Equal(t, "", found.StatusRequested)
+
+	// Signing off when asleep
+	s.workerLnx.SetStatus(workerStatusAsleep, s.db)
+	signoff()
+	getworker()
+	assert.Equal(t, workerStatusOffline, found.Status)
+	assert.Equal(t, workerStatusAsleep, found.StatusRequested)
+
+	// Signing off when timed out
+	s.workerLnx.SetStatus(workerStatusTimeout, s.db)
+	signoff()
+	getworker()
+	assert.Equal(t, workerStatusOffline, found.Status)
+	assert.Equal(t, "", found.StatusRequested)
+
+	// Signing off when awake and shutdown requested
+	s.workerLnx.SetStatus(workerStatusAwake, s.db)
+	s.workerLnx.RequestStatusChange(workerStatusShutdown, s.db)
+	signoff()
+	getworker()
+	assert.Equal(t, workerStatusOffline, found.Status)
+	assert.Equal(t, "", found.StatusRequested)
+
+	// Signing off when asleep
+	s.workerLnx.SetStatus(workerStatusAsleep, s.db)
+	s.workerLnx.RequestStatusChange(workerStatusShutdown, s.db)
+	signoff()
+	getworker()
+	assert.Equal(t, workerStatusOffline, found.Status)
+	assert.Equal(t, workerStatusAsleep, found.StatusRequested)
+
+	// Signing off when timed out
+	s.workerLnx.SetStatus(workerStatusTimeout, s.db)
+	s.workerLnx.RequestStatusChange(workerStatusShutdown, s.db)
+	signoff()
+	getworker()
+	assert.Equal(t, workerStatusOffline, found.Status)
+	assert.Equal(t, "", found.StatusRequested)
 }
 
 // Tests receiving the status change via /may-i-run and /task

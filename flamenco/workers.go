@@ -442,11 +442,16 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 		defer worker.RequestStatusChange(workerStatusAsleep, db)
 	}
 
-	if err := worker.SetStatus(workerStatusOffline, db); err != nil {
+	// Signing off is seen as acknowledgement of the "shutdown" status.
+	if err := worker.AckStatusChange(workerStatusOffline, db); err != nil {
 		if !sentHeader {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 		log.WithFields(logFields).WithError(err).Error("WorkerSignOff: unable to update worker")
+	} else {
+		if !sentHeader {
+			w.WriteHeader(http.StatusNoContent)
+		}
 	}
 }
 
