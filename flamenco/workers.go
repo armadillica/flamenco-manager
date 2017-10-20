@@ -68,7 +68,17 @@ func (worker *Worker) RequestStatusChange(newStatus string, db *mgo.Database) er
 }
 
 // AckStatusChange acknowledges the requested status change by moving it to the actual status.
+// Only the "shutdown" status should not be acknowledged, but just result in a signoff and thus
+// directly go to "offline" state.
 func (worker *Worker) AckStatusChange(newStatus string, db *mgo.Database) error {
+	if newStatus == workerStatusShutdown {
+		log.WithFields(log.Fields{
+			"ack_status": newStatus,
+			"worker":     worker.Identifier(),
+		}).Warning("worker tries to acknowledge a status that should not be acknowledged; ignoring")
+		return nil
+	}
+
 	worker.Status = newStatus
 	worker.StatusRequested = ""
 
@@ -427,6 +437,10 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 	}
 
 	// Update the worker itself, to show it's down in the DB too.
+	if worker.Status == workerStatusAsleep {
+		// Make sure that the worker remains asleep, even after signing on again.
+		defer worker.RequestStatusChange(workerStatusAsleep, db)
+	}
 
 	if err := worker.SetStatus(workerStatusOffline, db); err != nil {
 		if !sentHeader {
