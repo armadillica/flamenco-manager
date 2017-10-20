@@ -4,10 +4,14 @@ var load_workers_timeout_handle;
 function show_action(action_status, worker) {
     if (worker.status == 'offline')
         return false;
+    if (worker.status == 'timeout')
+        return action_status == 'ack-timeout'
     if (worker.status == action_status && worker.status_requested == '')
         return false;
     if (worker.status_requested == action_status)
         return false;
+    if (action_status == 'ack-timeout')
+        return worker.status == 'timeout';
     return true;
 }
 
@@ -93,6 +97,18 @@ function load_workers() {
                     })
                     .text('😃')
                     .attr('title', 'Wake the worker up')
+                );
+            }
+            if (show_action('shutdown', worker)) {
+                actionrow.append($('<a>').workerAction(worker._id, {action: 'shutdown'})
+                    .text('✝')
+                    .attr('title', 'Shut down the worker process')
+                );
+            }
+            if (show_action('ack-timeout', worker)) {
+                actionrow.append($('<a>').workerAction(worker._id, {action: 'ack-timeout'})
+                    .text('✓')
+                    .attr('title', 'acknowledge the timeout')
                 );
             }
             $row.append(actionrow);

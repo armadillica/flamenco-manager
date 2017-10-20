@@ -261,3 +261,22 @@ func (s *WorkerTestSuite) TestStatusChangeNotRequestable(t *check.C) {
 	teststatus(workerStatusOffline)
 	teststatus(workerStatusTimeout)
 }
+
+func (s *WorkerTestSuite) TestAckTimeout(t *check.C) {
+	// Ack'ing a timeout shouldn't work unless the worker is actually in timeout state.
+	err := s.workerLnx.AckTimeout(s.db)
+	assert.NotNil(t, err)
+
+	s.workerLnx.Status = workerStatusTimeout
+	err = s.workerLnx.AckTimeout(s.db)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "", s.workerLnx.StatusRequested)
+	assert.Equal(t, workerStatusOffline, s.workerLnx.Status)
+
+	found := Worker{}
+	err = s.db.C("flamenco_workers").FindId(s.workerLnx.ID).One(&found)
+	assert.Nil(t, err, "Unable to find workerLnx")
+	assert.Equal(t, "", found.StatusRequested)
+	assert.Equal(t, workerStatusOffline, found.Status)
+}

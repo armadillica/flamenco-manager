@@ -194,6 +194,12 @@ func (rep *Reporter) workerAction(w http.ResponseWriter, r *http.Request) {
 			logger = logger.WithField("requested_status", requestedStatus)
 			actionErr = worker.RequestStatusChange(requestedStatus, db)
 		},
+		"shutdown": func() {
+			actionErr = worker.RequestStatusChange(workerStatusShutdown, db)
+		},
+		"ack-timeout": func() {
+			actionErr = worker.AckTimeout(db)
+		},
 	}
 
 	handler, ok := actionHandlers[action]

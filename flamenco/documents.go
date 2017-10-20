@@ -20,10 +20,11 @@ const (
 
 // Possible worker statuses.
 const (
-	workerStatusOffline = "offline"
-	workerStatusAwake   = "awake"
-	workerStatusTimeout = "timeout"
-	workerStatusAsleep  = "asleep" // listens to a wakeup call, but performs no tasks.
+	workerStatusOffline  = "offline"
+	workerStatusShutdown = "shutdown" // will go offline soon
+	workerStatusAwake    = "awake"
+	workerStatusTimeout  = "timeout"
+	workerStatusAsleep   = "asleep" // listens to a wakeup call, but performs no tasks.
 )
 
 // Command is an executable part of a Task

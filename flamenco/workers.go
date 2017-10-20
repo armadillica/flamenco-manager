@@ -19,8 +19,9 @@ import (
 
 // Set of worker statuses that can be requested with RequestStatusChange()
 var workerStatusRequestable = map[string]bool{
-	workerStatusAsleep: true,
-	workerStatusAwake:  true,
+	workerStatusAsleep:   true,
+	workerStatusAwake:    true,
+	workerStatusShutdown: true,
 }
 
 // Set of worker statuses that allow the worker to keep running tasks.
@@ -75,6 +76,14 @@ func (worker *Worker) AckStatusChange(newStatus string, db *mgo.Database) error 
 		"$set":   M{"status": newStatus},
 		"$unset": M{"status_requested": true},
 	})
+}
+
+// AckTimeout acknowledges the timeout and just sets the worker to "offline".
+func (worker *Worker) AckTimeout(db *mgo.Database) error {
+	if worker.Status != workerStatusTimeout {
+		return fmt.Errorf("Worker status is not %q", workerStatusTimeout)
+	}
+	return worker.AckStatusChange(workerStatusOffline, db)
 }
 
 // Timeout marks the worker as timed out.
