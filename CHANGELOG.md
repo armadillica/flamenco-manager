@@ -1,8 +1,12 @@
 Changelog for Flamenco Manager
 ==============================
 
-## Version 2.0.16 (in development)
+## Version 2.1.0 (in development)
 
+- Added ability to send workers to sleep (and wake them up again) to the dashboard. This is done via
+  a request to change its internal state. This state change must be acknowleged by the Worker before
+  new tasks will be given. This is a backward-incompatible change, and requires you to upgrade your
+  Workers to version 2.1.x or newer.
 - Always log which version of Flamenco is running.
 - Added a note that the MongoDB files should reside on a local filesystem, and not on a network.
 - Prevent squashing of last-rendered image.
@@ -13,7 +17,6 @@ Changelog for Flamenco Manager
 - Limit latest image system queue to 3 images, and discard newer ones until the queue shrinks.
 - Scale latest images down to max full HD size (maintains aspect ratio).
 - Renamed worker status "down" to "offline"
-- Added ability to send workers to sleep (and wake them up again) to the dashboard.
 
 
 ## Version 2.0.15 (released 2017-09-09)
