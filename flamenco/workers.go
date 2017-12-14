@@ -507,7 +507,10 @@ func WorkerAckStatusChange(w http.ResponseWriter, r *auth.AuthenticatedRequest, 
 	} else {
 		logger.Info("WorkerAckStatusChange: worker acknowledged requested status")
 	}
-	worker.AckStatusChange(ackStatus, db)
+	err := worker.AckStatusChange(ackStatus, db)
+	if err != nil {
+		logger.WithError(err).Error("WorkerAckStatusChange: unable to set status change from worker ACK")
+	}
 
 	w.WriteHeader(http.StatusNoContent)
 }
