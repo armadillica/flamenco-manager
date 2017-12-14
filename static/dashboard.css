@@ -54,6 +54,8 @@ tr:nth-of-type(odd).status-awake td, tr:nth-of-type(odd).status-awake th { backg
 tr.status-timeout td, tr.status-timeout th { background-color: #a77239; }
 tr:nth-of-type(odd).status-timeout td, tr:nth-of-type(odd).status-timeout th { background-color: #d09c4a; }
 tr.status-offline td, tr.status-offline th { color: #bbb; }
+tr.status-testing td, tr.status-testing th { background-color: #b56b8d; }
+tr:nth-of-type(odd).status-testing td, tr:nth-of-type(odd).status-testing th { background-color: #ce92ae; }
 
 dl.dl-horizontal { margin: 0; }
 .dl-horizontal dt { width: 100px; }

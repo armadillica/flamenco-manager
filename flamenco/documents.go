@@ -24,6 +24,7 @@ const (
 	workerStatusOffline  = "offline"
 	workerStatusShutdown = "shutdown" // will go offline soon
 	workerStatusAwake    = "awake"
+	workerStatusTesting  = "testing"
 	workerStatusTimeout  = "timeout"
 	workerStatusAsleep   = "asleep" // listens to a wakeup call, but performs no tasks.
 )

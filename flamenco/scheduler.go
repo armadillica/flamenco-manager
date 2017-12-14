@@ -49,7 +49,7 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	})
 
 	// Fetch the worker's info
-	projection := M{"platform": 1, "supported_task_types": 1, "address": 1, "nickname": 1, "status_requested": 1}
+	projection := M{"platform": 1, "supported_task_types": 1, "address": 1, "nickname": 1, "status_requested": 1, "status": 1}
 	worker, err := FindWorker(r.Username, projection, db)
 	if err != nil {
 		logger.WithError(err).Warning("ScheduleTask: Unable to find worker")
@@ -61,7 +61,8 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	if worker.StatusRequested != "" {
 		logger = logger.WithField("status_requested", worker.StatusRequested)
 	}
-	worker.SetStatus(workerStatusAwake, db)
+
+	worker.SetAwake(db)
 	worker.Seen(&r.Request, db)
 
 	// If a status change was requested, refuse to schedule a task.

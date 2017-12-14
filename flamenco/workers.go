@@ -26,8 +26,9 @@ var workerStatusRequestable = map[string]bool{
 
 // Set of worker statuses that allow the worker to keep running tasks.
 var workerStatusRunnable = map[string]bool{
-	workerStatusAwake: true,
-	"":                true, // no status change was requested
+	workerStatusAwake:   true,
+	workerStatusTesting: true,
+	"":                  true, // no status change was requested
 }
 
 // Identifier returns the worker's address, with the nickname in parentheses (if set).
@@ -42,10 +43,26 @@ func (worker *Worker) Identifier() string {
 }
 
 // SetStatus sets the worker's status, and updates the database too.
+// Use SetAwake() instead of calling this function with status="awake".
 func (worker *Worker) SetStatus(status string, db *mgo.Database) error {
+	log.WithFields(log.Fields{
+		"worker":     worker.Identifier(),
+		"old_status": worker.Status,
+		"new_status": status,
+	}).Debug("setting worker status")
+
 	worker.Status = status
 	updates := M{"status": status}
 	return db.C("flamenco_workers").UpdateId(worker.ID, M{"$set": updates})
+}
+
+// SetAwake sets the worker status to Awake, but only if's not already awake or testing.
+func (worker *Worker) SetAwake(db *mgo.Database) error {
+	if worker.Status == workerStatusAwake || worker.Status == workerStatusTesting {
+		return nil
+	}
+
+	return worker.SetStatus(workerStatusAwake, db)
 }
 
 // SetCurrentTask sets the worker's current task, and updates the database too.
@@ -71,13 +88,17 @@ func (worker *Worker) RequestStatusChange(newStatus string, db *mgo.Database) er
 // Only the "shutdown" status should not be acknowledged, but just result in a signoff and thus
 // directly go to "offline" state.
 func (worker *Worker) AckStatusChange(newStatus string, db *mgo.Database) error {
+	logger := log.WithFields(log.Fields{
+		"old_status": worker.Status,
+		"ack_status": newStatus,
+		"worker":     worker.Identifier(),
+	})
+
 	if newStatus == workerStatusShutdown {
-		log.WithFields(log.Fields{
-			"ack_status": newStatus,
-			"worker":     worker.Identifier(),
-		}).Warning("worker tries to acknowledge a status that should not be acknowledged; ignoring")
+		logger.Warning("worker tries to acknowledge a status that should not be acknowledged; ignoring")
 		return nil
 	}
+	logger.Debug("worker ACKd status change")
 
 	worker.Status = newStatus
 	worker.StatusRequested = ""
@@ -307,7 +328,7 @@ func WorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest,
 	if worker.StatusRequested != "" {
 		logFields["worker_status_requested"] = worker.StatusRequested
 	}
-	worker.SetStatus(workerStatusAwake, db)
+	worker.SetAwake(db)
 	worker.Seen(&r.Request, db)
 	log.WithFields(logFields).Debug("WorkerMayRunTask: asking if it is allowed to keep running task")
 

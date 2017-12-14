@@ -4,6 +4,8 @@ var load_workers_timeout_handle;
 function show_action(action_status, worker) {
     if (worker.status == 'offline')
         return false;
+    if (worker.status == 'testing')
+        return action_status == 'shutdown'
     if (worker.status == 'timeout')
         return action_status == 'ack-timeout'
     if (worker.status == action_status && worker.status_requested == '')
