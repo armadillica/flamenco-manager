@@ -108,10 +108,9 @@ func sendTestBlenderRenderTask(worker *Worker, conf *Conf, db *mgo.Database, log
 		return fmt.Errorf("unable to create render output directory %s", renderOutput)
 	}
 
-	// stampNote := fmt.Sprintf("Flamenco Test Task for %s", worker.Identifier())
-	logger.Info("creating test blender task")
+	stampNote := fmt.Sprintf("Flamenco Test Task for %s", worker.Identifier())
+	blenderCmd := fmt.Sprintf("{blender} --python-expr \"import bpy; bpy.context.scene.render.stamp_note_text = '%s'\"", stampNote)
 
-	commands := []Command{}
 	task := Task{
 		Manager:     bson.ObjectIdHex(conf.ManagerID),
 		Name:        "Flamenco test job for " + worker.Identifier(),
@@ -120,16 +119,28 @@ func sendTestBlenderRenderTask(worker *Worker, conf *Conf, db *mgo.Database, log
 		JobPriority: 100,
 		JobType:     "test-blender-render",
 		TaskType:    "test-blender-render",
-		Commands:    commands,
 		Log:         "Created locally on Flamenco Manager\n",
 		Activity:    "queued",
 		Worker:      worker.Identifier(),
 		WorkerID:    &worker.ID,
+
+		Commands: []Command{
+			Command{
+				Name: "blender_render",
+				Settings: bson.M{
+					"blender_cmd":   blenderCmd,
+					"filepath":      taskB,
+					"render_output": renderOutput,
+					"frames":        "1",
+				},
+			},
+		},
 	}
 	if err := db.C("flamenco_tasks").Insert(task); err != nil {
 		logger.WithError(err).WithField("task", task).Error("unable to insert task into MongoDB")
 		return errors.New("unable to create task in MongoDB")
 	}
 
-	return errors.New("sendTestBlenderRenderTask almost implemented")
+	logger.Info("created test blender render task")
+	return nil
 }
