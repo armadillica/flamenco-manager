@@ -85,3 +85,13 @@ path_replacement:
         windows: s:/
         linux: /shared/
         darwin: /Volume/shared/
+
+# Example configuration for making it possible to perform test tasks.
+# For more details, see the Flamenco documentation.
+test_tasks:
+    test_blender_render:
+        # The location where the blend file will be placed for the Worker to pick up.
+        job_storage: '{render}/_flamenco/tests/jobs'
+
+        # The location where the Worker will save the rendered frame.
+        render_output: '{render}/_flamenco/tests/renders'
