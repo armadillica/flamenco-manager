@@ -24,7 +24,19 @@ var (
 
 	localTestBlendFile       = "static/testfiles/test.blend"
 	localTestBlendFilePrefix = TemplatePathPrefix(localTestBlendFile)
+	testTaskProjectID        = bson.ObjectIdHex("000000000000000000000000")
+	managerLocalJobType      = "manager-local"
 )
+
+// isTestTask() returns True if this task is a manager-local task that should not be verified with Flamenco Server.
+func (t *Task) isManagerLocalTask() bool {
+	// log.WithFields(log.Fields{
+	// 	"task_id":  t.ID.Hex(),
+	// 	"project":  t.Project.Hex(),
+	// 	"job_type": t.JobType,
+	// }).Debug("checking whether task is Manager-local")
+	return t.JobType == managerLocalJobType
+}
 
 // SendTestJob constructs a test job definition at the Server, which queues it for the worker to pick up.
 func SendTestJob(worker *Worker, conf *Conf, db *mgo.Database) (string, error) {
@@ -109,15 +121,16 @@ func sendTestBlenderRenderTask(worker *Worker, conf *Conf, db *mgo.Database, log
 	}
 
 	stampNote := fmt.Sprintf("Flamenco Test Task for %s", worker.Identifier())
-	blenderCmd := fmt.Sprintf("{blender} --python-expr \"import bpy; bpy.context.scene.render.stamp_note_text = '%s'\"", stampNote)
+	pythonExpr := fmt.Sprintf("import bpy; bpy.context.scene.render.stamp_note_text = '%s'", stampNote)
 
 	task := Task{
 		Manager:     bson.ObjectIdHex(conf.ManagerID),
+		Project:     testTaskProjectID,
 		Name:        "Flamenco test job for " + worker.Identifier(),
 		Status:      "queued",
 		Priority:    100,
 		JobPriority: 100,
-		JobType:     "test-blender-render",
+		JobType:     managerLocalJobType,
 		TaskType:    "test-blender-render",
 		Log:         "Created locally on Flamenco Manager\n",
 		Activity:    "queued",
@@ -128,7 +141,8 @@ func sendTestBlenderRenderTask(worker *Worker, conf *Conf, db *mgo.Database, log
 			Command{
 				Name: "blender_render",
 				Settings: bson.M{
-					"blender_cmd":   blenderCmd,
+					"blender_cmd":   "{blender}",
+					"python_expr":   pythonExpr,
 					"filepath":      taskB,
 					"render_output": renderOutput,
 					"frames":        "1",

@@ -446,6 +446,7 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 
 		for _, task := range tasks {
 			tupdate.TaskID = task.ID
+			tupdate.isManagerLocal = task.isManagerLocalTask()
 			if err := QueueTaskUpdate(&tupdate, db); err != nil {
 				if !sentHeader {
 					w.WriteHeader(http.StatusInternalServerError)

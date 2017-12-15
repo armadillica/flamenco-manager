@@ -108,9 +108,10 @@ func (ttc *TimeoutChecker) timeoutTask(task *Task, db *mgo.Database) {
 	}
 
 	tupdate := TaskUpdate{
-		TaskID:     task.ID,
-		TaskStatus: statusFailed,
-		Activity:   fmt.Sprintf("Task timed out on worker %s", ident),
+		isManagerLocal: task.isManagerLocalTask(),
+		TaskID:         task.ID,
+		TaskStatus:     statusFailed,
+		Activity:       fmt.Sprintf("Task timed out on worker %s", ident),
 		Log: fmt.Sprintf(
 			"%s Task %s (%s) timed out, was active but untouched since %s. "+
 				"Was handled by worker %s",

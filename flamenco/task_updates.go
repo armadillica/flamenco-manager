@@ -82,6 +82,7 @@ func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedReque
 
 	WorkerPingedTask(worker.ID, tupdate.TaskID, tupdate.TaskStatus, db)
 
+	tupdate.isManagerLocal = task.isManagerLocalTask()
 	if err := QueueTaskUpdate(&tupdate, db); err != nil {
 		log.WithFields(logFields).WithError(err).Warning("QueueTaskUpdateFromWorker: unable to update task")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -89,7 +90,7 @@ func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedReque
 		return
 	}
 
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // QueueTaskUpdate queues the task update, without any extra updates.
@@ -105,9 +106,11 @@ func QueueTaskUpdateWithExtra(tupdate *TaskUpdate, db *mgo.Database, extraUpdate
 	tupdate.ID = bson.NewObjectId()
 
 	// Store the update in the queue for sending to the Flamenco Server later.
-	taskUpdateQueue := db.C(queueMgoCollection)
-	if err := taskUpdateQueue.Insert(&tupdate); err != nil {
-		return fmt.Errorf("QueueTaskUpdate: error inserting task update in queue: %s", err)
+	if !tupdate.isManagerLocal {
+		taskUpdateQueue := db.C(queueMgoCollection)
+		if err := taskUpdateQueue.Insert(&tupdate); err != nil {
+			return fmt.Errorf("QueueTaskUpdate: error inserting task update in queue: %s", err)
+		}
 	}
 
 	// Locally apply the change to our cached version of the task too, if it is a valid transition.
@@ -341,7 +344,8 @@ func (pusher *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bso
 
 	queueTaskCancel := func(taskID bson.ObjectId) {
 		msg := "Manager cancelled task by request of Flamenco Server"
-		LogTaskActivity(nil, taskID, msg, time.Now().Format(IsoFormat)+": "+msg, db)
+		fakeTask := Task{ID: taskID}
+		LogTaskActivity(nil, &fakeTask, msg, time.Now().Format(IsoFormat)+": "+msg, db)
 
 		tupdate := TaskUpdate{
 			TaskID:     taskID,
@@ -405,15 +409,16 @@ func (pusher *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bso
 }
 
 // LogTaskActivity creates and queues a TaskUpdate to store activity and a log line.
-func LogTaskActivity(worker *Worker, taskID bson.ObjectId, activity, logLine string, db *mgo.Database) {
+func LogTaskActivity(worker *Worker, task *Task, activity, logLine string, db *mgo.Database) {
 	tupdate := TaskUpdate{
-		TaskID:   taskID,
-		Activity: activity,
-		Log:      logLine,
+		TaskID:         task.ID,
+		Activity:       activity,
+		Log:            logLine,
+		isManagerLocal: task.isManagerLocalTask(),
 	}
 	if err := QueueTaskUpdate(&tupdate, db); err != nil {
 		logFields := log.Fields{
-			"task_id":    taskID.Hex(),
+			"task_id":    task.ID.Hex(),
 			log.ErrorKey: err,
 		}
 		if worker != nil {

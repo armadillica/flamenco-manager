@@ -103,6 +103,12 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 			return
 		}
 
+		// If this is a manager-local task, we should not check with Flamenco Server.
+		if task.isManagerLocalTask() {
+			logger.WithField("task", task.ID.Hex()).Debug("debug task, not checking upstream")
+			break
+		}
+
 		wasChanged = ts.upstream.RefetchTask(task)
 		if !wasChanged {
 			break
@@ -119,9 +125,13 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	logger = logger.WithField("task_id", task.ID.Hex())
 	logger.Info("ScheduleTask: assigning task to worker")
 
-	// Update the task status to "active", pushing it as a task update to the manager too.
+	// Update the task status to "active", pushing it as a task update to the Server too.
 	task.Status = "active"
-	tupdate := TaskUpdate{TaskID: task.ID, TaskStatus: task.Status}
+	tupdate := TaskUpdate{
+		TaskID:         task.ID,
+		TaskStatus:     task.Status,
+		isManagerLocal: task.isManagerLocalTask(),
+	}
 	localUpdates := bson.M{
 		"worker":           worker.Nickname,
 		"worker_id":        worker.ID,
@@ -144,7 +154,7 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	encoder := json.NewEncoder(w)
 	if err := encoder.Encode(task); err != nil {
 		logger.WithError(err).Warning("ScheduleTask: error encoding & sending task to worker")
-		ts.unassignTaskFromWorker(task.ID, worker, err, db)
+		ts.unassignTaskFromWorker(task, worker, err, db)
 		return
 	}
 
@@ -153,23 +163,24 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	// Push a task log line stating we've assigned this task to the given worker.
 	// This is done here, instead of by the worker, so that it's logged even if the worker fails.
 	msg := fmt.Sprintf("Manager assigned task %s to worker %s", task.ID.Hex(), worker.Identifier())
-	LogTaskActivity(worker, task.ID, msg, time.Now().Format(IsoFormat)+": "+msg, db)
+	LogTaskActivity(worker, task, msg, time.Now().Format(IsoFormat)+": "+msg, db)
 }
 
-func (ts *TaskScheduler) unassignTaskFromWorker(taskID bson.ObjectId, worker *Worker, reason error, db *mgo.Database) {
+func (ts *TaskScheduler) unassignTaskFromWorker(task *Task, worker *Worker, reason error, db *mgo.Database) {
 	wIdent := worker.Identifier()
 	logger := log.WithFields(log.Fields{
-		"task_id": taskID.Hex(),
+		"task_id": task.ID.Hex(),
 		"worker":  wIdent,
 	})
 
 	logger.Warning("unassignTaskFromWorker: un-assigning task from worker")
 
 	tupdate := TaskUpdate{
-		TaskID:     taskID,
-		TaskStatus: "claimed-by-manager",
-		Worker:     "-", // no longer assigned to any worker
-		Activity:   fmt.Sprintf("Re-queued task after unassigning from worker %s ", wIdent),
+		isManagerLocal: task.isManagerLocalTask(),
+		TaskID:         task.ID,
+		TaskStatus:     "claimed-by-manager",
+		Worker:         "-", // no longer assigned to any worker
+		Activity:       fmt.Sprintf("Re-queued task after unassigning from worker %s ", wIdent),
 		Log: fmt.Sprintf("%s: Manager re-queued task after there was an error sending it to worker %s:\n%s",
 			time.Now().Format(IsoFormat), wIdent, reason),
 	}

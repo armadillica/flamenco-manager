@@ -83,6 +83,8 @@ type TaskUpdate struct {
 	CommandProgressPercentage int           `bson:"command_progress_percentage" json:"command_progress_percentage"`
 	Log                       string        `bson:"log,omitempty" json:"log,omitempty"`
 	Worker                    string        `bson:"worker" json:"worker"`
+
+	isManagerLocal bool // when true, this update should only be applied locally and not be sent upstream.
 }
 
 // TaskUpdateResponse is received from Server.
