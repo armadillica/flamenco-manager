@@ -108,18 +108,20 @@ func TemplatePathPrefix(fileToFind string) string {
 	// Find relative to executable folder.
 	exedirname, err := osext.ExecutableFolder()
 	if err != nil {
-		logger.WithError(err).Fatal("unable to determine the executable's directory")
+		logger.WithError(err).Error("unable to determine the executable's directory")
+		return ""
 	}
 
 	if _, err := os.Stat(filepath.Join(exedirname, fileToFind)); os.IsNotExist(err) {
 		cwd, err := os.Getwd()
 		if err != nil {
-			logger.WithError(err).Fatal("unable to determine current working directory")
+			logger.WithError(err).Error("unable to determine current working directory")
 		}
 		logger.WithFields(log.Fields{
 			"cwd":        cwd,
 			"exedirname": exedirname,
-		}).Fatal("unable to find file")
+		}).Error("unable to find file")
+		return ""
 	}
 
 	// Append a slash so that we can later just concatenate strings.

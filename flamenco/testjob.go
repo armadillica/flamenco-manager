@@ -22,10 +22,9 @@ var (
 		"test-blender-render": sendTestBlenderRenderTask,
 	}
 
-	localTestBlendFile       = "static/testfiles/test.blend"
-	localTestBlendFilePrefix = TemplatePathPrefix(localTestBlendFile)
-	testTaskProjectID        = bson.ObjectIdHex("000000000000000000000000")
-	managerLocalJobType      = "manager-local"
+	localTestBlendFile  = "static/testfiles/test.blend"
+	testTaskProjectID   = bson.ObjectIdHex("000000000000000000000000")
+	managerLocalJobType = "manager-local"
 )
 
 // isTestTask() returns True if this task is a manager-local task that should not be verified with Flamenco Server.
@@ -99,6 +98,8 @@ func sendTestBlenderRenderTask(worker *Worker, conf *Conf, db *mgo.Database, log
 	// Figure out the local job storage path, so that we can write a blend file there.
 	localStorage := ReplaceLocal(jobStorage, conf)
 	taskB := filepath.Join(localStorage, "test.blend")
+
+	localTestBlendFilePrefix := TemplatePathPrefix(localTestBlendFile)
 	localB := filepath.Join(localTestBlendFilePrefix, localTestBlendFile)
 	logger = logger.WithFields(log.Fields{
 		"job_storage":     jobStorage,
