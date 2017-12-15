@@ -121,8 +121,10 @@ func sendTestBlenderRenderTask(worker *Worker, conf *Conf, db *mgo.Database, log
 		return fmt.Errorf("unable to create render output directory %s", renderOutput)
 	}
 
-	stampNote := fmt.Sprintf("Flamenco Test Task for %s", worker.Identifier())
-	pythonExpr := fmt.Sprintf("import bpy; bpy.context.scene.render.stamp_note_text = '%s'", stampNote)
+	stampNote := "Flamenco Test Task for " + worker.Identifier()
+	pythonExpr := fmt.Sprintf(
+		"import bpy; bpy.context.scene.render.stamp_note_text = '%s'",
+		strings.Replace(stampNote, "'", "\\'", -1))
 
 	task := Task{
 		Manager:     bson.ObjectIdHex(conf.ManagerID),
