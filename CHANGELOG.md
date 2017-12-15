@@ -17,6 +17,8 @@ Changelog for Flamenco Manager
 - Limit latest image system queue to 3 images, and discard newer ones until the queue shrinks.
 - Scale latest images down to max full HD size (maintains aspect ratio).
 - Renamed worker status "down" to "offline"
+- Added support for testing Workers. This test requires Worker version 2.1.0+, and requires that the
+  worker is started with the `--test` CLI argument. For more details see the Flamenco documentation.
 
 
 ## Version 2.0.15 (released 2017-09-09)
