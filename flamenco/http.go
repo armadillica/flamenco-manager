@@ -96,28 +96,33 @@ func SendJSON(logprefix, method string, url *url.URL,
 // Templates are searched for relative to the current working directory as well as relative
 // to the currently running executable.
 func TemplatePathPrefix(fileToFind string) string {
+	logger := log.WithField("file_to_find", fileToFind)
+
 	// Find as relative path, i.e. relative to CWD.
 	_, err := os.Stat(fileToFind)
 	if err == nil {
-		log.Debugf("Found templates in current working directory")
+		logger.Debug("Found templates in current working directory")
 		return ""
 	}
 
 	// Find relative to executable folder.
 	exedirname, err := osext.ExecutableFolder()
 	if err != nil {
-		log.Fatalf("Unable to determine the executable's directory.")
+		logger.WithError(err).Fatal("unable to determine the executable's directory")
 	}
 
 	if _, err := os.Stat(filepath.Join(exedirname, fileToFind)); os.IsNotExist(err) {
 		cwd, err := os.Getwd()
 		if err != nil {
-			log.Fatalf("Unable to determine current working directory: %s", err)
+			logger.WithError(err).Fatal("unable to determine current working directory")
 		}
-		log.Fatalf("Unable to find templates/websetup/layout.html in %s or %s", cwd, exedirname)
+		logger.WithFields(log.Fields{
+			"cwd":        cwd,
+			"exedirname": exedirname,
+		}).Fatal("unable to find file")
 	}
 
 	// Append a slash so that we can later just concatenate strings.
-	log.Debugf("Found templates in %s", exedirname)
+	log.WithField("exedirname", exedirname).Debug("found file")
 	return exedirname + string(os.PathSeparator)
 }
