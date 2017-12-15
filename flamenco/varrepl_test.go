@@ -1,6 +1,8 @@
 package flamenco
 
 import (
+	"runtime"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
@@ -114,4 +116,20 @@ func (s *VarReplTestSuite) TestReplacePathsUnknownOS(t *check.C) {
 		s.task.Commands[2].Settings["render_output"],
 	)
 	assert.Equal(t, "{hey}/haha", s.task.Commands[2].Settings["otherpath"])
+}
+
+func (s *VarReplTestSuite) TestReplaceLocal(t *check.C) {
+	assert.Equal(t, "", ReplaceLocal("", &s.config))
+	assert.Equal(t, "hheyyyy", ReplaceLocal("hheyyyy", &s.config))
+	assert.Equal(t, "{unknown}", ReplaceLocal("{unknown}", &s.config))
+
+	expected, ok := map[string]string{
+		"windows": "r:/here",
+		"linux":   "/render/here",
+		"darwin":  "/Volume/render/here",
+	}[runtime.GOOS]
+	if !ok {
+		panic("unknown runtime OS '" + runtime.GOOS + "'")
+	}
+	assert.Equal(t, expected, ReplaceLocal("{render}/here", &s.config))
 }

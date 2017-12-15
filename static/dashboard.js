@@ -5,7 +5,7 @@ function show_action(action_status, worker) {
     if (worker.status == 'offline')
         return false;
     if (worker.status == 'testing')
-        return action_status == 'shutdown'
+        return action_status == 'shutdown' || action_status == 'send-test-job'
     if (worker.status == 'timeout')
         return action_status == 'ack-timeout'
     if (worker.status == action_status && worker.status_requested == '')
@@ -111,6 +111,12 @@ function load_workers() {
                 actionrow.append($('<a>').workerAction(worker._id, {action: 'ack-timeout'})
                     .text('✓')
                     .attr('title', 'acknowledge the timeout')
+                );
+            }
+            if (show_action('send-test-job', worker)) {
+                actionrow.append($('<a>').workerAction(worker._id, {action: 'send-test-job'})
+                    .text('🎥')
+                    .attr('title', 'send a test job')
                 );
             }
             $row.append(actionrow);

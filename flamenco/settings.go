@@ -20,6 +20,17 @@ const (
 	defaultServerURL = "https://cloud.blender.org/"
 )
 
+// BlenderRenderConfig represents the configuration required for a test render.
+type BlenderRenderConfig struct {
+	JobStorage   string `yaml:"job_storage"`
+	RenderOutput string `yaml:"render_output"`
+}
+
+// TestTasks represents the 'test_tasks' key in the Manager's configuration file.
+type TestTasks struct {
+	BlenderRender BlenderRenderConfig `yaml:"test_blender_render"`
+}
+
 // Conf represents the Manager's configuration file.
 type Conf struct {
 	DatabaseURL   string   `yaml:"database_url"`
@@ -64,6 +75,8 @@ type Conf struct {
 
 	SSDPDiscovery  bool   `yaml:"ssdp_discovery"`
 	SSDPDeviceUUID string `yaml:"ssdp_device_uuid"`
+
+	TestTasks TestTasks `yaml:"test_tasks"`
 }
 
 // GetConf parses flamenco-manager.yaml and returns its contents as a Conf object.
@@ -106,6 +119,13 @@ func LoadConf(filename string) (Conf, error) {
 				"linux":   "/render",
 				"windows": "R:/",
 				"darwin":  "/render",
+			},
+		},
+
+		TestTasks: TestTasks{
+			BlenderRender: BlenderRenderConfig{
+				JobStorage:   "{job_storage}/test-jobs",
+				RenderOutput: "{render}/test-renders",
 			},
 		},
 	}

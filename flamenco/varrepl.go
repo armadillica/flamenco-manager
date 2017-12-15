@@ -3,10 +3,11 @@ package flamenco
 import (
 	"fmt"
 	"reflect"
+	"runtime"
 	"strings"
 )
 
-var stringType reflect.Type = reflect.TypeOf("somestring")
+var stringType = reflect.TypeOf("somestring")
 
 // ReplaceVariables performs variable and path replacement for tasks.
 func ReplaceVariables(config *Conf, task *Task, worker *Worker) {
@@ -35,4 +36,23 @@ func ReplaceVariables(config *Conf, task *Task, worker *Worker) {
 			cmd.Settings[key] = strvalue
 		}
 	}
+}
+
+// ReplaceLocal performs variable and path replacement for strings based on the local platform.
+func ReplaceLocal(strvalue string, config *Conf) string {
+	varmap := config.VariablesByPlatform[runtime.GOOS]
+	pathmap := config.PathReplacementByPlatform[runtime.GOOS]
+
+	// Variable replacement
+	for varname, varvalue := range varmap {
+		placeholder := fmt.Sprintf("{%s}", varname)
+		strvalue = strings.Replace(strvalue, placeholder, varvalue, -1)
+	}
+	// Path replacement
+	for varname, varvalue := range pathmap {
+		placeholder := fmt.Sprintf("{%s}", varname)
+		strvalue = strings.Replace(strvalue, placeholder, varvalue, -1)
+	}
+
+	return strvalue
 }

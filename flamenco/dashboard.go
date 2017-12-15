@@ -187,6 +187,7 @@ func (rep *Reporter) workerAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var actionResult string
 	var actionErr error
 	actionHandlers := map[string]func(){
 		"set-status": func() {
@@ -199,6 +200,9 @@ func (rep *Reporter) workerAction(w http.ResponseWriter, r *http.Request) {
 		},
 		"ack-timeout": func() {
 			actionErr = worker.AckTimeout(db)
+		},
+		"send-test-job": func() {
+			actionResult, actionErr = SendTestJob(worker, rep.config, db)
 		},
 	}
 
@@ -217,7 +221,13 @@ func (rep *Reporter) workerAction(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, actionErr)
 		logger.WithError(actionErr).Warning("workerAction: error occurred")
 	} else {
-		w.WriteHeader(http.StatusNoContent)
+		if actionResult == "" {
+			w.WriteHeader(http.StatusNoContent)
+		} else {
+			w.Header().Add("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, actionResult)
+		}
 		logger.Info("workerAction: action OK")
 	}
 }
