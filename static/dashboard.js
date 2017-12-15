@@ -4,16 +4,18 @@ var load_workers_timeout_handle;
 function show_action(action_status, worker) {
     if (worker.status == 'offline')
         return false;
+    if (action_status == 'send-test-job')
+        return worker.status == 'testing'
+    if (action_status == 'ack-timeout')
+        return worker.status == 'timeout';
     if (worker.status == 'testing')
-        return action_status == 'shutdown' || action_status == 'send-test-job'
+        return action_status == 'shutdown'
     if (worker.status == 'timeout')
         return action_status == 'ack-timeout'
     if (worker.status == action_status && worker.status_requested == '')
         return false;
     if (worker.status_requested == action_status)
         return false;
-    if (action_status == 'ack-timeout')
-        return worker.status == 'timeout';
     return true;
 }
 
