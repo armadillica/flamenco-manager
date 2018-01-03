@@ -80,14 +80,15 @@ of this `flamenco-manager` directory.
 1. Install Go 1.9 or newer
 2. `export GOPATH=/path/to/your/workspace/for/go`
 3. `cd $FM`
-4. Download all dependencies with `go get`
-5. Download Flamenco test dependencies with `go get -t ./...`
-6. Run the unittests with `go test ./...`
-7. Build your first Flamenco Manager with `go install`; this will create an executable
+4. Install "dep" with `go get -u github.com/golang/dep/cmd/dep`
+5. Download all dependencies with `dep ensure`
+6. Download Flamenco test dependencies with `go get -t ./...`
+7. Run the unittests with `go test ./...`
+8. Build your first Flamenco Manager with `go install`; this will create an executable
    `flamenco-manager` in `$GOPATH/bin`. It may be a good idea to add `$GOPATH/bin` to your `PATH`
    environment variable.
-8. Configure Flamenco Manager by starting it in *setup mode* (`flamenco-manager -setup`, see above).
-9. Run the Manager with `$GOPATH/bin/flamenco-manager -verbose`.
+9. Configure Flamenco Manager by starting it in *setup mode* (`flamenco-manager -setup`, see above).
+10. Run the Manager with `$GOPATH/bin/flamenco-manager -verbose`.
 
 
 ### Testing

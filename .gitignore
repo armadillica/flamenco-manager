@@ -1,5 +1,6 @@
 /db/
 /mongodb-logs/
+/vendor/
 /flamenco-manager
 /flamenco-manager.yaml
 /test_*.json
