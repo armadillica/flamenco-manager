@@ -38,7 +38,8 @@ function build {
     TARGET=/docker/flamenco-manager-\$GOOS\$SUFFIX
 
     echo "Building \$TARGET"
-    go get -a -ldflags '-s'
+    go get -ldflags '-s' github.com/golang/dep/cmd/dep
+    \$GOPATH/bin/dep ensure
     go build -o \$TARGET
 
     if [ \$GOOS == linux ]; then
