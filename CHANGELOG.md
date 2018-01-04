@@ -1,7 +1,7 @@
 Changelog for Flamenco Manager
 ==============================
 
-## Version 2.1.0 (in development)
+## Version 2.1.0 (2018-01-04)
 
 - Added ability to send workers to sleep (and wake them up again) to the dashboard. This is done via
   a request to change its internal state. This state change must be acknowleged by the Worker before
