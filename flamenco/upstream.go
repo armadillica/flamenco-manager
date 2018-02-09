@@ -143,7 +143,7 @@ func downloadTasksFromUpstream(config *Conf, mongoSess *mgo.Session) {
 		logger = logger.WithField("last_modified", *settings.DepsgraphLastModified)
 		req.Header.Set("X-Flamenco-If-Updated-Since", *settings.DepsgraphLastModified)
 	}
-	logger.Info("Getting tasks from upstream Flamenco")
+	logger.Debug("Getting tasks from upstream Flamenco")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -180,9 +180,6 @@ func downloadTasksFromUpstream(config *Conf, mongoSess *mgo.Session) {
 		return
 	}
 
-	// Erase the URL from the logger; it's not necessary to keep repeating it.
-	logger = log.WithFields(log.Fields{})
-
 	// Insert them into the MongoDB
 	depsgraph := scheduledTasks.Depsgraph
 	if len(depsgraph) > 0 {
@@ -192,6 +189,10 @@ func downloadTasksFromUpstream(config *Conf, mongoSess *mgo.Session) {
 		logger.WithField("count", len(depsgraph)).Warning("Unexpectedly received no tasks from upstream Flamenco Server")
 		return
 	}
+
+	// Erase the URL from the logger; it's not necessary to keep repeating it.
+	logger = log.WithFields(log.Fields{})
+
 	tasksColl := db.C("flamenco_tasks")
 	utcNow := UtcNow()
 	for _, task := range depsgraph {

@@ -65,7 +65,7 @@ func (tc *TaskCleaner) Close() {
 
 func (tc *TaskCleaner) check(db *mgo.Database) {
 	cleanupBefore := UtcNow().Add(-tc.config.TaskCleanupMaxAge)
-	log.Debugf("Removing all tasks that have not been touched since %s", cleanupBefore)
+	log.WithField("cleanup_before", cleanupBefore).Debug("Removing stale tasks")
 
 	// find all active tasks that either have never been pinged and were
 	// sent to us a long time ago, or were pinged long ago.
@@ -85,8 +85,10 @@ func (tc *TaskCleaner) check(db *mgo.Database) {
 
 	result, err := db.C("flamenco_tasks").RemoveAll(query)
 	if err != nil {
-		log.Warningf("Error cleaning up tasks: %s", err)
+		log.WithError(err).Warning("Error removing stale tasks")
 		return
 	}
-	log.Infof("Removed %d stale tasks.", result.Removed)
+	if result.Removed > 0 {
+		log.WithField("count", result.Removed).Info("Removed stale tasks")
+	}
 }
