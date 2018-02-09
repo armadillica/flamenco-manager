@@ -34,6 +34,12 @@ func ImageWatcherHTTPPush(w http.ResponseWriter, r *http.Request, broadcaster *c
 	w.Header().Set("Connection", "keep-alive")
 	f.Flush()
 
+	// Firefox really want to have an immediate event on the channel,
+	// or it'll think that the connection wasn't made properly.
+	fmt.Fprintf(w, "event: notification\n")
+	fmt.Fprintf(w, "data: hello there!\n\n")
+	f.Flush()
+
 	defer log.Debugf("Finished HTTP request at %s from %s", r.URL.Path, r.RemoteAddr)
 
 	// Hook our channel up to the image broadcaster.
