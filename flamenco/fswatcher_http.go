@@ -12,12 +12,16 @@ import (
 
 // ImageWatcherHTTPPush starts a server-side events channel.
 func ImageWatcherHTTPPush(w http.ResponseWriter, r *http.Request, broadcaster *chantools.OneToManyChan) {
-	log.Infof("ImageWatcherHTTPPush: Channel started at %s for %s", r.URL.Path, r.RemoteAddr)
+	logger := log.WithFields(log.Fields{
+		"remote_addr": r.RemoteAddr,
+		"url":         r.URL.Path,
+	})
 
 	// Make sure that the writer supports flushing.
 	f, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+		logger.Error("ImageWatcher: Streaming unsupported; writer does not implement http.Flusher interface")
 		return
 	}
 
@@ -25,6 +29,7 @@ func ImageWatcherHTTPPush(w http.ResponseWriter, r *http.Request, broadcaster *c
 	closeNotifier, ok := w.(http.CloseNotifier)
 	if !ok {
 		http.Error(w, "Cannot stream", http.StatusInternalServerError)
+		logger.Error("ImageWatcher: Streaming unsupported; writer does not implement http.CloseNotifier interface")
 		return
 	}
 
@@ -40,7 +45,8 @@ func ImageWatcherHTTPPush(w http.ResponseWriter, r *http.Request, broadcaster *c
 	fmt.Fprintf(w, "data: hello there!\n\n")
 	f.Flush()
 
-	defer log.Debugf("Finished HTTP request at %s from %s", r.URL.Path, r.RemoteAddr)
+	logger.Info("ImageWatcher: Channel started")
+	defer logger.Debug("ImageWatcher: Closed HTTP stream")
 
 	// Hook our channel up to the image broadcaster.
 	pathChannel := make(chan string)
@@ -50,14 +56,14 @@ func ImageWatcherHTTPPush(w http.ResponseWriter, r *http.Request, broadcaster *c
 	for {
 		select {
 		case <-closeNotifier.CloseNotify():
-			log.Debugf("ImageWatcher: Connection from %s closed", r.RemoteAddr)
+			logger.Debug("ImageWatcher: Connection closed")
 			return
 		case path, ok := <-pathChannel:
 			if !ok {
 				// Shutting down.
 				return
 			}
-			log.Debugf("ImageWatcher: Sending notification to %s", r.RemoteAddr)
+			logger.Debug("ImageWatcher: Sending notification")
 			fmt.Fprintf(w, "event: image\n")
 			fmt.Fprintf(w, "data: %s\n\n", filepath.Base(path))
 			f.Flush()
