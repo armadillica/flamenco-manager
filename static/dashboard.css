@@ -61,9 +61,9 @@ dl.dl-horizontal { margin: 0; }
 .dl-horizontal dt { width: 100px; }
 .dl-horizontal dd { margin-left: 120px; }
 
-#last_rendered_image {
+.small-last-rendered-image {
     max-width: 100%;
-    max-height: 300px;
+    max-height: 365px;
 }
 
 .imageholder {
