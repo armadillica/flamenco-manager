@@ -24,7 +24,7 @@ func DecodeJSON(w http.ResponseWriter, r io.Reader, document interface{},
 	dec := json.NewDecoder(r)
 
 	if err := dec.Decode(document); err != nil {
-		log.Warningf("%s Unable to decode JSON: %s", logprefix, err)
+		log.WithError(err).Warningf("%s Unable to decode JSON", logprefix)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "Unable to decode JSON: %s\n", err)
 		return err
@@ -45,14 +45,15 @@ func SendJSON(logprefix, method string, url *url.URL,
 ) error {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		log.Errorf("%s: Unable to marshal JSON: %s", logprefix, err)
+		log.WithError(err).Errorf("%s: Unable to marshal JSON", logprefix)
 		return err
 	}
 
+	logger := log.WithField("url", url.String())
 	// TODO Sybren: enable GZip compression.
 	req, err := http.NewRequest("POST", url.String(), bytes.NewBuffer(payloadBytes))
 	if err != nil {
-		log.Errorf("%s: Unable to create request: %s", logprefix, err)
+		logger.WithError(err).Errorf("%s: Unable to create request", logprefix)
 		return err
 	}
 	req.Header.Add("Content-Type", "application/json")
@@ -63,25 +64,23 @@ func SendJSON(logprefix, method string, url *url.URL,
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Warningf("%s: Unable to POST to %s: %s", logprefix, url, err)
+		logger.WithError(err).Warningf("%s: Unable to POST", logprefix)
 		return err
 	}
+	logger = logger.WithField("http_status", resp.StatusCode)
 
 	body, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
 	if err != nil {
-		log.Warningf("%s: Error %d POSTing to %s: %s",
-			logprefix, resp.StatusCode, url, err)
+		logger.WithError(err).Warningf("%s: Error POSTing", logprefix)
 		return err
 	}
 
 	if resp.StatusCode >= 300 {
-		suffix := ""
 		if resp.StatusCode != 404 {
-			suffix = fmt.Sprintf("\n    body:\n%s", body)
+			logger = logger.WithField("body", body)
 		}
-		log.Warningf("%s: Error %d POSTing to %s%s",
-			logprefix, resp.StatusCode, url, suffix)
+		log.Warningf("%s: Error POSTing", logprefix)
 		return fmt.Errorf("%s: Error %d POSTing to %s", logprefix, resp.StatusCode, url)
 	}
 
