@@ -235,7 +235,6 @@ function time_diff(timestamp) {
         month: 'short',
         day: 'numeric',
     });
-    // return (1900 + as_date.getYear()) + '-' + as_date.getMonth() + '-' + as_date.getDay();
 }
 
 function downloadkick() {
