@@ -6,6 +6,7 @@ Changelog for Flamenco Manager
 - Fixed race condition in JavaScript loading.
 - Fixed incompatibility of "latest image" server-side event system with Firefox.
 - Limit display height of last-rendered image to 300 pixels.
+- Added `job_storage` path replacement variable to default configuration.
 
 
 ## Version 2.1.0 (2018-01-04)
