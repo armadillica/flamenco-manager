@@ -10,6 +10,7 @@ Changelog for Flamenco Manager
 - Log a warning when backslashes are used in path replacement variables. Those should not be used,
   but forward slashes should be used for every platform.
 - Allow erasing idle workers from the dashboard.
+- Show 'last seen' timestamp in idle workers tooltip on the dashboard.
 
 
 ## Version 2.1.0 (2018-01-04)

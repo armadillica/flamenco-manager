@@ -78,7 +78,7 @@ function load_workers() {
                 $dd.append($('<span>')
                     .addClass('idle-worker-name')
                     .text(worker.nickname)
-                    .attr('title', worker._id)
+                    .attr('title', worker._id + '\nLast seen ' + new Date(worker.last_activity))
                     .append($forget)
                 );
             }
