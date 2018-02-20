@@ -1,6 +1,7 @@
 package flamenco
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,6 +19,11 @@ import (
 const (
 	configFilename   = "flamenco-manager.yaml"
 	defaultServerURL = "https://cloud.blender.org/"
+)
+
+var (
+	// ErrDuplicateVariables is returned when the same name is used as regular and path-replacement variable.
+	ErrDuplicateVariables = errors.New("duplicate variables found")
 )
 
 // BlenderRenderConfig represents the configuration required for a test render.
@@ -118,7 +124,12 @@ func LoadConf(filename string) (Conf, error) {
 			"render": map[string]string{
 				"linux":   "/render",
 				"windows": "R:/",
-				"darwin":  "/render",
+				"darwin":  "/Volume/render",
+			},
+			"job_storage": map[string]string{
+				"linux":   "/shared/flamenco-jobs",
+				"windows": "S:/",
+				"darwin":  "/Volume/shared/flamenco-jobs",
 			},
 		},
 
@@ -130,11 +141,13 @@ func LoadConf(filename string) (Conf, error) {
 		},
 	}
 	if err != nil {
+		c.processVariables()
 		return c, err
 	}
 
 	err = yaml.Unmarshal(yamlFile, &c)
 	if err != nil {
+		c.processVariables()
 		return c, fmt.Errorf("unmarshal: %v", err)
 	}
 
@@ -150,43 +163,10 @@ func LoadConf(filename string) (Conf, error) {
 
 	c.checkDatabase()
 
-	foundDuplicate := false
-	for varname, perplatform := range c.PathReplacementByVarname {
-		// Check variable/path replacement duplicates.
-		_, found := c.VariablesByVarname[varname]
-		if found {
-			log.Errorf("Variable '%s' defined as both regular and path replacement variable", varname)
-			foundDuplicate = true
-		}
-
-		// Remove trailing slashes from replacement paths, since there should be a slash after
-		// each path replacement variable anyway.
-		for platform, value := range perplatform {
-			perplatform[platform] = strings.TrimRight(value, "/")
-		}
+	err = c.processVariables()
+	if err != nil {
+		return c, err
 	}
-
-	transposeVariableMatrix(&c.VariablesByVarname, &c.VariablesByPlatform)
-	transposeVariableMatrix(&c.PathReplacementByVarname, &c.PathReplacementByPlatform)
-
-	for platform, vars := range c.VariablesByPlatform {
-		log.Debugf("Variables for '%s'", platform)
-		for name, value := range vars {
-			log.Debugf("     %15s = %s", name, value)
-		}
-	}
-
-	for platform, vars := range c.PathReplacementByPlatform {
-		log.Debugf("Paths for '%s'", platform)
-		for name, value := range vars {
-			log.Debugf("     %15s = %s", name, value)
-		}
-	}
-
-	if foundDuplicate {
-		return c, fmt.Errorf("duplicate variables found")
-	}
-
 	return c, nil
 }
 
@@ -256,6 +236,48 @@ func (c *Conf) Write(filename string) error {
 // HasTLS returns true if both the TLS certificate and key files are configured.
 func (c *Conf) HasTLS() bool {
 	return c.TLSCert != "" && c.TLSKey != ""
+}
+
+// processVariables takes by-varname and turns it into by-platform, and checks for duplicates
+// between regular and path-replacement variables.
+func (c *Conf) processVariables() error {
+	foundDuplicate := false
+	for varname, perplatform := range c.PathReplacementByVarname {
+		// Check variable/path replacement duplicates.
+		_, found := c.VariablesByVarname[varname]
+		if found {
+			log.WithField("variable", varname).Error("Variable defined as both regular and path replacement variable")
+			foundDuplicate = true
+		}
+
+		// Remove trailing slashes from replacement paths, since there should be a slash after
+		// each path replacement variable anyway.
+		for platform, value := range perplatform {
+			perplatform[platform] = strings.TrimRight(value, "/")
+		}
+	}
+
+	transposeVariableMatrix(&c.VariablesByVarname, &c.VariablesByPlatform)
+	transposeVariableMatrix(&c.PathReplacementByVarname, &c.PathReplacementByPlatform)
+
+	for platform, vars := range c.VariablesByPlatform {
+		log.Debugf("Variables for '%s'", platform)
+		for name, value := range vars {
+			log.Debugf("     %15s = %s", name, value)
+		}
+	}
+
+	for platform, vars := range c.PathReplacementByPlatform {
+		log.Debugf("Paths for '%s'", platform)
+		for name, value := range vars {
+			log.Debugf("     %15s = %s", name, value)
+		}
+	}
+
+	if foundDuplicate {
+		return ErrDuplicateVariables
+	}
+	return nil
 }
 
 func transposeVariableMatrix(in, out *map[string]map[string]string) {
