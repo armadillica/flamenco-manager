@@ -67,10 +67,19 @@ function load_workers() {
                 .attr('title', 'Workers not seen in a long time.'));
             $dd = $('<dd>');
             for (worker of idle_workers) {
+                let $forget = $('<span>')
+                                .text('x')
+                                .addClass('forget-worker')
+                                .attr('title', 'click to forget worker')
+                                .workerAction(worker._id, {action: 'forget-worker'},
+                                    "Are you sure you want to erase " + worker.nickname + "?\n\n" +
+                                    "This will cause authentication errors on the Worker if you " +
+                                    "ever restart it; use --reregister on the worker to solve that.")
                 $dd.append($('<span>')
                     .addClass('idle-worker-name')
                     .text(worker.nickname)
                     .attr('title', worker._id)
+                    .append($forget)
                 );
             }
             $dl.append($dd);
@@ -258,8 +267,10 @@ $(function() {
     toastr.options.positionClass = 'toast-bottom-left';
     toastr.options.hideMethod = 'slideUp';
 
-    $.fn.workerAction = function(workerID, payload) {
+    $.fn.workerAction = function(workerID, payload, confirmation) {
         this.click(function() {
+            if (typeof confirmation !== 'undefined' && !confirm(confirmation)) return;
+
             $.post('/worker-action/' + workerID, payload)
             .done(function(resp) {
                 if (!resp) resp = "Request confirmed"

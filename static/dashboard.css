@@ -104,3 +104,11 @@ button#downloadkick {
     margin-right: 15px;
     border-bottom: none;
 }
+
+.worker-action.forget-worker {
+    font-size: 85%;
+    vertical-align: super;
+    color: #f66;
+    padding: 3px;
+    margin-right: 5px;
+}

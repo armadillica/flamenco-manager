@@ -204,6 +204,9 @@ func (rep *Reporter) workerAction(w http.ResponseWriter, r *http.Request) {
 		"send-test-job": func() {
 			actionResult, actionErr = SendTestJob(worker, rep.config, db)
 		},
+		"forget-worker": func() {
+			actionErr = forgetWorker(worker, db)
+		},
 	}
 
 	handler, ok := actionHandlers[action]

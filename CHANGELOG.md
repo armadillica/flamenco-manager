@@ -9,6 +9,7 @@ Changelog for Flamenco Manager
 - Added `job_storage` path replacement variable to default configuration.
 - Log a warning when backslashes are used in path replacement variables. Those should not be used,
   but forward slashes should be used for every platform.
+- Allow erasing idle workers from the dashboard.
 
 
 ## Version 2.1.0 (2018-01-04)

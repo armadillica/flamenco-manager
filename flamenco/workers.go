@@ -257,6 +257,18 @@ func StoreNewWorker(winfo *Worker, db *mgo.Database) error {
 	return nil
 }
 
+// forgetWorker actually erases the worker from the database.
+// References to this worker are not erased, so will become invalid.
+func forgetWorker(winfo *Worker, db *mgo.Database) error {
+	log.WithFields(log.Fields{
+		"worker": winfo.Identifier(),
+		"id":     winfo.ID.Hex(),
+	}).Warning("forgetting worker; erasing worker from database")
+
+	workersColl := db.C("flamenco_workers")
+	return workersColl.Remove(bson.M{"_id": winfo.ID})
+}
+
 // WorkerSecret returns the hashed secret of the worker.
 func WorkerSecret(user string, db *mgo.Database) string {
 	projection := bson.M{"hashed_secret": 1}
