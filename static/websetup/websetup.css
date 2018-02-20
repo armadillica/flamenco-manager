@@ -2,10 +2,10 @@ html, body {
     font-family: Noto, Ubuntu, sans-serif;
     color: white;
     background-color: #507e92;
-    text-shadow: 0.2ex 0.2ex 0.1ex rgba(0, 0, 0, 0.2);
+    text-shadow: 0.2ex 0.2ex 0.2ex rgba(0, 0, 0, 0.2);
 }
 
-a, a:link { color: #aef0ff; }
+a, a:link { color: #aef0ff; text-decoration: underline; }
 a:visited { color: #e6fff2; }
 a:hover { color: #d0f7eb; }
 a:active { color: #f7d0d2; }
@@ -48,7 +48,22 @@ input {
 }
 
 #config section {
-    margin-bottom: 30px;
+    padding: 0.1em 0.2em;
+    margin-bottom: 3em;
+    /* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#5d93aa+0,507e92+11,73b1e7+100&1+0,0+26 */
+    background: -moz-linear-gradient(top, rgba(93,147,170,1) 0%, rgba(80,126,146,0.58) 11%, rgba(86,135,160,0) 26%, rgba(115,177,231,0) 100%); /* FF3.6-15 */
+    background: -webkit-linear-gradient(top, rgba(93,147,170,1) 0%,rgba(80,126,146,0.58) 11%,rgba(86,135,160,0) 26%,rgba(115,177,231,0) 100%); /* Chrome10-25,Safari5.1-6 */
+    background: linear-gradient(to bottom, rgba(93,147,170,1) 0%,rgba(80,126,146,0.58) 11%,rgba(86,135,160,0) 26%,rgba(115,177,231,0) 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#5d93aa', endColorstr='#0073b1e7',GradientType=0 ); /* IE6-9 */
+    border: 1px solid #477082;
+}
+
+h3 {
+    margin: 0.2em 0 0.8em 0;
+}
+
+.note {
+    padding: 0.4em 1em;
 }
 
 .help-block {

@@ -66,12 +66,22 @@
 
         <section>
             <h3>Variables</h3>
-            <p>Also see the <a href='https://www.flamenco.io/docs/user_manual/installation/#manager-configuration' target='_blank'>Manager Configuration</a>
-                section in the Flamenco documentation.</p>
+            <p>Click on any cell in the tables below to edit.</p>
+            <p class='note text-warning bg-warning'><strong>IMPORTANT</strong>: Use forward slashes only, also on Windows (e.g. <code>S:/flamenco-jobs</code>).</p>
+
+            <h4>Regular variables</h4>
+            <p>Some tasks require certain variables. For example, rendering with Blender requires
+                that the `blender` variable points to the Blender executable for each Worker
+                platform. Also see the <a
+                href='https://www.flamenco.io/docs/user_manual/installation/#manager-configuration'
+                target='_blank'>Manager Configuration</a> section in the Flamenco documentation.</p>
             <div id='variables-table' class='table-editable'>
                 {{template "vartable" .Config.VariablesByVarname}}
             </div>
-            <h3>Path Replacement Variables</h3>
+            <h4>Path Replacement Variables</h4>
+            <p>These variables work both ways, so for example <code>R:/render/job.blend</code>
+                created on Windows may be rewritten to <code>{render}/job.blend</code>, which in
+                turn is seen as <code>/media/render/job.blend</code> on a Linux worker.</p>
             <div id='path-variables-table' class='table-editable'>
                 {{template "vartable" .Config.PathReplacementByVarname}}
             </div>
