@@ -164,7 +164,7 @@ func downloadTasksFromUpstream(config *Conf, mongoSess *mgo.Session) {
 		if ioErr != nil {
 			logger = logger.WithError(ioErr)
 		} else {
-			logger = logger.WithField("body", body)
+			logger = logger.WithField("body", string(body))
 		}
 		logger.WithField("status_code", resp.StatusCode).Error("Error GETing tasks")
 		return
