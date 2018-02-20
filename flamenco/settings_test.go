@@ -27,3 +27,11 @@ func (s *SettingsTestSuite) TestDefaultSettings(t *check.C) {
 	assert.True(t, ok)
 	assert.Equal(t, "S:", winPVars["job_storage"])
 }
+
+func (s *SettingsTestSuite) TestDuplicateVars(t *check.C) {
+	config, err := LoadConf("settings_test_duplicate_vars.yaml")
+	assert.Equal(t, ErrDuplicateVariables, err)
+
+	// The settings should contain the defaults.
+	assert.Equal(t, "7401c189-ef69-434b-b4d8-56d00075faf5", config.SSDPDeviceUUID)
+}
