@@ -253,6 +253,13 @@ func (c *Conf) processVariables() error {
 		// Remove trailing slashes from replacement paths, since there should be a slash after
 		// each path replacement variable anyway.
 		for platform, value := range perplatform {
+			if strings.Contains(value, "\\") {
+				log.WithFields(log.Fields{
+					"variable": varname,
+					"platform": platform,
+					"value":    value,
+				}).Warning("Backslash found in path replacement variable. Change those to forward slashes instead.")
+			}
 			perplatform[platform] = strings.TrimRight(value, "/")
 		}
 	}

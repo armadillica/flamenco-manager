@@ -7,6 +7,8 @@ Changelog for Flamenco Manager
 - Fixed incompatibility of "latest image" server-side event system with Firefox.
 - Limit display height of last-rendered image to 300 pixels.
 - Added `job_storage` path replacement variable to default configuration.
+- Log a warning when backslashes are used in path replacement variables. Those should not be used,
+  but forward slashes should be used for every platform.
 
 
 ## Version 2.1.0 (2018-01-04)
