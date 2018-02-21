@@ -11,6 +11,7 @@ Changelog for Flamenco Manager
   but forward slashes should be used for every platform.
 - Allow erasing idle workers from the dashboard.
 - Show 'last seen' timestamp in idle workers tooltip on the dashboard.
+- Built with Golang 1.10
 
 
 ## Version 2.1.0 (2018-01-04)
