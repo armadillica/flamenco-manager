@@ -1,7 +1,7 @@
 Changelog for Flamenco Manager
 ==============================
 
-## Version 2.1.1 (in development)
+## Version 2.1.1 (2018-01-21)
 
 - Fixed race condition in JavaScript loading.
 - Fixed incompatibility of "latest image" server-side event system with Firefox.
