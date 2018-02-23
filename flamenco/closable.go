@@ -38,7 +38,7 @@ func (closable *closable) closableDone() {
 	closable.closingMutex.Lock()
 	defer closable.closingMutex.Unlock()
 
-	log.Debugf("Closable: doneWg.Done() ok")
+	log.Debug("Closable: doneWg.Done() ok")
 	closable.doneWg.Done()
 }
 
@@ -57,7 +57,7 @@ func (closable *closable) _closableMaybeClose() {
 // and waits for all things added with closableAdd() to be "done" too.
 func (closable *closable) closableCloseAndWait() {
 	closable._closableMaybeClose()
-	log.Debugf("Closable: waiting for shutdown to finish.")
+	log.Debug("Closable: waiting for shutdown to finish.")
 	closable.doneWg.Wait()
 }
 
@@ -65,5 +65,5 @@ func (closable *closable) closableCloseAndWait() {
 // but does not waits for all things added with closableAdd() to be "done" too.
 func (closable *closable) closableCloseNotWait() {
 	closable._closableMaybeClose()
-	log.Debugf("Closable: marking as closed but NOT waiting shutdown to finish.")
+	log.Debug("Closable: marking as closed but NOT waiting shutdown to finish.")
 }
