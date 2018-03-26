@@ -65,7 +65,7 @@ func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedReque
 		return
 	}
 	logFields["current_task_status"] = task.Status
-	logFields["current_task_worker_id"] = task.WorkerID
+	logFields["current_task_worker_id"] = task.WorkerID.Hex()
 	if task.WorkerID != nil && *task.WorkerID != worker.ID {
 		log.WithFields(logFields).Warning("QueueTaskUpdateFromWorker: task update rejected, task belongs to other worker")
 		w.WriteHeader(http.StatusConflict)
