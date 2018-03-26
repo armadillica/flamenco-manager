@@ -1,6 +1,9 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.2 (in development)
+
+
 ## Version 2.1.1 (2018-01-21)
 
 - Fixed race condition in JavaScript loading.
