@@ -3,6 +3,10 @@ Changelog for Flamenco Manager
 
 ## Version 2.2 (in development)
 
+- Accept log entries for tasks that are no longer runnable. In this case the task's status and
+  activity doesn't change, but the logs are still accepted & forwarded to Flamenco Server. This
+  helps to figure out why a task failed, even when the logs are lagging behind.
+
 
 ## Version 2.1.1 (2018-01-21)
 

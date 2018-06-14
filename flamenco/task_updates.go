@@ -75,15 +75,15 @@ func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedReque
 		fmt.Fprintf(w, "Task %s is assigned to another worker.", taskID.Hex())
 		return
 	}
-	if !IsRunnableTaskStatus(task.Status) {
-		// These statuses can never be overwritten, and all task updates will be rejected.
-		log.WithFields(logFields).Warning("QueueTaskUpdateFromWorker: task update rejected, task has non-runnable status")
-		w.WriteHeader(http.StatusConflict)
-		fmt.Fprintf(w, "Task %s has status %s.", taskID.Hex(), task.Status)
-		return
-	}
 
 	WorkerPingedTask(worker.ID, tupdate.TaskID, tupdate.TaskStatus, db)
+
+	if !IsRunnableTaskStatus(task.Status) {
+		// These statuses can never be overwritten by a worker.
+		tupdate.TaskStatus = ""
+		tupdate.Activity = ""
+		log.WithFields(logFields).Debug("QueueTaskUpdateFromWorker: task has non-runnable status, ignoring new task status & activity")
+	}
 
 	tupdate.isManagerLocal = task.isManagerLocalTask()
 	if err := QueueTaskUpdate(&tupdate, db); err != nil {
