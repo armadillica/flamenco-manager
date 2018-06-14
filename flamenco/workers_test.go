@@ -337,3 +337,37 @@ func (s *WorkerTestSuite) TestAckTimeout(t *check.C) {
 	assert.Equal(t, "", found.StatusRequested)
 	assert.Equal(t, workerStatusOffline, found.Status)
 }
+
+func (s *WorkerTestSuite) TestWorkerPingedTaskEffectOnStatus(t *check.C) {
+	task := ConstructTestTask("aaaaaaaaaaaaaaaaaaaaaaaa", "sleeping")
+	if err := s.db.C("flamenco_tasks").Insert(task); err != nil {
+		t.Fatal("Unable to insert test task", err)
+	}
+	respRec, ar := WorkerTestRequest(s.workerLnx.ID, "GET", "/task")
+	s.sched.ScheduleTask(respRec, ar)
+
+	// Force the task into a non-runnable status, then ping the task again.
+	// This shouldn't change the task status.
+	if err := s.db.C("flamenco_tasks").UpdateId(task.ID,
+		bson.M{"$set": bson.M{"status": "failed"}}); err != nil {
+		t.Fatal("Unable to update test task", err)
+	}
+
+	loadTask := func() *Task {
+		dbTask := Task{}
+		if err := s.db.C("flamenco_tasks").FindId(task.ID).One(&dbTask); err != nil {
+			t.Fatal("Unable to find task in DB", err)
+		}
+		return &dbTask
+	}
+
+	prePingTimestamp := loadTask().LastWorkerPing
+	assert.NotNil(t, prePingTimestamp)
+	WorkerPingedTask(s.workerLnx.ID, task.ID, "active", s.db)
+
+	dbTask := loadTask()
+	assert.Equal(t, "failed", dbTask.Status)
+	assert.Condition(t, func() bool {
+		return dbTask.LastWorkerPing.After(*prePingTimestamp)
+	})
+}
