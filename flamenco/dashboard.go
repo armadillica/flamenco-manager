@@ -85,13 +85,17 @@ func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
 	defer mongoSess.Close()
 	db := mongoSess.DB("")
 
-	var taskCount, workerCount int
+	var taskCount, workerCount, upstreamQueueSize int
 	var err error
 	if taskCount, err = Count(db.C("flamenco_tasks")); err != nil {
 		fmt.Printf("ERROR : %s\n", err.Error())
 		return
 	}
 	if workerCount, err = Count(db.C("flamenco_workers")); err != nil {
+		fmt.Printf("ERROR : %s\n", err.Error())
+		return
+	}
+	if upstreamQueueSize, err = Count(db.C("task_update_queue")); err != nil {
 		fmt.Printf("ERROR : %s\n", err.Error())
 		return
 	}
@@ -146,6 +150,7 @@ func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
 	statusreport := StatusReport{
 		workerCount,
 		taskCount,
+		upstreamQueueSize,
 		rep.flamencoVersion,
 		workers,
 		rep.server,

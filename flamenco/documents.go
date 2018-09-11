@@ -168,11 +168,12 @@ type SettingsInMongo struct {
 
 // StatusReport is sent in response to a query on the / URL.
 type StatusReport struct {
-	NrOfWorkers int      `json:"nr_of_workers"`
-	NrOfTasks   int      `json:"nr_of_tasks"`
-	Version     string   `json:"version"`
-	Workers     []Worker `json:"workers"`
-	Server      string   `json:"server"`
+	NrOfWorkers       int      `json:"nr_of_workers"`
+	NrOfTasks         int      `json:"nr_of_tasks"`
+	UpstreamQueueSize int      `json:"upstream_queue_size"`
+	Version           string   `json:"version"`
+	Workers           []Worker `json:"workers"`
+	Server            string   `json:"server"`
 }
 
 // FileProduced is sent by the worker whenever it produces (e.g. renders)
