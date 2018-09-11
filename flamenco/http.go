@@ -78,7 +78,7 @@ func SendJSON(logprefix, method string, url *url.URL,
 
 	if resp.StatusCode >= 300 {
 		if resp.StatusCode != 404 {
-			logger = logger.WithField("body", body)
+			logger = logger.WithField("body", string(body))
 		}
 		logger.Warningf("%s: Error POSTing", logprefix)
 		return fmt.Errorf("%s: Error %d POSTing to %s", logprefix, resp.StatusCode, url)
