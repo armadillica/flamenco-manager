@@ -58,8 +58,8 @@ tr.status-testing td, tr.status-testing th { background-color: #b56b8d; }
 tr:nth-of-type(odd).status-testing td, tr:nth-of-type(odd).status-testing th { background-color: #ce92ae; }
 
 dl.dl-horizontal { margin: 0; }
-.dl-horizontal dt { width: 100px; }
-.dl-horizontal dd { margin-left: 120px; }
+.dl-horizontal dt { width: 120px; }
+.dl-horizontal dd { margin-left: 140px; }
 
 .small-last-rendered-image {
     max-width: 100%;
