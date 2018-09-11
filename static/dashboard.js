@@ -59,7 +59,7 @@ function load_workers() {
         $dl.append($('<dd>').text(info.nr_of_tasks));
         $dl.append($('<dt>')
             .text('Upstream Queue')
-            .attr('title', 'Number of task updates queued for sending to Flamenco Manager.'));
+            .attr('title', 'Number of task updates queued for sending to Flamenco Server.'));
         $dl.append($('<dd>').text(info.upstream_queue_size));
         $dl.append($('<dt>').text('Server'));
         $dd = $('<dd>');
