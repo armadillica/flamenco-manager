@@ -27,7 +27,10 @@ func EnterSetupMode(config *flamenco.Conf, flamencoVersion string, router *mux.R
 	for _, url := range urls {
 		setupURL, err := url.Parse(webroot)
 		if err != nil {
-			log.Warning("Unable to append web root %s to URL %s: %s", webroot, setupURL, err)
+			log.WithFields(log.Fields{
+				"webroot": webroot,
+				"url":     setupURL.String(),
+			}).WithError(err).Warning("Unable to append web root to URL", webroot, setupURL, err)
 		}
 		log.Infof("  - %s", setupURL)
 	}
