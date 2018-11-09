@@ -242,7 +242,7 @@ func StoreNewWorker(winfo *Worker, db *mgo.Database) error {
 
 	// Store it in MongoDB after hashing the password and assigning an ID.
 	winfo.ID = bson.NewObjectId()
-	winfo.HashedSecret, err = bcrypt.GenerateFromPassword([]byte(winfo.Secret), bcrypt.DefaultCost)
+	winfo.HashedSecret, err = bcrypt.GenerateFromPassword([]byte(winfo.Secret), bcrypt.MinCost)
 	if err != nil {
 		log.WithError(err).Error("Unable to hash password")
 		return err
