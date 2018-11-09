@@ -330,66 +330,6 @@ func WorkerCount(db *mgo.Database) int {
 	return count
 }
 
-// WorkerMayRunTask tells the worker whether it's allowed to keep running the given task.
-func WorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest,
-	db *mgo.Database, taskID bson.ObjectId) {
-
-	worker, logFields := findWorkerForHTTP(w, r, db)
-	logFields["task_id"] = taskID.Hex()
-
-	if worker.StatusRequested != "" {
-		logFields["worker_status_requested"] = worker.StatusRequested
-	}
-	worker.SetAwake(db)
-	worker.Seen(&r.Request, db)
-	log.WithFields(logFields).Debug("WorkerMayRunTask: asking if it is allowed to keep running task")
-
-	response := MayKeepRunningResponse{
-		StatusRequested: worker.StatusRequested,
-	}
-
-	// Get the task and check its status.
-	task := Task{}
-	if err := db.C("flamenco_tasks").FindId(taskID).One(&task); err != nil {
-		log.WithFields(logFields).Warning("WorkerMayRunTask: unable to find task")
-		response.Reason = fmt.Sprintf("unable to find task %s", taskID.Hex())
-	} else if task.WorkerID != nil && *task.WorkerID != worker.ID {
-		logFields["other_worker"] = task.WorkerID.Hex()
-		log.WithFields(logFields).Warning("WorkerMayRunTask: task was assigned to other worker")
-		response.Reason = fmt.Sprintf("task %s reassigned to another worker", taskID.Hex())
-	} else if !IsRunnableTaskStatus(task.Status) {
-		logFields["task_status"] = task.Status
-		log.WithFields(logFields).Warning("WorkerMayRunTask: task is in not-runnable status, worker will stop")
-		response.Reason = fmt.Sprintf("task %s in non-runnable status %s", taskID.Hex(), task.Status)
-	} else if !workerStatusRunnable[worker.StatusRequested] {
-		log.WithFields(logFields).Warning("WorkerMayRunTask: worker was requested to go to non-active status; will stop its current task")
-		response.Reason = fmt.Sprintf("worker status change to %s requested", worker.StatusRequested)
-	} else {
-		response.MayKeepRunning = true
-		WorkerPingedTask(worker.ID, taskID, "", db)
-	}
-
-	// Send the response
-	w.Header().Set("Content-Type", "application/json")
-	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(response); err != nil {
-		log.WithFields(logFields).WithError(err).Warning("WorkerMayRunTask: unable to send response to worker")
-		return
-	}
-}
-
-// IsRunnableTaskStatus returns whether the given status is considered "runnable".
-func IsRunnableTaskStatus(status string) bool {
-	runnableStatuses := map[string]bool{
-		"active":             true,
-		"claimed-by-manager": true,
-		"queued":             true,
-	}
-
-	runnable, found := runnableStatuses[status]
-	return runnable && found
-}
-
 // WorkerPingedTask marks the task as pinged by the worker.
 // If worker_id is not nil, sets the worker_id field of the task. Otherwise doesn't
 // touch that field and only updates last_worker_ping.

@@ -93,7 +93,7 @@ func httpWorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 		return
 	}
 
-	flamenco.WorkerMayRunTask(w, r, mongoSess.DB(""), bson.ObjectIdHex(taskID))
+	taskScheduler.WorkerMayRunTask(w, r, mongoSess.DB(""), bson.ObjectIdHex(taskID))
 }
 
 func httpWorkerAckStatusChange(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
