@@ -52,15 +52,11 @@ func (s *TaskUpdatesTestSuite) TestCancelRunningTasks(t *check.C) {
 		t.Fatal("Unable to insert test task 2", err)
 	}
 
-	timeout := TimeoutAfter(1 * time.Second)
-	defer close(timeout)
-
 	// Mock that the task with highest priority was actually canceled on the Server.
 	httpmock.RegisterResponder(
 		"POST",
 		"http://localhost:51234/api/flamenco/managers/5852bc5198377351f95d103e/task-update-batch",
 		func(req *http.Request) (*http.Response, error) {
-			defer func() { timeout <- false }()
 			log.Info("POST from manager received on server, sending back TaskUpdateResponse.")
 
 			resp := TaskUpdateResponse{
@@ -76,17 +72,24 @@ func (s *TaskUpdatesTestSuite) TestCancelRunningTasks(t *check.C) {
 	s.config.CancelTaskFetchInterval = 300 * time.Millisecond
 
 	tup := CreateTaskUpdatePusher(&s.config, s.upstream, s.session)
-	defer tup.Close()
-
-	go tup.Go()
-
-	timedout := <-timeout
-	assert.False(t, timedout, "HTTP POST to Flamenco Server not performed")
-
-	// Give the tup.Go() coroutine (and subsequent calls) time to run.
-	// the "timeout <- false" call in the responder is triggered before
-	// that function is done working.
+	tup.Go()
+	// Give the tup.Go() coroutine (and subsequent calls) time to run
+	// and actually start running the pusher timer.
 	time.Sleep(100 * time.Millisecond)
+
+	tupDone := make(chan bool)
+	go func() {
+		tup.Close()
+		tupDone <- true
+	}()
+
+	select {
+	case <-tupDone:
+		break
+	case <-time.After(1 * time.Second):
+		assert.FailNow(t, "Go() call took too much time")
+	}
+	assert.Equal(t, 1, httpmock.GetTotalCallCount(), "HTTP POST to Flamenco Server not performed")
 
 	// Check that one task was canceled and the other was not.
 	taskDb := Task{}

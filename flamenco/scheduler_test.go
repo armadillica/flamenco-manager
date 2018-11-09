@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"time"
 
 	"github.com/armadillica/flamenco-manager/flamenco/httperror"
 
@@ -187,15 +186,11 @@ func (s *SchedulerTestSuite) TestSchedulerVerifyUpstreamCanceled(t *check.C) {
 		t.Fatal("Unable to insert test task 2", err)
 	}
 
-	timeout := TimeoutAfter(1 * time.Second)
-	defer close(timeout)
-
 	// Mock that the task with highest priority was actually canceled on the Server.
 	httpmock.RegisterResponder(
 		"GET",
 		"http://localhost:51234/api/flamenco/tasks/2aaaaaaaaaaaaaaaaaaaaaaa",
 		func(req *http.Request) (*http.Response, error) {
-			defer func() { timeout <- false }()
 			log.Info("GET from manager received on server, sending back updated task.")
 
 			// same task, but with changed status.
@@ -211,8 +206,7 @@ func (s *SchedulerTestSuite) TestSchedulerVerifyUpstreamCanceled(t *check.C) {
 	ar := &auth.AuthenticatedRequest{Request: *request, Username: s.workerLnx.ID.Hex()}
 	s.sched.ScheduleTask(respRec, ar)
 
-	timedout := <-timeout
-	assert.False(t, timedout, "HTTP GET to Flamenco Server not performed")
+	assert.Equal(t, 1, httpmock.GetTotalCallCount(), "HTTP GET to Flamenco Server not performed")
 
 	// Check the response JSON
 	jsonTask := Task{}
@@ -239,15 +233,11 @@ func (s *SchedulerTestSuite) TestSchedulerVerifyUpstreamPrioChange(t *check.C) {
 		t.Fatal("Unable to insert test task 2", err)
 	}
 
-	timeout := TimeoutAfter(1 * time.Second)
-	defer close(timeout)
-
 	// Mock that the task with highest priority was actually canceled on the Server.
 	httpmock.RegisterResponder(
 		"GET",
 		"http://localhost:51234/api/flamenco/tasks/2aaaaaaaaaaaaaaaaaaaaaaa",
 		func(req *http.Request) (*http.Response, error) {
-			defer func() { timeout <- false }()
 			log.Info("GET from manager received on server, sending back updated task.")
 
 			// same task, but with changed status.
@@ -263,8 +253,7 @@ func (s *SchedulerTestSuite) TestSchedulerVerifyUpstreamPrioChange(t *check.C) {
 	ar := &auth.AuthenticatedRequest{Request: *request, Username: s.workerLnx.ID.Hex()}
 	s.sched.ScheduleTask(respRec, ar)
 
-	timedout := <-timeout
-	assert.False(t, timedout, "HTTP GET to Flamenco Server not performed")
+	assert.Equal(t, 1, httpmock.GetTotalCallCount(), "HTTP GET to Flamenco Server not performed")
 
 	// Check the response JSON
 	jsonTask := Task{}
@@ -297,15 +286,11 @@ func (s *SchedulerTestSuite) TestSchedulerVerifyUpstreamDeleted(t *check.C) {
 		t.Fatal("Unable to insert test task 2", err)
 	}
 
-	timeout := TimeoutAfter(1 * time.Second)
-	defer close(timeout)
-
 	// Mock that the task with highest priority was actually canceled on the Server.
 	httpmock.RegisterResponder(
 		"GET",
 		"http://localhost:51234/api/flamenco/tasks/2aaaaaaaaaaaaaaaaaaaaaaa",
 		func(req *http.Request) (*http.Response, error) {
-			defer func() { timeout <- false }()
 			log.Info("GET from manager received on server, sending back 404.")
 			return httpmock.NewStringResponse(404, ""), nil
 		},
@@ -317,8 +302,7 @@ func (s *SchedulerTestSuite) TestSchedulerVerifyUpstreamDeleted(t *check.C) {
 	ar := &auth.AuthenticatedRequest{Request: *request, Username: s.workerLnx.ID.Hex()}
 	s.sched.ScheduleTask(respRec, ar)
 
-	timedout := <-timeout
-	assert.False(t, timedout, "HTTP GET to Flamenco Server not performed")
+	assert.Equal(t, 1, httpmock.GetTotalCallCount(), "HTTP GET to Flamenco Server not performed")
 
 	// Check the response JSON
 	jsonTask := Task{}

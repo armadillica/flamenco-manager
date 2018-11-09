@@ -162,8 +162,7 @@ func startSSDPServer() *gossdp.Ssdp {
 }
 
 func shutdown(signum os.Signal) {
-	// Force shutdown after a bit longer than the HTTP server timeout.
-	timeout := flamenco.TimeoutAfter(17 * time.Second)
+	shutdownDone := make(chan bool)
 
 	go func() {
 		log.WithField("signal", signum).Info("Signal received, shutting down.")
@@ -205,12 +204,17 @@ func shutdown(signum os.Signal) {
 			session.Close()
 		}
 
-		timeout <- false
+		shutdownDone <- true
 	}()
 
-	if <-timeout {
+	// Force shutdown after a bit longer than the HTTP server timeout.
+	select {
+	case <-shutdownDone:
+		break
+	case <-time.After(17 * time.Second):
 		log.Error("Shutdown forced, stopping process.")
 		os.Exit(-2)
+
 	}
 
 	log.Warning("Shutdown complete, stopping process.")
