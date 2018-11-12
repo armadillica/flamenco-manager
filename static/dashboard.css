@@ -56,6 +56,8 @@ tr:nth-of-type(odd).status-timeout td, tr:nth-of-type(odd).status-timeout th { b
 tr.status-offline td, tr.status-offline th { color: #bbb; }
 tr.status-testing td, tr.status-testing th { background-color: #b56b8d; }
 tr:nth-of-type(odd).status-testing td, tr:nth-of-type(odd).status-testing th { background-color: #ce92ae; }
+tr.status-error td, tr.status-error th { background-color: #9b5555; }
+tr:nth-of-type(odd).status-error td, tr:nth-of-type(odd).status-error th { background-color: #925959; }
 
 dl.dl-horizontal { margin: 0; }
 .dl-horizontal dt { width: 120px; }

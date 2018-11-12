@@ -27,6 +27,7 @@ const (
 	workerStatusTesting  = "testing"
 	workerStatusTimeout  = "timeout"
 	workerStatusAsleep   = "asleep" // listens to a wakeup call, but performs no tasks.
+	workerStatusError    = "error"  // found something wrong with itself, may retry later.
 )
 
 // Command is an executable part of a Task

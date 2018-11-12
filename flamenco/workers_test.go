@@ -328,3 +328,17 @@ func (s *WorkerTestSuite) TestWorkerPingedTaskEffectOnStatus(t *check.C) {
 		return dbTask.LastWorkerPing.After(*prePingTimestamp)
 	})
 }
+
+func (s *WorkerTestSuite) TestErrorStatus(t *check.C) {
+	err := s.workerLnx.AckStatusChange(workerStatusError, s.db)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "", s.workerLnx.StatusRequested)
+	assert.Equal(t, workerStatusError, s.workerLnx.Status)
+
+	found := Worker{}
+	err = s.db.C("flamenco_workers").FindId(s.workerLnx.ID).One(&found)
+	assert.Nil(t, err, "Unable to find workerLnx")
+	assert.Equal(t, "", found.StatusRequested)
+	assert.Equal(t, workerStatusError, found.Status)
+}
