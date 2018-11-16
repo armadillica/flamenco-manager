@@ -114,36 +114,60 @@ func (worker *Worker) AckTimeout(db *mgo.Database) error {
 	if worker.Status != workerStatusTimeout {
 		return fmt.Errorf("Worker status is not %q", workerStatusTimeout)
 	}
-	return worker.AckStatusChange(workerStatusOffline, db)
+	logger := log.WithFields(log.Fields{
+		"old_status": worker.Status,
+		"new_status": workerStatusOffline,
+		"worker":     worker.Identifier(),
+	})
+
+	logger.Debug("Somebody ACKed the timeout state of a worker")
+
+	worker.Status = workerStatusOffline
+	worker.StatusRequested = ""
+
+	return db.C("flamenco_workers").UpdateId(worker.ID, M{
+		"$set": M{"status": workerStatusOffline},
+	})
+
 }
 
 // Timeout marks the worker as timed out.
 func (worker *Worker) Timeout(db *mgo.Database) {
-	logFields := log.Fields{
-		"worker":    worker.Identifier(),
-		"worker_id": worker.ID.Hex(),
-	}
-	log.WithFields(logFields).Warning("Worker timed out")
-
-	err := worker.SetStatus(workerStatusTimeout, db)
-	if err != nil {
-		log.WithFields(logFields).WithError(err).Error("Unable to set worker status")
-	}
+	worker.setTimeoutStatus(log.Fields{}, db)
 }
 
 // TimeoutOnTask marks the worker as timed out on a given task.
 // The task is just used for logging.
 func (worker *Worker) TimeoutOnTask(task *Task, db *mgo.Database) {
 	logFields := log.Fields{
-		"worker":    worker.Identifier(),
-		"worker_id": worker.ID.Hex(),
-		"task_id":   task.ID.Hex(),
+		"task_id": task.ID.Hex(),
 	}
-	log.WithFields(logFields).Warning("Worker timed out on task")
+	worker.setTimeoutStatus(logFields, db)
+}
 
-	err := worker.SetStatus(workerStatusTimeout, db)
+// setTimeoutStatus sets the requested status to the current status, and
+// sets the current status to "timeout". This way the worker is requested
+// to go back to its current state when it comes back online.
+func (worker *Worker) setTimeoutStatus(logFields log.Fields, db *mgo.Database) {
+	moreFields := log.Fields{
+		"old_status": worker.Status,
+		"new_status": workerStatusTimeout,
+		"worker":     worker.Identifier(),
+		"worker_id":  worker.ID.Hex(),
+	}
+	logger := log.WithFields(moreFields).WithFields(logFields)
+	logger.Warning("Worker timed out")
+
+	updates := M{"status": workerStatusTimeout}
+	if worker.StatusRequested == "" {
+		updates["status_requested"] = worker.Status
+		worker.StatusRequested = worker.Status
+	}
+	worker.Status = workerStatusTimeout
+
+	err := db.C("flamenco_workers").UpdateId(worker.ID, M{"$set": updates})
 	if err != nil {
-		log.WithFields(logFields).WithError(err).Error("Unable to set worker status")
+		logger.WithError(err).Error("Unable to set worker status")
 	}
 }
 

@@ -137,6 +137,7 @@ func (ttc *TimeoutChecker) checkWorkers(db *mgo.Database) {
 		"_id":      1,
 		"nickname": 1,
 		"address":  1,
+		"status":   1,
 	}
 	if err := db.C("flamenco_workers").Find(query).Select(projection).All(&timedoutWorkers); err != nil {
 		log.Warningf("Error finding timed-out workers: %s", err)

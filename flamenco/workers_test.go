@@ -258,6 +258,20 @@ func (s *WorkerTestSuite) TestAckStatusChange(t *check.C) {
 	assert.Equal(t, workerStatusAsleep, found.Status)
 }
 
+func (s *WorkerTestSuite) TestTimeout(t *check.C) {
+	s.workerLnx.SetStatus(workerStatusAsleep, s.db)
+	s.workerLnx.Timeout(s.db)
+
+	assert.Equal(t, workerStatusAsleep, s.workerLnx.StatusRequested)
+	assert.Equal(t, workerStatusTimeout, s.workerLnx.Status)
+
+	found := Worker{}
+	err := s.db.C("flamenco_workers").FindId(s.workerLnx.ID).One(&found)
+	assert.Nil(t, err, "Unable to find workerLnx")
+	assert.Equal(t, workerStatusAsleep, found.StatusRequested)
+	assert.Equal(t, workerStatusTimeout, found.Status)
+}
+
 func (s *WorkerTestSuite) TestStatusChangeNotRequestable(t *check.C) {
 	teststatus := func(status string) {
 		err := s.workerLnx.RequestStatusChange(status, s.db)
