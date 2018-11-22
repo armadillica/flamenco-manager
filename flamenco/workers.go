@@ -456,7 +456,8 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 // WorkerSignOn allows a Worker to register a new list of supported task types.
 // It also clears the worker's "current" task from the dashboard, so that it's clear that the
 // now-active worker is not actually working on that task.
-func WorkerSignOn(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.Database) {
+func WorkerSignOn(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.Database,
+	notifier *UpstreamNotifier) {
 	worker, logFields := findWorkerForHTTP(w, r, db)
 	log.WithFields(logFields).Info("Worker signed on")
 
@@ -473,8 +474,10 @@ func WorkerSignOn(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.D
 		log.WithFields(logFields).Info("Worker changed nickname")
 		updateSet["nickname"] = winfo.Nickname
 	}
-	if len(winfo.SupportedTaskTypes) > 0 {
+	if len(winfo.SupportedTaskTypes) > 0 && !Equal(winfo.SupportedTaskTypes, worker.SupportedTaskTypes) {
 		updateSet["supported_task_types"] = winfo.SupportedTaskTypes
+		log.WithFields(logFields).WithField("task_types", winfo.SupportedTaskTypes).Info("Worker changed supported task types")
+		notifier.SendTaskTypesNotification()
 	}
 
 	updateUnset := bson.M{
@@ -536,4 +539,18 @@ func WorkerGetStatusChange(w http.ResponseWriter, r *auth.AuthenticatedRequest, 
 	}
 
 	log.WithFields(logFields).Info("sent requested status change to worker")
+}
+
+// Equal tells whether a and b contain the same elements.
+// A nil argument is equivalent to an empty slice.
+func Equal(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }

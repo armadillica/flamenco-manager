@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"time"
 
 	auth "github.com/abbot/go-http-auth"
 	log "github.com/sirupsen/logrus"
@@ -23,6 +24,7 @@ type WorkerTestSuite struct {
 	db       *mgo.Database
 	upstream *UpstreamConnection
 	sched    *TaskScheduler
+	notifier *UpstreamNotifier
 }
 
 var _ = check.Suite(&WorkerTestSuite{})
@@ -36,6 +38,7 @@ func (s *WorkerTestSuite) SetUpTest(c *check.C) {
 
 	s.upstream = ConnectUpstream(&config, session)
 	s.sched = CreateTaskScheduler(&config, s.upstream, session)
+	s.notifier = CreateUpstreamNotifier(&config, s.upstream, session)
 
 	// Store workers in DB, on purpose in the opposite order as the tasks.
 	s.workerLnx = Worker{
@@ -93,11 +96,15 @@ func WorkerTestRequestWithBody(workerID bson.ObjectId, body io.Reader, method, u
 }
 
 func (s *WorkerTestSuite) TestWorkerSignOn(t *check.C) {
+	serverUpdateMethod := "POST"
+	serverUpdateURL := "http://localhost:51234/api/flamenco/managers/5852bc5198377351f95d103e/update"
+	serverUpdateKey := serverUpdateMethod + " " + serverUpdateURL
+
 	signon := func(body string) {
 		respRec, ar := WorkerTestRequestWithBody(
 			s.workerLnx.ID, strings.NewReader(body),
 			"POST", "/sign-on")
-		WorkerSignOn(respRec, ar, s.db)
+		WorkerSignOn(respRec, ar, s.db, s.notifier)
 		assert.Equal(t, 204, respRec.Code)
 	}
 
@@ -112,24 +119,56 @@ func (s *WorkerTestSuite) TestWorkerSignOn(t *check.C) {
 	getworker()
 	assert.Equal(t, []string{"sleeping"}, found.SupportedTaskTypes)
 	assert.Equal(t, "workerLnx", found.Nickname)
+	assert.Equal(t, 0, httpmock.GetCallCountInfo()[serverUpdateKey],
+		"Unexpected %s request to %s", serverUpdateMethod, serverUpdateURL)
 
 	// Only change nickname
 	signon("{\"nickname\": \"new-and-sparkly\"}")
 	getworker()
 	assert.Equal(t, []string{"sleeping"}, found.SupportedTaskTypes)
 	assert.Equal(t, "new-and-sparkly", found.Nickname)
+	assert.Equal(t, 0, httpmock.GetCallCountInfo()[serverUpdateKey],
+		"Unexpected %s request to %s", serverUpdateMethod, serverUpdateURL)
 
 	// Only change supported task types
+	callMade := make(chan bool, 1)
+	httpmock.RegisterResponder(
+		serverUpdateMethod, serverUpdateURL,
+		func(req *http.Request) (*http.Response, error) {
+			defer func() { callMade <- true }()
+			// TODO: test contents of request
+			log.Info("HTTP POST to Flamenco was performed.")
+			return httpmock.NewStringResponse(204, ""), nil
+		},
+	)
 	signon("{\"supported_task_types\": [\"exr-merge\", \"unknown\"]}")
 	getworker()
 	assert.Equal(t, []string{"exr-merge", "unknown"}, found.SupportedTaskTypes)
 	assert.Equal(t, "new-and-sparkly", found.Nickname)
+
+	select {
+	case <-callMade:
+		break
+	case <-time.After(250 * time.Millisecond):
+		assert.Fail(t, "Timeout waiting for notification")
+	}
+	assert.Equal(t, 1, httpmock.GetCallCountInfo()[serverUpdateKey],
+		"%s request to %s not made", serverUpdateMethod, serverUpdateURL)
 
 	// Change both
 	signon("{\"supported_task_types\": [\"blender-render\"], \"nickname\": \"another\"}")
 	getworker()
 	assert.Equal(t, []string{"blender-render"}, found.SupportedTaskTypes)
 	assert.Equal(t, "another", found.Nickname)
+
+	select {
+	case <-callMade:
+		break
+	case <-time.After(250 * time.Millisecond):
+		assert.Fail(t, "Timeout waiting for notification")
+	}
+	assert.Equal(t, 2, httpmock.GetCallCountInfo()[serverUpdateKey],
+		"%s request to %s not made", serverUpdateMethod, serverUpdateURL)
 
 	// Test that the current task is cleared.
 	assert.Nil(t, s.db.C("flamenco_workers").UpdateId(
@@ -141,6 +180,7 @@ func (s *WorkerTestSuite) TestWorkerSignOn(t *check.C) {
 	signon("{}")
 	getworker()
 	assert.Nil(t, found.CurrentTask)
+
 }
 
 func (s *WorkerTestSuite) TestWorkerSignOff(t *check.C) {

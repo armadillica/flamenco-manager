@@ -140,16 +140,18 @@ type Worker struct {
 	StatusRequested string `bson:"status_requested" json:"status_requested"`
 }
 
-// StartupNotification sent to upstream Flamenco Server upon startup. This is a combination
-// of settings (see settings.go) and information from the database.
-type StartupNotification struct {
+// UpstreamNotification sent to upstream Flamenco Server upon startup and when
+// workers change their task types. This is a combination of settings (see
+// settings.go) and information from the database.
+type UpstreamNotification struct {
 	// Settings
 	ManagerURL               string                       `json:"manager_url"`
 	VariablesByVarname       map[string]map[string]string `json:"variables"`
 	PathReplacementByVarname map[string]map[string]string `json:"path_replacement"`
 
 	// From our local database
-	NumberOfWorkers int `json:"nr_of_workers"`
+	NumberOfWorkers int      `json:"nr_of_workers"`
+	WorkerTaskTypes []string `json:"worker_task_types"`
 }
 
 // MayKeepRunningResponse is sent to workers to indicate whether they can keep running their task.

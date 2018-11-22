@@ -117,7 +117,7 @@ func httpWorkerSignOn(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 	mongoSess := session.Copy()
 	defer mongoSess.Close()
 
-	flamenco.WorkerSignOn(w, r, mongoSess.DB(""))
+	flamenco.WorkerSignOn(w, r, mongoSess.DB(""), upstreamNotifier)
 }
 
 func httpWorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest) {

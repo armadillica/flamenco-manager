@@ -44,8 +44,8 @@ func (closable *closable) closableDone() {
 
 // _closableMaybeClose only closes the channel if it wasn't closed yet.
 func (closable *closable) _closableMaybeClose() {
-	closable.closingMutex.Lock()
-	defer closable.closingMutex.Unlock()
+	closable.closableClosingLock()
+	defer closable.closableClosingUnlock()
 
 	if !closable.isClosed {
 		closable.isClosed = true
@@ -66,4 +66,12 @@ func (closable *closable) closableCloseAndWait() {
 func (closable *closable) closableCloseNotWait() {
 	closable._closableMaybeClose()
 	log.Debug("Closable: marking as closed but NOT waiting shutdown to finish.")
+}
+
+func (closable *closable) closableClosingLock() {
+	closable.closingMutex.Lock()
+}
+
+func (closable *closable) closableClosingUnlock() {
+	closable.closingMutex.Unlock()
 }

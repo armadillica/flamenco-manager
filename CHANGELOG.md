@@ -7,6 +7,8 @@ Changelog for Flamenco Manager
   activity doesn't change, but the logs are still accepted & forwarded to Flamenco Server. This
   helps to figure out why a task failed, even when the logs are lagging behind.
 - Include upstream queue size on dashboard.
+- Send the set of task types supported by our workers to Flamenco Server. This will allow it to
+  tailor some variable jobs to our capabilities.
 
 
 ## Version 2.1.1 (2018-01-21)
