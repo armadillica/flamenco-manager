@@ -23,7 +23,7 @@ func Timer(name string, sleepDuration, initialDelay time.Duration, closable *clo
 		for {
 			select {
 			case <-closable.doneChan:
-				log.Infof("Timer '%s' goroutine shutting down.", name)
+				log.WithField("timer_name", name).Debug("timer shutting down")
 				return
 			default:
 				// Only sleep a little bit, so that we can check 'done' quite often.
