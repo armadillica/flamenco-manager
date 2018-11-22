@@ -202,7 +202,7 @@ func (worker *Worker) SeenEx(r *http.Request, db *mgo.Database, set bson.M, unse
 		set["address"] = remoteHost
 	}
 
-	var userAgent string = r.Header.Get("User-Agent")
+	userAgent := r.Header.Get("User-Agent")
 	if worker.Software != userAgent {
 		set["software"] = userAgent
 	}
