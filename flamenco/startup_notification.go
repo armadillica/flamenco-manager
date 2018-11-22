@@ -14,17 +14,17 @@ const startupNotificationInitialDelay = 500 * time.Millisecond
 // Duration between consecutive retries of sending the startup notification.
 const startupNotificationRetry = 30 * time.Second
 
-// StartupNotifier sends a signal to Flamenco Server that we've started.
-type StartupNotifier struct {
+// UpstreamNotifier sends a signal to Flamenco Server that we've started or changed configuration.
+type UpstreamNotifier struct {
 	closable
 	config   *Conf
 	upstream *UpstreamConnection
 	session  *mgo.Session
 }
 
-// CreateStartupNotifier creates a new startup notifier.
-func CreateStartupNotifier(config *Conf, upstream *UpstreamConnection, session *mgo.Session) *StartupNotifier {
-	notifier := StartupNotifier{
+// CreateUpstreamNotifier creates a new notifier.
+func CreateUpstreamNotifier(config *Conf, upstream *UpstreamConnection, session *mgo.Session) *UpstreamNotifier {
+	notifier := UpstreamNotifier{
 		makeClosable(),
 		config,
 		upstream,
@@ -35,15 +35,15 @@ func CreateStartupNotifier(config *Conf, upstream *UpstreamConnection, session *
 }
 
 // Close performs a clean shutdown.
-func (sn *StartupNotifier) Close() {
-	log.Debugf("StartupNotifier: shutting down, waiting for shutdown to complete.")
+func (sn *UpstreamNotifier) Close() {
+	log.Debugf("UpstreamNotifier: shutting down, waiting for shutdown to complete.")
 	sn.closableCloseAndWait()
-	log.Info("StartupNotifier: shutdown complete.")
+	log.Info("UpstreamNotifier: shutdown complete.")
 }
 
-// Go sends a StartupNotification document to upstream Flamenco Server.
+// SendStartupNotification sends a StartupNotification document to upstream Flamenco Server.
 // Keeps trying in a goroutine until the notification was succesful.
-func (sn *StartupNotifier) Go() {
+func (sn *UpstreamNotifier) SendStartupNotification() {
 	notification := StartupNotification{
 		ManagerURL:               sn.config.OwnURL,
 		VariablesByVarname:       sn.config.VariablesByVarname,
@@ -66,7 +66,7 @@ func (sn *StartupNotifier) Go() {
 
 		db := mongoSession.DB("")
 
-		timer := Timer("StartupNotifier", startupNotificationRetry,
+		timer := Timer("UpstreamNotifier", startupNotificationRetry,
 			startupNotificationInitialDelay, &sn.closable)
 
 		for _ = range timer {

@@ -38,7 +38,7 @@ var taskScheduler *flamenco.TaskScheduler
 var taskUpdatePusher *flamenco.TaskUpdatePusher
 var timeoutChecker *flamenco.TimeoutChecker
 var taskCleaner *flamenco.TaskCleaner
-var startupNotifier *flamenco.StartupNotifier
+var upstreamNotifier *flamenco.UpstreamNotifier
 var httpServer *http.Server
 var latestImageSystem *flamenco.LatestImageSystem
 var ssdp *gossdp.Ssdp
@@ -307,7 +307,7 @@ func normalMode() (*mux.Router, error) {
 	}).Info("Starting up subsystems.")
 
 	upstream = flamenco.ConnectUpstream(&config, session)
-	startupNotifier = flamenco.CreateStartupNotifier(&config, upstream, session)
+	upstreamNotifier = flamenco.CreateUpstreamNotifier(&config, upstream, session)
 	taskScheduler = flamenco.CreateTaskScheduler(&config, upstream, session)
 	taskUpdatePusher = flamenco.CreateTaskUpdatePusher(&config, upstream, session)
 	timeoutChecker = flamenco.CreateTimeoutChecker(&config, session)
@@ -330,7 +330,7 @@ func normalMode() (*mux.Router, error) {
 	router.HandleFunc("/sign-off", workerAuthenticator.Wrap(httpWorkerSignOff)).Methods("POST")
 	router.HandleFunc("/kick", httpKick)
 
-	startupNotifier.Go()
+	upstreamNotifier.SendStartupNotification()
 	taskUpdatePusher.Go()
 	timeoutChecker.Go()
 	taskCleaner.Go()

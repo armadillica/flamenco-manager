@@ -11,11 +11,11 @@ import (
 	httpmock "gopkg.in/jarcoal/httpmock.v1"
 )
 
-type StartupNotificationTestSuite struct{}
+type UpstreamNotificationTestSuite struct{}
 
-var _ = check.Suite(&StartupNotificationTestSuite{})
+var _ = check.Suite(&UpstreamNotificationTestSuite{})
 
-func (s *StartupNotificationTestSuite) TestStartupNotification(t *check.C) {
+func (s *UpstreamNotificationTestSuite) TestStartupNotification(t *check.C) {
 	config := GetTestConfig()
 	session := MongoSession(&config)
 
@@ -42,8 +42,8 @@ func (s *StartupNotificationTestSuite) TestStartupNotification(t *check.C) {
 	upstream := ConnectUpstream(&config, session)
 	defer upstream.Close()
 
-	notifier := CreateStartupNotifier(&config, upstream, session)
-	notifier.Go()
+	notifier := CreateUpstreamNotifier(&config, upstream, session)
+	notifier.SendStartupNotification()
 	defer notifier.Close()
 
 	timedout := <-timeout
