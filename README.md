@@ -11,7 +11,6 @@ To run Flamenco Manager for the first time, follow these steps:
 
 0. Install [ImageMagick](https://www.imagemagick.org/script/download.php) and make sure that the
    `convert` command can be found on `$PATH`.
-0. Install [FFmpeg](https://ffmpeg.org/) if you want to use video encoding tasks.
 1. Download [Flamenco Manager](https://www.flamenco.io/download/) for your platform.
 2. Extract the downloaded file.
 3. Run `./flamenco-manager -setup` (Linux/macOS) or `flamenco-manager.exe -setup` (Windows).
