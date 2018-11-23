@@ -11,6 +11,7 @@ To run Flamenco Manager for the first time, follow these steps:
 
 0. Install [ImageMagick](https://www.imagemagick.org/script/download.php) and make sure that the
    `convert` command can be found on `$PATH`.
+0. Install [FFmpeg](https://ffmpeg.org/) if you want to use video encoding tasks.
 1. Download [Flamenco Manager](https://www.flamenco.io/download/) for your platform.
 2. Extract the downloaded file.
 3. Run `./flamenco-manager -setup` (Linux/macOS) or `flamenco-manager.exe -setup` (Windows).
@@ -19,9 +20,9 @@ To run Flamenco Manager for the first time, follow these steps:
 5. Link Flamenco Manager to Blender Cloud by following the steps in the web interface.
 6. Configure Flamenco Manager via the web interface. Update the variables and path replacement
    variables for your render farm; the `blender` variable should point to the Blender executable
-   where it can be found *on the workers*. The path replacement variables allow you to set different
-   paths for both Clients (like the Blender Cloud Add-on) and Workers, given their respective
-   platforms.
+   where it can be found *on the workers*, and similar for the `ffmpeg` variable.
+   The path replacement variables allow you to set different paths for both Clients (like the
+   Blender Cloud Add-on) and Workers, given their respective platforms.
 7. Once you have completed configuration, restart Flamenco Manager through the web interface. It
    will now run in normal (i.e. non-setup) mode.
 

@@ -14,6 +14,10 @@ variables:
         windows: c:/temp/blender.exe
         linux: /opt/myblenderbuild/blender
         darwin: /opt/myblenderbuild/blender
+    ffmpeg:
+        windows: xxx
+        linux: /usr/bin/ffmpeg
+        darwin: xxx
 
 path_replacement:
     render:

@@ -74,6 +74,10 @@ variables:
         windows: c:/temp/blender.exe --enable-new-depsgraph --factory-startup
         linux: /opt/myblenderbuild/blender --enable-new-depsgraph --factory-startup
         darwin: /opt/myblenderbuild/blender --enable-new-depsgraph --factory-startup
+    ffmpeg:
+        windows: c:/temp/ffmpeg.exe
+        linux: /usr/bin/ffmpeg
+        darwin: /Applications/ffmpeg/ffmpeg
 
 # Two-way translations of POSIX-style paths.
 path_replacement:
