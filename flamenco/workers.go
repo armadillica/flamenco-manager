@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"time"
 
 	auth "github.com/abbot/go-http-auth"
 	log "github.com/sirupsen/logrus"
@@ -394,9 +393,9 @@ func WorkerPingedTask(workerID bson.ObjectId, taskID bson.ObjectId, taskStatus s
 }
 
 // WorkerSignOff re-queues all active tasks (should be only one) that are assigned to this worker.
-func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.Database) {
+func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.Database,
+	scheduler *TaskScheduler) {
 	worker, logFields := findWorkerForHTTP(w, r, db)
-	workerIdent := worker.Identifier()
 
 	log.WithFields(logFields).Warning("Worker signing off")
 
@@ -412,18 +411,8 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 		w.WriteHeader(http.StatusInternalServerError)
 		sentHeader = true
 	} else {
-		tupdate := TaskUpdate{
-			TaskStatus: "claimed-by-manager",
-			Worker:     "-", // no longer assigned to any worker
-			Activity:   fmt.Sprintf("Re-queued task after worker %s signed off", workerIdent),
-			Log: fmt.Sprintf("%s: Manager re-queued task after worker %s signed off",
-				time.Now(), workerIdent),
-		}
-
 		for _, task := range tasks {
-			tupdate.TaskID = task.ID
-			tupdate.isManagerLocal = task.isManagerLocalTask()
-			if err := QueueTaskUpdate(&tupdate, db); err != nil {
+			if err = scheduler.ReturnTask(worker, logFields, db, &task, "worker signed off"); err != nil {
 				if !sentHeader {
 					w.WriteHeader(http.StatusInternalServerError)
 					sentHeader = true

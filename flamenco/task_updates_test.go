@@ -20,6 +20,7 @@ type TaskUpdatesTestSuite struct {
 	session  *mgo.Session
 	db       *mgo.Database
 	upstream *UpstreamConnection
+	sched    *TaskScheduler
 }
 
 var _ = check.Suite(&TaskUpdatesTestSuite{})
@@ -31,6 +32,7 @@ func (s *TaskUpdatesTestSuite) SetUpTest(c *check.C) {
 	s.session = MongoSession(&s.config)
 	s.db = s.session.DB("")
 	s.upstream = ConnectUpstream(&s.config, s.session)
+	s.sched = CreateTaskScheduler(&s.config, s.upstream, s.session)
 }
 
 func (s *TaskUpdatesTestSuite) TearDownTest(c *check.C) {
@@ -226,7 +228,7 @@ func (s *TaskUpdatesTestSuite) TestTaskRescheduling(c *check.C) {
 
 	// Worker 1 signs off, so task becomes available again for scheduling to worker 2.
 	respRec, ar = WorkerTestRequest(worker1.ID, "POST", "/sign-off")
-	WorkerSignOff(respRec, ar, s.db)
+	WorkerSignOff(respRec, ar, s.db, s.sched)
 	respRec, ar = WorkerTestRequest(worker2.ID, "POST", "/task")
 	taskSched.ScheduleTask(respRec, ar)
 	assert.Equal(c, http.StatusOK, respRec.Code)

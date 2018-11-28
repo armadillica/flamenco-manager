@@ -313,6 +313,47 @@ func (ts *TaskScheduler) maybeKickTaskDownloader() {
 	ts.upstream.KickDownloader(false)
 }
 
+// ReturnTask lets a Worker return its tasks to the queue, for execution by another worker.
+func (ts *TaskScheduler) ReturnTask(worker *Worker, logFields log.Fields,
+	db *mgo.Database, task *Task, reasonForReturn string) error {
+	logger := log.WithFields(logFields)
+	logger.Debug("ReturnTask: worker is returning task to the queue")
+
+	// Lock the task scheduler so that tasks don't get reassigned while we perform our checks.
+	ts.mutex.Lock()
+	defer ts.mutex.Unlock()
+
+	// Get the task and check whether it's assigned to this worker at all.
+	if task.WorkerID != nil && *task.WorkerID != worker.ID {
+		logger.WithField("other_worker", task.WorkerID.Hex()).Info("ReturnTask: task was assigned to other worker")
+		return nil
+	}
+
+	// If the task isn't active, "returning it" has no meaning.
+	if task.Status != statusActive {
+		logger.WithField("task_status", task.Status).Info("ReturnTask: task is not active, so not doing anything")
+		return nil
+	}
+
+	// Queue the actual task update to re-queue it.
+	wIdent := worker.Identifier()
+	tupdate := TaskUpdate{
+		isManagerLocal: task.isManagerLocalTask(),
+		TaskID:         task.ID,
+		TaskStatus:     statusClaimedByManager,
+		Worker:         "-", // no longer assigned to any worker
+		Activity:       fmt.Sprintf("Re-queued task after unassigning from worker %s: %s", wIdent, reasonForReturn),
+		Log: fmt.Sprintf("%s: Manager re-queued task after unassigning it from worker %s: %s",
+			time.Now().Format(IsoFormat), wIdent, reasonForReturn),
+	}
+	if err := QueueTaskUpdate(&tupdate, db); err != nil {
+		log.WithError(err).Error("unassignTaskFromWorker: unable to update MongoDB for task just unassigned from worker")
+		return err
+	}
+
+	return nil
+}
+
 // WorkerMayRunTask tells the worker whether it's allowed to keep running the given task.
 func (ts *TaskScheduler) WorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest,
 	db *mgo.Database, taskID bson.ObjectId) {

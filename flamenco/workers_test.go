@@ -186,7 +186,7 @@ func (s *WorkerTestSuite) TestWorkerSignOn(t *check.C) {
 func (s *WorkerTestSuite) TestWorkerSignOff(t *check.C) {
 	signoff := func() {
 		respRec, ar := WorkerTestRequest(s.workerLnx.ID, "POST", "/sign-off")
-		WorkerSignOff(respRec, ar, s.db)
+		WorkerSignOff(respRec, ar, s.db, s.sched)
 		assert.Equal(t, 204, respRec.Code)
 	}
 

@@ -124,7 +124,7 @@ func httpWorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 	mongoSess := session.Copy()
 	defer mongoSess.Close()
 
-	flamenco.WorkerSignOff(w, r, mongoSess.DB(""))
+	flamenco.WorkerSignOff(w, r, mongoSess.DB(""), taskScheduler)
 }
 
 func workerSecret(user, realm string) string {
