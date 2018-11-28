@@ -111,7 +111,7 @@ func QueueTaskUpdateWithExtra(tupdate *TaskUpdate, db *mgo.Database, extraUpdate
 	// Store the update in the queue for sending to the Flamenco Server later.
 	if !tupdate.isManagerLocal {
 		taskUpdateQueue := db.C(queueMgoCollection)
-		if err := taskUpdateQueue.Insert(&tupdate); err != nil {
+		if err := taskUpdateQueue.Insert(tupdate); err != nil {
 			return fmt.Errorf("QueueTaskUpdate: error inserting task update in queue: %s", err)
 		}
 	}
