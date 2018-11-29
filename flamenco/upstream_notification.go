@@ -1,5 +1,13 @@
 package flamenco
 
+/* Notifcations sent to Flamenco Server.
+ *
+ * There are two notifications sent, with pretty much the same content.
+ * The URL the notification is sent to determines the semantics. One is
+ * the startup notification, and the other is to tell the Server that the
+ * supported task types changed.
+ */
+
 import (
 	"fmt"
 	"net/url"
