@@ -519,6 +519,7 @@ func WorkerGetStatusChange(w http.ResponseWriter, r *auth.AuthenticatedRequest, 
 		return
 	}
 
+	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	enc := json.NewEncoder(w)
 	err := enc.Encode(WorkerStatus{worker.StatusRequested})

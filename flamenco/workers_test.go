@@ -282,9 +282,30 @@ func (s *WorkerTestSuite) TestStatusChangeReceiving(t *check.C) {
 	assert.Equal(t, workerStatusAsleep, schedResp.StatusRequested)
 }
 
+func (s *WorkerTestSuite) TestWorkerStatusChange(t *check.C) {
+	// No change requested; should get empty 204 back.
+	respRec, ar := WorkerTestRequest(s.workerLnx.ID, "GET", "/status-change")
+	WorkerGetStatusChange(respRec, ar, s.db)
+	assert.Equal(t, http.StatusNoContent, respRec.Code)
+
+	// Request a status change.
+	err := s.workerLnx.RequestStatusChange(workerStatusAsleep, s.db)
+	assert.Nil(t, err)
+
+	// Now we should get the change back.
+	respRec, ar = WorkerTestRequest(s.workerLnx.ID, "GET", "/status-change")
+	WorkerGetStatusChange(respRec, ar, s.db)
+	assert.Equal(t, http.StatusOK, respRec.Code)
+	payload := WorkerStatus{}
+	parseJSON(t, respRec, http.StatusOK, &payload)
+	assert.Equal(t, WorkerStatus{StatusRequested: workerStatusAsleep}, payload)
+}
+
 func (s *WorkerTestSuite) TestAckStatusChange(t *check.C) {
 	err := s.workerLnx.RequestStatusChange(workerStatusAsleep, s.db)
 	assert.Nil(t, err)
+
+	// Tests direct function call.
 	err = s.workerLnx.AckStatusChange(workerStatusAsleep, s.db)
 	assert.Nil(t, err)
 
@@ -296,6 +317,37 @@ func (s *WorkerTestSuite) TestAckStatusChange(t *check.C) {
 	assert.Nil(t, err, "Unable to find workerLnx")
 	assert.Equal(t, "", found.StatusRequested)
 	assert.Equal(t, workerStatusAsleep, found.Status)
+}
+
+func (s *WorkerTestSuite) TestAckStatusChangeHTTP(t *check.C) {
+	err := s.workerLnx.RequestStatusChange(workerStatusAsleep, s.db)
+	assert.Nil(t, err)
+
+	// Tests requested status change.
+	respRec, ar := WorkerTestRequest(s.workerLnx.ID, "POST", "/ack-status-change/{status}")
+	WorkerAckStatusChange(respRec, ar, s.db, workerStatusAsleep)
+	assert.Equal(t, http.StatusNoContent, respRec.Code)
+
+	// Status should be ACK'ed
+	found := Worker{}
+	err = s.db.C("flamenco_workers").FindId(s.workerLnx.ID).One(&found)
+	assert.Nil(t, err, "Unable to find workerLnx")
+	assert.Equal(t, "", found.StatusRequested)
+	assert.Equal(t, workerStatusAsleep, found.Status)
+
+	// ACK'ing a non-requested valid status should also work.
+
+	// Tests requested status change.
+	respRec, ar = WorkerTestRequest(s.workerLnx.ID, "POST", "/ack-status-change/{status}")
+	WorkerAckStatusChange(respRec, ar, s.db, workerStatusStarting)
+	assert.Equal(t, http.StatusNoContent, respRec.Code)
+
+	// Status should be ACK'ed
+	found = Worker{}
+	err = s.db.C("flamenco_workers").FindId(s.workerLnx.ID).One(&found)
+	assert.Nil(t, err, "Unable to find workerLnx")
+	assert.Equal(t, "", found.StatusRequested)
+	assert.Equal(t, workerStatusStarting, found.Status)
 }
 
 func (s *WorkerTestSuite) TestTimeout(t *check.C) {
