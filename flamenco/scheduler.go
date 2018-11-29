@@ -19,6 +19,7 @@ type TaskScheduler struct {
 	config   *Conf
 	upstream *UpstreamConnection
 	session  *mgo.Session
+	queue    *TaskUpdateQueue
 
 	/* Timestamp of the last time we kicked the task downloader because there weren't any
 	 * tasks left for workers. */
@@ -28,11 +29,12 @@ type TaskScheduler struct {
 }
 
 // CreateTaskScheduler constructs a new TaskScheduler, including private fields.
-func CreateTaskScheduler(config *Conf, upstream *UpstreamConnection, session *mgo.Session) *TaskScheduler {
+func CreateTaskScheduler(config *Conf, upstream *UpstreamConnection, session *mgo.Session, queue *TaskUpdateQueue) *TaskScheduler {
 	return &TaskScheduler{
 		config,
 		upstream,
 		session,
+		queue,
 		time.Time{},
 		new(sync.Mutex),
 	}
@@ -137,7 +139,7 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 		"worker_id":        worker.ID,
 		"last_worker_ping": UtcNow(),
 	}
-	if err := QueueTaskUpdateWithExtra(&tupdate, db, localUpdates); err != nil {
+	if err := ts.queue.QueueTaskUpdateWithExtra(task, &tupdate, db, localUpdates); err != nil {
 		logger.WithError(err).Error("Unable to queue task update while assigning task")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -163,7 +165,7 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	// Push a task log line stating we've assigned this task to the given worker.
 	// This is done here, instead of by the worker, so that it's logged even if the worker fails.
 	msg := fmt.Sprintf("Manager assigned task %s to worker %s", task.ID.Hex(), worker.Identifier())
-	LogTaskActivity(worker, task, msg, time.Now().Format(IsoFormat)+": "+msg, db)
+	ts.queue.LogTaskActivity(worker, task, msg, time.Now().Format(IsoFormat)+": "+msg, db)
 }
 
 func (ts *TaskScheduler) unassignTaskFromWorker(task *Task, worker *Worker, reason error, db *mgo.Database) {
@@ -185,7 +187,7 @@ func (ts *TaskScheduler) unassignTaskFromWorker(task *Task, worker *Worker, reas
 			time.Now().Format(IsoFormat), wIdent, reason),
 	}
 
-	if err := QueueTaskUpdate(&tupdate, db); err != nil {
+	if err := ts.queue.QueueTaskUpdate(task, &tupdate, db); err != nil {
 		logger.WithError(err).Error("unassignTaskFromWorker: unable to update MongoDB for task just unassigned from worker")
 		return
 	}
@@ -378,7 +380,7 @@ func (ts *TaskScheduler) ReturnTask(worker *Worker, logFields log.Fields,
 		Log: fmt.Sprintf("%s: Manager re-queued task after unassigning it from worker %s: %s",
 			time.Now().Format(IsoFormat), wIdent, reasonForReturn),
 	}
-	if err := QueueTaskUpdate(&tupdate, db); err != nil {
+	if err := ts.queue.QueueTaskUpdate(task, &tupdate, db); err != nil {
 		log.WithError(err).Error("unassignTaskFromWorker: unable to update MongoDB for task just unassigned from worker")
 		return err
 	}

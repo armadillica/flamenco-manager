@@ -21,6 +21,7 @@ type TaskUpdatesTestSuite struct {
 	db       *mgo.Database
 	upstream *UpstreamConnection
 	sched    *TaskScheduler
+	queue    *TaskUpdateQueue
 }
 
 var _ = check.Suite(&TaskUpdatesTestSuite{})
@@ -32,7 +33,8 @@ func (s *TaskUpdatesTestSuite) SetUpTest(c *check.C) {
 	s.session = MongoSession(&s.config)
 	s.db = s.session.DB("")
 	s.upstream = ConnectUpstream(&s.config, s.session)
-	s.sched = CreateTaskScheduler(&s.config, s.upstream, s.session)
+	s.queue = CreateTaskUpdateQueue(&s.config)
+	s.sched = CreateTaskScheduler(&s.config, s.upstream, s.session, s.queue)
 }
 
 func (s *TaskUpdatesTestSuite) TearDownTest(c *check.C) {
@@ -73,7 +75,7 @@ func (s *TaskUpdatesTestSuite) TestCancelRunningTasks(t *check.C) {
 	s.config.TaskUpdatePushMaxCount = 4000
 	s.config.CancelTaskFetchInterval = 300 * time.Millisecond
 
-	tup := CreateTaskUpdatePusher(&s.config, s.upstream, s.session)
+	tup := CreateTaskUpdatePusher(&s.config, s.upstream, s.session, s.queue)
 	tup.Go()
 	// Give the tup.Go() coroutine (and subsequent calls) time to run
 	// and actually start running the pusher timer.
@@ -128,7 +130,7 @@ func (s *TaskUpdatesTestSuite) TestMultipleWorkersForOneTask(c *check.C) {
 	payloadBytes, err := json.Marshal(tupdate)
 	assert.Nil(c, err)
 	respRec, ar := WorkerTestRequestWithBody(worker1.ID, bytes.NewBuffer(payloadBytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
-	QueueTaskUpdateFromWorker(respRec, ar, s.db, task1.ID)
+	s.queue.QueueTaskUpdateFromWorker(respRec, ar, s.db, task1.ID)
 	assert.Equal(c, 204, respRec.Code)
 
 	// Because of this update, the task should be assigned to worker 1
@@ -141,7 +143,7 @@ func (s *TaskUpdatesTestSuite) TestMultipleWorkersForOneTask(c *check.C) {
 	payloadBytes, err = json.Marshal(tupdate)
 	assert.Nil(c, err)
 	respRec, ar = WorkerTestRequestWithBody(worker2.ID, bytes.NewBuffer(payloadBytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
-	QueueTaskUpdateFromWorker(respRec, ar, s.db, task1.ID)
+	s.queue.QueueTaskUpdateFromWorker(respRec, ar, s.db, task1.ID)
 	assert.Equal(c, http.StatusConflict, respRec.Code)
 
 	// The task should still be assigned to worker 1
@@ -175,7 +177,7 @@ func (s *TaskUpdatesTestSuite) TestUpdateForCancelRequestedTask(c *check.C) {
 		payload, err := json.Marshal(tupdate)
 		assert.Nil(c, err)
 		respRec, ar := WorkerTestRequestWithBody(worker1.ID, bytes.NewBuffer(payload), "POST", "/tasks/"+taskID+"/update")
-		QueueTaskUpdateFromWorker(respRec, ar, s.db, task.ID)
+		s.queue.QueueTaskUpdateFromWorker(respRec, ar, s.db, task.ID)
 
 		// This update should be accepted, but not change the task's status.
 		assert.Equal(c, http.StatusNoContent, respRec.Code)
@@ -208,7 +210,7 @@ func (s *TaskUpdatesTestSuite) TestTaskRescheduling(c *check.C) {
 	assert.Nil(c, StoreNewWorker(&worker1, s.db))
 	assert.Nil(c, StoreNewWorker(&worker2, s.db))
 
-	taskSched := CreateTaskScheduler(&s.config, s.upstream, s.session)
+	taskSched := CreateTaskScheduler(&s.config, s.upstream, s.session, s.queue)
 
 	tupdate := TaskUpdate{
 		TaskID:     task1.ID,
@@ -218,7 +220,7 @@ func (s *TaskUpdatesTestSuite) TestTaskRescheduling(c *check.C) {
 	payloadBytes, err := json.Marshal(tupdate)
 	assert.Nil(c, err)
 	respRec, ar := WorkerTestRequestWithBody(worker1.ID, bytes.NewBuffer(payloadBytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
-	QueueTaskUpdateFromWorker(respRec, ar, s.db, task1.ID)
+	s.queue.QueueTaskUpdateFromWorker(respRec, ar, s.db, task1.ID)
 	assert.Equal(c, http.StatusNoContent, respRec.Code)
 
 	// Because of this update, the task should be assigned to worker 1.
@@ -248,7 +250,7 @@ func (s *TaskUpdatesTestSuite) TestTaskRescheduling(c *check.C) {
 	payloadBytes, err = json.Marshal(tupdate)
 	assert.Nil(c, err)
 	respRec, ar = WorkerTestRequestWithBody(worker2.ID, bytes.NewBuffer(payloadBytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
-	QueueTaskUpdateFromWorker(respRec, ar, s.db, task1.ID)
+	s.queue.QueueTaskUpdateFromWorker(respRec, ar, s.db, task1.ID)
 	assert.Equal(c, http.StatusNoContent, respRec.Code)
 
 	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))

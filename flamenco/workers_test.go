@@ -25,6 +25,7 @@ type WorkerTestSuite struct {
 	upstream *UpstreamConnection
 	sched    *TaskScheduler
 	notifier *UpstreamNotifier
+	queue    *TaskUpdateQueue
 }
 
 var _ = check.Suite(&WorkerTestSuite{})
@@ -37,7 +38,8 @@ func (s *WorkerTestSuite) SetUpTest(c *check.C) {
 	s.db = session.DB("")
 
 	s.upstream = ConnectUpstream(&config, session)
-	s.sched = CreateTaskScheduler(&config, s.upstream, session)
+	s.queue = CreateTaskUpdateQueue(&config)
+	s.sched = CreateTaskScheduler(&config, s.upstream, session, s.queue)
 	s.notifier = CreateUpstreamNotifier(&config, s.upstream, session)
 
 	// Store workers in DB, on purpose in the opposite order as the tasks.

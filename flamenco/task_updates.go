@@ -22,10 +22,22 @@ type TaskUpdatePusher struct {
 	config   *Conf
 	upstream *UpstreamConnection
 	session  *mgo.Session
+	queue    *TaskUpdateQueue
+}
+
+// TaskUpdateQueue queues task updates for later pushing, and writes log files to disk.
+type TaskUpdateQueue struct {
+	config *Conf
+}
+
+// CreateTaskUpdateQueue creates a new TaskUpdateQueue.
+func CreateTaskUpdateQueue(config *Conf) *TaskUpdateQueue {
+	tuq := TaskUpdateQueue{config}
+	return &tuq
 }
 
 // QueueTaskUpdateFromWorker receives a task update from a worker, and queues it for sending to Flamenco Server.
-func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedRequest,
+func (tuq *TaskUpdateQueue) QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedRequest,
 	db *mgo.Database, taskID bson.ObjectId) {
 
 	logFields := log.Fields{
@@ -86,7 +98,7 @@ func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedReque
 	}
 
 	tupdate.isManagerLocal = task.isManagerLocalTask()
-	if err := QueueTaskUpdate(&tupdate, db); err != nil {
+	if err := tuq.QueueTaskUpdate(&task, &tupdate, db); err != nil {
 		log.WithFields(logFields).WithError(err).Warning("QueueTaskUpdateFromWorker: unable to update task")
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Unable to store update: %s\n", err)
@@ -97,13 +109,13 @@ func QueueTaskUpdateFromWorker(w http.ResponseWriter, r *auth.AuthenticatedReque
 }
 
 // QueueTaskUpdate queues the task update, without any extra updates.
-func QueueTaskUpdate(tupdate *TaskUpdate, db *mgo.Database) error {
-	return QueueTaskUpdateWithExtra(tupdate, db, bson.M{})
+func (tuq *TaskUpdateQueue) QueueTaskUpdate(task *Task, tupdate *TaskUpdate, db *mgo.Database) error {
+	return tuq.QueueTaskUpdateWithExtra(task, tupdate, db, bson.M{})
 }
 
 // QueueTaskUpdateWithExtra does the same as QueueTaskUpdate(), but with extra updates to
 // the local flamenco_tasks collection.
-func QueueTaskUpdateWithExtra(tupdate *TaskUpdate, db *mgo.Database, extraUpdates bson.M) error {
+func (tuq *TaskUpdateQueue) QueueTaskUpdateWithExtra(task *Task, tupdate *TaskUpdate, db *mgo.Database, extraUpdates bson.M) error {
 	// For ensuring the ordering of updates. time.Time has nanosecond precision.
 	tupdate.ReceivedOnManager = time.Now().UTC()
 	tupdate.ID = bson.NewObjectId()
@@ -154,6 +166,26 @@ func QueueTaskUpdateWithExtra(tupdate *TaskUpdate, db *mgo.Database, extraUpdate
 	return nil
 }
 
+// LogTaskActivity creates and queues a TaskUpdate to store activity and a log line.
+func (tuq *TaskUpdateQueue) LogTaskActivity(worker *Worker, task *Task, activity, logLine string, db *mgo.Database) {
+	tupdate := TaskUpdate{
+		TaskID:         task.ID,
+		Activity:       activity,
+		Log:            logLine,
+		isManagerLocal: task.isManagerLocalTask(),
+	}
+	if err := tuq.QueueTaskUpdate(task, &tupdate, db); err != nil {
+		logFields := log.Fields{
+			"task_id":    task.ID.Hex(),
+			log.ErrorKey: err,
+		}
+		if worker != nil {
+			logFields["worker"] = worker.Identifier()
+		}
+		log.WithFields(logFields).Error("LogTaskActivity: Unable to queue task update")
+	}
+}
+
 // TaskStatusTransitionValid performs a query on the database to determine the current status,
 // then checks whether the new status is acceptable.
 func TaskStatusTransitionValid(taskColl *mgo.Collection, taskID bson.ObjectId, newStatus string) bool {
@@ -192,12 +224,13 @@ func validForCancelRequested(newStatus string) bool {
 }
 
 // CreateTaskUpdatePusher creates a new task update pusher that runs in a separate goroutine.
-func CreateTaskUpdatePusher(config *Conf, upstream *UpstreamConnection, session *mgo.Session) *TaskUpdatePusher {
+func CreateTaskUpdatePusher(config *Conf, upstream *UpstreamConnection, session *mgo.Session, queue *TaskUpdateQueue) *TaskUpdatePusher {
 	return &TaskUpdatePusher{
 		makeClosable(),
 		config,
 		upstream,
 		session,
+		queue,
 	}
 }
 
@@ -348,13 +381,13 @@ func (pusher *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bso
 	queueTaskCancel := func(taskID bson.ObjectId) {
 		msg := "Manager cancelled task by request of Flamenco Server"
 		fakeTask := Task{ID: taskID}
-		LogTaskActivity(nil, &fakeTask, msg, time.Now().Format(IsoFormat)+": "+msg, db)
+		pusher.queue.LogTaskActivity(nil, &fakeTask, msg, time.Now().Format(IsoFormat)+": "+msg, db)
 
 		tupdate := TaskUpdate{
 			TaskID:     taskID,
 			TaskStatus: statusCanceled,
 		}
-		if updateErr := QueueTaskUpdate(&tupdate, db); updateErr != nil {
+		if updateErr := pusher.queue.QueueTaskUpdate(&fakeTask, &tupdate, db); updateErr != nil {
 			log.WithFields(logFields).WithFields(log.Fields{
 				"task_id":    taskID.Hex(),
 				log.ErrorKey: updateErr,
@@ -409,24 +442,4 @@ func (pusher *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bso
 	}
 
 	return err
-}
-
-// LogTaskActivity creates and queues a TaskUpdate to store activity and a log line.
-func LogTaskActivity(worker *Worker, task *Task, activity, logLine string, db *mgo.Database) {
-	tupdate := TaskUpdate{
-		TaskID:         task.ID,
-		Activity:       activity,
-		Log:            logLine,
-		isManagerLocal: task.isManagerLocalTask(),
-	}
-	if err := QueueTaskUpdate(&tupdate, db); err != nil {
-		logFields := log.Fields{
-			"task_id":    task.ID.Hex(),
-			log.ErrorKey: err,
-		}
-		if worker != nil {
-			logFields["worker"] = worker.Identifier()
-		}
-		log.WithFields(logFields).Error("LogTaskActivity: Unable to queue task update")
-	}
 }

@@ -36,6 +36,7 @@ var config flamenco.Conf
 var upstream *flamenco.UpstreamConnection
 var taskScheduler *flamenco.TaskScheduler
 var taskUpdatePusher *flamenco.TaskUpdatePusher
+var taskUpdateQueue *flamenco.TaskUpdateQueue
 var timeoutChecker *flamenco.TimeoutChecker
 var taskCleaner *flamenco.TaskCleaner
 var upstreamNotifier *flamenco.UpstreamNotifier
@@ -74,7 +75,7 @@ func httpTaskUpdate(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 		return
 	}
 
-	flamenco.QueueTaskUpdateFromWorker(w, r, mongoSess.DB(""), bson.ObjectIdHex(taskID))
+	taskUpdateQueue.QueueTaskUpdateFromWorker(w, r, mongoSess.DB(""), bson.ObjectIdHex(taskID))
 }
 
 func httpTaskReturn(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
@@ -324,9 +325,10 @@ func normalMode() (*mux.Router, error) {
 
 	upstream = flamenco.ConnectUpstream(&config, session)
 	upstreamNotifier = flamenco.CreateUpstreamNotifier(&config, upstream, session)
-	taskScheduler = flamenco.CreateTaskScheduler(&config, upstream, session)
-	taskUpdatePusher = flamenco.CreateTaskUpdatePusher(&config, upstream, session)
-	timeoutChecker = flamenco.CreateTimeoutChecker(&config, session)
+	taskUpdateQueue = flamenco.CreateTaskUpdateQueue(&config)
+	taskScheduler = flamenco.CreateTaskScheduler(&config, upstream, session, taskUpdateQueue)
+	taskUpdatePusher = flamenco.CreateTaskUpdatePusher(&config, upstream, session, taskUpdateQueue)
+	timeoutChecker = flamenco.CreateTimeoutChecker(&config, session, taskUpdateQueue)
 	taskCleaner = flamenco.CreateTaskCleaner(&config, session)
 	reporter := flamenco.CreateReporter(&config, session, flamencoVersion)
 	latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)

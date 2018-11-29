@@ -20,13 +20,16 @@ type TimeoutChecker struct {
 	closable
 	config  *Conf
 	session *mgo.Session
+	queue   *TaskUpdateQueue
 }
 
 // CreateTimeoutChecker creates a new TimeoutChecker.
-func CreateTimeoutChecker(config *Conf, session *mgo.Session) *TimeoutChecker {
+func CreateTimeoutChecker(config *Conf, session *mgo.Session, queue *TaskUpdateQueue) *TimeoutChecker {
 	return &TimeoutChecker{
 		makeClosable(),
-		config, session,
+		config,
+		session,
+		queue,
 	}
 }
 
@@ -117,7 +120,7 @@ func (ttc *TimeoutChecker) timeoutTask(task *Task, db *mgo.Database) {
 				"Was handled by worker %s",
 			UtcNow().Format(IsoFormat), task.Name, task.ID.Hex(), task.LastWorkerPing, ident),
 	}
-	QueueTaskUpdate(&tupdate, db)
+	ttc.queue.QueueTaskUpdate(task, &tupdate, db)
 }
 
 func (ttc *TimeoutChecker) checkWorkers(db *mgo.Database) {

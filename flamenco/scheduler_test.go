@@ -24,6 +24,7 @@ type SchedulerTestSuite struct {
 	db       *mgo.Database
 	upstream *UpstreamConnection
 	sched    *TaskScheduler
+	queue    *TaskUpdateQueue
 }
 
 var _ = check.Suite(&SchedulerTestSuite{})
@@ -47,7 +48,8 @@ func (s *SchedulerTestSuite) SetUpTest(c *check.C) {
 	s.db = session.DB("")
 
 	s.upstream = ConnectUpstream(&config, session)
-	s.sched = CreateTaskScheduler(&config, s.upstream, session)
+	s.queue = CreateTaskUpdateQueue(&config)
+	s.sched = CreateTaskScheduler(&config, s.upstream, session, s.queue)
 
 	// Store workers in DB, on purpose in the opposite order as the tasks.
 	s.workerLnx = Worker{
