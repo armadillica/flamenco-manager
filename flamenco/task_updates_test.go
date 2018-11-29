@@ -3,7 +3,10 @@ package flamenco
 import (
 	"bytes"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
+	"os"
+	"path"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -30,6 +33,11 @@ func (s *TaskUpdatesTestSuite) SetUpTest(c *check.C) {
 	httpmock.Activate()
 
 	s.config = GetTestConfig()
+
+	taskLogsPath, err := ioutil.TempDir("", "testlogs")
+	assert.Nil(c, err)
+	s.config.TaskLogsPath = taskLogsPath
+
 	s.session = MongoSession(&s.config)
 	s.db = s.session.DB("")
 	s.upstream = ConnectUpstream(&s.config, s.session)
@@ -39,6 +47,8 @@ func (s *TaskUpdatesTestSuite) SetUpTest(c *check.C) {
 
 func (s *TaskUpdatesTestSuite) TearDownTest(c *check.C) {
 	log.Info("SchedulerTestSuite tearing down test, dropping database.")
+	os.RemoveAll(s.config.TaskLogsPath)
+
 	s.upstream.Close()
 	s.db.DropDatabase()
 	httpmock.DeactivateAndReset()
@@ -269,4 +279,89 @@ func (s *TaskUpdatesTestSuite) TestTaskRescheduling(c *check.C) {
 	assert.True(c, worker2.CurrentTaskUpdated.After(timestampBetweenUpdates))
 	assert.Equal(c, "active", worker1.CurrentTaskStatus)
 	assert.Equal(c, "failed", worker2.CurrentTaskStatus)
+}
+
+func (s *TaskUpdatesTestSuite) TestLogHandling(c *check.C) {
+	tasksColl := s.db.C("flamenco_tasks")
+	queueColl := s.db.C(queueMgoCollection)
+
+	task := ConstructTestTask("1aaaaaaaaaaaaaaaaaaaaaaa", "testing")
+	assert.Nil(c, tasksColl.Insert(task))
+
+	worker := Worker{
+		Platform:           "linux",
+		SupportedTaskTypes: []string{"testing"},
+	}
+	assert.Nil(c, StoreNewWorker(&worker, s.db))
+
+	tupdate := TaskUpdate{
+		TaskID:   task.ID,
+		Activity: "doing stuff by worker",
+		Log:      "many\nlines\nof\nlogging\nproduced\nby\nthis\nworker\nso\nmany\nmany\nmany\nlines\nit's\ncrazy.\n",
+	}
+	payloadBytes, err := json.Marshal(tupdate)
+	assert.Nil(c, err)
+	respRec, ar := WorkerTestRequestWithBody(worker.ID, bytes.NewBuffer(payloadBytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
+	s.queue.QueueTaskUpdateFromWorker(respRec, ar, s.db, task.ID)
+	assert.Equal(c, 204, respRec.Code)
+
+	// Because of this update, the task should be assigned to worker 1
+	found := Task{}
+	assert.Nil(c, tasksColl.FindId(task.ID).One(&found))
+	assert.Equal(c, *found.WorkerID, worker.ID)
+	assert.Equal(c, found.Activity, "doing stuff by worker")
+	assert.Equal(c, found.Log, "by\nthis\nworker\nso\nmany\nmany\nmany\nlines\nit's\ncrazy.\n",
+		"The last 10 log lines should have been stored with the task.")
+
+	// The outgoing queue should not have the entire log, but just the last 10 lines.
+	var queuedUpdates []TaskUpdate
+	assert.Nil(c, queueColl.Find(bson.M{"task_id": task.ID}).All(&queuedUpdates))
+	assert.Equal(c, 1, len(queuedUpdates))
+	assert.Equal(c, tupdate.Activity, queuedUpdates[0].Activity)
+	assert.Equal(c, found.Log, queuedUpdates[0].Log,
+		"The last 10 log lines should have been queued.")
+
+	// Check the log file
+	logdir, logfname := s.queue.taskLogPath(task.Job, task.ID)
+	logFilename := path.Join(logdir, logfname)
+	contents, err := ioutil.ReadFile(logFilename)
+	assert.Nil(c, err)
+	assert.Equal(c, tupdate.Log, string(contents))
+
+	// A subsequent update should append to the log file but not to the task.
+	firstLog := tupdate.Log
+	tupdate.Activity = "more stuff by worker"
+	tupdate.Log = "just\nsome\nmore\nlines\n"
+
+	payloadBytes, err = json.Marshal(tupdate)
+	assert.Nil(c, err)
+	respRec, ar = WorkerTestRequestWithBody(worker.ID, bytes.NewBuffer(payloadBytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
+	s.queue.QueueTaskUpdateFromWorker(respRec, ar, s.db, task.ID)
+	assert.Equal(c, 204, respRec.Code)
+
+	assert.Nil(c, queueColl.Find(bson.M{"task_id": task.ID}).All(&queuedUpdates))
+	assert.Equal(c, 2, len(queuedUpdates))
+	assert.Equal(c, tupdate.Activity, queuedUpdates[1].Activity)
+	assert.Equal(c, tupdate.Log, queuedUpdates[1].Log,
+		"For a short update the entire log should be stored.")
+
+	contents, err = ioutil.ReadFile(logFilename)
+	assert.Nil(c, err)
+	assert.Equal(c, firstLog+tupdate.Log, string(contents))
+}
+
+func (s *TaskUpdatesTestSuite) TestTrimLogForTaskUpdate(c *check.C) {
+	assert.Equal(c, "", trimLogForTaskUpdate(""))
+	assert.Equal(c, "one line\ntwo lines\n", trimLogForTaskUpdate("one line\ntwo lines"))
+	assert.Equal(c, "one line\ntwo lines\n", trimLogForTaskUpdate("one line\ntwo lines\n"))
+
+	assert.Equal(c, "by\nthis\nworker\nso\nmany\nmany\nmany\nlines\nit's\ncrazy.\n",
+		trimLogForTaskUpdate("many\nlines\nof\nlogging\nproduced\nby\nthis\nworker\nso\nmany\nmany\nmany\nlines\nit's\ncrazy.\n"))
+}
+
+func (s *TaskUpdatesTestSuite) TestUnknownJobIDValue(c *check.C) {
+	var uninitialized bson.ObjectId
+	assert.Equal(c, uninitialized, unknownJobID)
+	assert.Equal(c, 0, len(unknownJobID))
+	assert.Equal(c, "", unknownJobID.Hex())
 }

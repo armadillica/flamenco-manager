@@ -41,6 +41,7 @@ type TestTasks struct {
 type Conf struct {
 	DatabaseURL   string   `yaml:"database_url"`
 	DatabasePath  string   `yaml:"database_path"`
+	TaskLogsPath  string   `yaml:"task_logs_path"`
 	Listen        string   `yaml:"listen"`
 	OwnURL        string   `yaml:"own_url"`
 	FlamencoStr   string   `yaml:"flamenco"`
@@ -98,6 +99,7 @@ func LoadConf(filename string) (Conf, error) {
 	c := Conf{
 		Listen:                      ":8083",
 		DatabasePath:                "./db",
+		TaskLogsPath:                "./task-logs",
 		DownloadTaskSleep:           5 * time.Minute,
 		DownloadTaskRecheckThrottle: 10 * time.Second,
 		TaskUpdatePushMaxInterval:   30 * time.Second,

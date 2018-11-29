@@ -4,6 +4,9 @@ package flamenco
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"path"
+	"strings"
 	"time"
 
 	auth "github.com/abbot/go-http-auth"
@@ -13,8 +16,17 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-const queueMgoCollection = "task_update_queue"
-const taskQueueInspectPeriod = 1 * time.Second
+const (
+	queueMgoCollection      = "task_update_queue"
+	taskQueueInspectPeriod  = 1 * time.Second
+	taskQueueRetainLogLines = 10 // How many lines of logging are sent to the server.
+)
+
+// In the specific case where the Server asks us to cancel a task we know nothing about,
+// we cannot look up the Job ID, which means that we cannot write to the task's log file
+// on disk. As an indicator that we do not know the job ID, we use this one. Behind the
+// scenes it's actually just an empty string, so it's never used as an actual job ID.
+var unknownJobID bson.ObjectId
 
 // TaskUpdatePusher pushes queued task updates to the Flamenco Server.
 type TaskUpdatePusher struct {
@@ -120,6 +132,12 @@ func (tuq *TaskUpdateQueue) QueueTaskUpdateWithExtra(task *Task, tupdate *TaskUp
 	tupdate.ReceivedOnManager = time.Now().UTC()
 	tupdate.ID = bson.NewObjectId()
 
+	// Store the log into a plain-text file for the task.
+	if err := tuq.writeTaskLog(task, tupdate.Log); err != nil {
+		return err
+	}
+	tupdate.Log = trimLogForTaskUpdate(tupdate.Log)
+
 	// Store the update in the queue for sending to the Flamenco Server later.
 	if !tupdate.isManagerLocal {
 		taskUpdateQueue := db.C(queueMgoCollection)
@@ -150,6 +168,9 @@ func (tuq *TaskUpdateQueue) QueueTaskUpdateWithExtra(task *Task, tupdate *TaskUp
 	}
 	if tupdate.Activity != "" {
 		updates["activity"] = tupdate.Activity
+	}
+	if tupdate.Log != "" {
+		updates["log"] = tupdate.Log
 	}
 	if len(updates) > 0 {
 		log.WithFields(logFields).WithField("updates", updates).Debug("QueueTaskUpdate: updating task")
@@ -184,6 +205,67 @@ func (tuq *TaskUpdateQueue) LogTaskActivity(worker *Worker, task *Task, activity
 		}
 		log.WithFields(logFields).Error("LogTaskActivity: Unable to queue task update")
 	}
+}
+
+func trimLogForTaskUpdate(logText string) string {
+	if logText == "" {
+		return ""
+	}
+	lines := strings.Split(strings.TrimSpace(logText), "\n")
+	fromLine := 0
+	if len(lines) > taskQueueRetainLogLines {
+		fromLine = len(lines) - taskQueueRetainLogLines
+	}
+
+	return strings.Join(lines[fromLine:], "\n") + "\n"
+}
+
+func (tuq *TaskUpdateQueue) writeTaskLog(task *Task, logText string) error {
+	logger := log.WithField("task_id", task.ID.Hex())
+	if task.Job == unknownJobID {
+		logger.Debug("not saving log, task as unknown job ID")
+		return nil
+	}
+
+	dirpath, filename := tuq.taskLogPath(task.Job, task.ID)
+	filepath := path.Join(dirpath, filename)
+	logger = logger.WithField("filepath", filepath)
+
+	if err := os.MkdirAll(dirpath, 0755); err != nil {
+		logger.WithError(err).Error("unable to create directory for log file")
+		return err
+	}
+
+	file, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		logger.WithError(err).Error("unable to open log file for append/create/write")
+		return err
+	}
+
+	if n, err := file.WriteString(logText); n < len(logText) || err != nil {
+		logger.WithFields(log.Fields{
+			"written":      n,
+			"total_length": len(logText),
+			log.ErrorKey:   err,
+		}).Error("could only write partial log file")
+		return err
+	}
+
+	if err := file.Close(); err != nil {
+		logger.WithError(err).Error("error closing log file")
+		return err
+	}
+
+	logger.Debug("successfully appended to log file")
+	return nil
+}
+
+// taskLogPath returns the directory and the filename suitable to write a log file.
+func (tuq *TaskUpdateQueue) taskLogPath(jobID, taskID bson.ObjectId) (string, string) {
+	jobHex := jobID.Hex()
+	dirpath := path.Join(tuq.config.TaskLogsPath, "job-"+jobHex[:4], jobHex)
+	filename := "task-" + taskID.Hex() + ".txt"
+	return dirpath, filename
 }
 
 // TaskStatusTransitionValid performs a query on the database to determine the current status,
@@ -366,6 +448,7 @@ func (pusher *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bso
 		"_id": bson.M{"$in": cancelTaskIDs},
 	}).Select(bson.M{
 		"_id":    1,
+		"job":    1,
 		"status": 1,
 	}).All(&tasksToCancel)
 	if err != nil {
@@ -378,18 +461,17 @@ func (pusher *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bso
 	seenTasks := map[bson.ObjectId]bool{}
 	goToCancelRequested := make([]bson.ObjectId, 0, len(cancelTaskIDs))
 
-	queueTaskCancel := func(taskID bson.ObjectId) {
+	queueTaskCancel := func(task *Task) {
 		msg := "Manager cancelled task by request of Flamenco Server"
-		fakeTask := Task{ID: taskID}
-		pusher.queue.LogTaskActivity(nil, &fakeTask, msg, time.Now().Format(IsoFormat)+": "+msg, db)
+		pusher.queue.LogTaskActivity(nil, task, msg, time.Now().Format(IsoFormat)+": "+msg, db)
 
 		tupdate := TaskUpdate{
-			TaskID:     taskID,
+			TaskID:     task.ID,
 			TaskStatus: statusCanceled,
 		}
-		if updateErr := pusher.queue.QueueTaskUpdate(&fakeTask, &tupdate, db); updateErr != nil {
+		if updateErr := pusher.queue.QueueTaskUpdate(task, &tupdate, db); updateErr != nil {
 			log.WithFields(logFields).WithFields(log.Fields{
-				"task_id":    taskID.Hex(),
+				"task_id":    task.ID.Hex(),
 				log.ErrorKey: updateErr,
 			}).Error("TaskUpdatePusher: Unable to queue task update for canceled task, " +
 				"expect the task to hang in cancel-requested state.")
@@ -405,7 +487,7 @@ func (pusher *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bso
 			// This needs to be canceled through the worker, and thus go to cancel-requested.
 			goToCancelRequested = append(goToCancelRequested, taskToCancel.ID)
 		} else {
-			queueTaskCancel(taskToCancel.ID)
+			queueTaskCancel(&taskToCancel)
 		}
 	}
 
@@ -431,7 +513,11 @@ func (pusher *TaskUpdatePusher) handleIncomingCancelRequests(cancelTaskIDs []bso
 			continue
 		}
 		log.WithFields(logFields).WithField("task_id", taskID.Hex()).Warning("TaskUpdatePusher: unknown task")
-		queueTaskCancel(taskID)
+		fakeTask := Task{
+			ID:  taskID,
+			Job: unknownJobID,
+		}
+		queueTaskCancel(&fakeTask)
 	}
 	logFields["tasks_canceled"] = canceledCount
 	log.WithFields(logFields).Info("TaskUpdatePusher: marked tasks as canceled")

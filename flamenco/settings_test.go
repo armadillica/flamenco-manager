@@ -14,6 +14,8 @@ func (s *SettingsTestSuite) TestDefaultSettings(t *check.C) {
 	config, err := LoadConf("nonexistant.yaml")
 	assert.NotNil(t, err) // should indicate an error to open the file.
 
+	assert.Equal(t, "./task-logs", config.TaskLogsPath)
+
 	// The settings should contain the defaults, though.
 	assert.Equal(t, "7401c189-ef69-434b-b4d8-56d00075faf5", config.SSDPDeviceUUID)
 	assert.Contains(t, config.PathReplacementByVarname, "job_storage")
