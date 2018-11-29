@@ -313,6 +313,38 @@ func (ts *TaskScheduler) maybeKickTaskDownloader() {
 	ts.upstream.KickDownloader(false)
 }
 
+// ReturnTaskFromWorker is the HTTP interface for workers to return a specific task to the queue.
+func (ts *TaskScheduler) ReturnTaskFromWorker(w http.ResponseWriter, r *auth.AuthenticatedRequest,
+	db *mgo.Database, taskID bson.ObjectId) {
+
+	worker, logFields := findWorkerForHTTP(w, r, db)
+	logFields["task_id"] = taskID.Hex()
+	logger := log.WithFields(logFields)
+
+	task := Task{}
+	if err := db.C("flamenco_tasks").FindId(taskID).One(&task); err != nil {
+		if err == mgo.ErrNotFound {
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			logger.WithError(err).Error("ReturnTaskFromWorker: Unable to find task")
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		fmt.Printf("Task %s not found", taskID.Hex())
+		return
+	}
+
+	logger.Info("worker is returning task to the queue")
+
+	worker.Seen(&r.Request, db)
+	if err := ts.ReturnTask(worker, logFields, db, &task, "returned by worker"); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Unable to return task: %s", err.Error())
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // ReturnTask lets a Worker return its tasks to the queue, for execution by another worker.
 func (ts *TaskScheduler) ReturnTask(worker *Worker, logFields log.Fields,
 	db *mgo.Database, task *Task, reasonForReturn string) error {

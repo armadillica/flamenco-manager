@@ -77,6 +77,22 @@ func httpTaskUpdate(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 	flamenco.QueueTaskUpdateFromWorker(w, r, mongoSess.DB(""), bson.ObjectIdHex(taskID))
 }
 
+func httpTaskReturn(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
+	mongoSess := session.Copy()
+	defer mongoSess.Close()
+
+	vars := mux.Vars(&r.Request)
+	taskID := vars["task-id"]
+
+	if !bson.IsObjectIdHex(taskID) {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Invalid ObjectID passed as task ID: %s\n", taskID)
+		return
+	}
+
+	taskScheduler.ReturnTaskFromWorker(w, r, mongoSess.DB(""), bson.ObjectIdHex(taskID))
+}
+
 /**
  * Called by a worker, to check whether it is allowed to keep running this task.
  */
@@ -323,6 +339,7 @@ func normalMode() (*mux.Router, error) {
 	router.HandleFunc("/register-worker", httpRegisterWorker).Methods("POST")
 	router.HandleFunc("/task", workerAuthenticator.Wrap(httpScheduleTask)).Methods("POST")
 	router.HandleFunc("/tasks/{task-id}/update", workerAuthenticator.Wrap(httpTaskUpdate)).Methods("POST")
+	router.HandleFunc("/tasks/{task-id}/return", workerAuthenticator.Wrap(httpTaskReturn)).Methods("POST")
 	router.HandleFunc("/may-i-run/{task-id}", workerAuthenticator.Wrap(httpWorkerMayRunTask)).Methods("GET")
 	router.HandleFunc("/status-change", workerAuthenticator.Wrap(httpWorkerGetStatusChange)).Methods("GET")
 	router.HandleFunc("/ack-status-change/{ack-status}", workerAuthenticator.Wrap(httpWorkerAckStatusChange)).Methods("POST")

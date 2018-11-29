@@ -9,6 +9,7 @@ Changelog for Flamenco Manager
 - Include upstream queue size on dashboard.
 - Send the set of task types supported by our workers to Flamenco Server. This will allow it to
   tailor some variable jobs to our capabilities.
+- Allow Workers to return tasks to the queue.
 
 
 ## Version 2.1.1 (2018-01-21)
