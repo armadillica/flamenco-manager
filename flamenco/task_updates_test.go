@@ -357,29 +357,34 @@ func (s *TaskUpdatesTestSuite) TestLogRotation(c *check.C) {
 		s.sendTaskUpdate(c, task.ID, worker.ID, status, activity, log)
 	}
 
-	logEntry1 := "many\nlines\nof\nlogging\nproduced\nby\nthis\nworker\nso\nmany\nmany\nmany\nlines\nit's\ncrazy.\n"
-	sendUpdate("", "doing stuff by worker", logEntry1)
+	read := func(filename string) string {
+		content, err := ioutil.ReadFile(filename)
+		assert.Nil(c, err)
+		return string(content)
+	}
 
 	// This should create a log file.
-	contents, err := ioutil.ReadFile(logFilename)
-	assert.Equal(c, logEntry1, string(contents), err.Error())
+	logEntry1 := "ENTRY 1: many\nlines\nof\nlogging\nproduced\nby\nthis\nworker\nso\nmany\nmany\nmany\nlines\nit's\ncrazy.\n"
+	sendUpdate(statusActive, "doing stuff by worker", logEntry1)
+	assert.Equal(c, logEntry1, read(logFilename))
 
 	// A subsequent update should append to the same log file.
-	logEntry2 := "Some\nmore\nlogging going on.\n"
-	sendUpdate("", "some more stuff by worker", logEntry1)
-	contents, err = ioutil.ReadFile(logFilename)
-	assert.Equal(c, logEntry1+logEntry2, string(contents), err.Error())
+	logEntry2 := "ENTRY 2: Some\nmore\nlogging going on.\n"
+	sendUpdate("", "some more stuff by worker", logEntry2)
+	assert.Equal(c, logEntry1+logEntry2, read(logFilename))
 
 	// Mark as completed -- TODO: check that this file gets GZipped in the background.
-	logEntry3 := "final line\n"
+	logEntry3 := "ENTRY 3: final line\n"
 	sendUpdate(statusCompleted, "done", logEntry3)
-	assert.Equal(c, logEntry1+logEntry2+logEntry3, string(contents), err.Error())
+	assert.Equal(c, logEntry1+logEntry2+logEntry3, read(logFilename))
+
+	// Re-queue the task.
+	assert.Nil(c, s.db.C("flamenco_tasks").UpdateId(task.ID,
+		bson.M{"$set": bson.M{"status": statusClaimedByManager}}))
 
 	// Sending another update reactivates the task, and thus should produce a new log file.
-	logEntry4 := "New run of this task\n"
+	logEntry4 := "ENTRY 4: New run of this task\n"
 	sendUpdate(statusActive, "reactivating task", logEntry4)
-	contents, err = ioutil.ReadFile(logFilename)
-	assert.Equal(c, logEntry4, string(contents), err.Error())
-	contents, err = ioutil.ReadFile(logFilename + ".1")
-	assert.Equal(c, logEntry1+logEntry2+logEntry3, string(contents), err.Error())
+	assert.Equal(c, logEntry4, read(logFilename))
+	assert.Equal(c, logEntry1+logEntry2+logEntry3, read(logFilename+".1"))
 }

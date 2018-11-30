@@ -52,3 +52,11 @@ func fileExists(filename string) bool {
 	_, err := os.Stat(filename)
 	return !os.IsNotExist(err)
 }
+
+func fileTouch(filename string) {
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_RDONLY, 0666)
+	if err != nil {
+		panic(err.Error())
+	}
+	file.Close()
+}

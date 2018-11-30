@@ -132,10 +132,10 @@ func (tuq *TaskUpdateQueue) QueueTaskUpdateWithExtra(task *Task, tupdate *TaskUp
 	tupdate.ReceivedOnManager = time.Now().UTC()
 	tupdate.ID = bson.NewObjectId()
 
-	// Store the log into a plain-text file for the task.
-	if err := tuq.writeTaskLog(task, tupdate.Log); err != nil {
-		return err
-	}
+	// Store the log into a plain-text file for the task. However, we can only
+	// write to the log file after we've done some more investigation of the
+	// situation (the task may be reactivated and the log may require rotating).
+	logToWrite := tupdate.Log
 	tupdate.Log = trimLogForTaskUpdate(tupdate.Log)
 
 	// Store the update in the queue for sending to the Flamenco Server later.
@@ -160,8 +160,9 @@ func (tuq *TaskUpdateQueue) QueueTaskUpdateWithExtra(task *Task, tupdate *TaskUp
 
 	if tupdate.TaskStatus != "" {
 		// Before blindly applying the task status, first check if the transition is valid.
-		if TaskStatusTransitionValid(taskColl, tupdate.TaskID, tupdate.TaskStatus) {
+		if taskStatusTransitionValid(task.Status, tupdate.TaskStatus) {
 			updates["status"] = tupdate.TaskStatus
+			tuq.onTaskStatusChanged(task, tupdate.TaskStatus)
 		} else {
 			log.WithFields(logFields).Warning("QueueTaskUpdate: not locally applying task status")
 		}
@@ -172,6 +173,12 @@ func (tuq *TaskUpdateQueue) QueueTaskUpdateWithExtra(task *Task, tupdate *TaskUp
 	if tupdate.Log != "" {
 		updates["log"] = tupdate.Log
 	}
+
+	// Now that we have called tuq.onTaskStatusChanged() we know the logs were properly rotated.
+	if err := tuq.writeTaskLog(task, logToWrite); err != nil {
+		return err
+	}
+
 	if len(updates) > 0 {
 		log.WithFields(logFields).WithField("updates", updates).Debug("QueueTaskUpdate: updating task")
 		if err := taskColl.UpdateId(tupdate.TaskID, bson.M{"$set": updates}); err != nil {
@@ -204,6 +211,23 @@ func (tuq *TaskUpdateQueue) LogTaskActivity(worker *Worker, task *Task, activity
 			logFields["worker"] = worker.Identifier()
 		}
 		log.WithFields(logFields).Error("LogTaskActivity: Unable to queue task update")
+	}
+}
+
+// Called when a task status update is queued for sending to the Server.
+func (tuq *TaskUpdateQueue) onTaskStatusChanged(task *Task, newStatus string) {
+	if task.Status == newStatus {
+		return
+	}
+
+	log.WithFields(log.Fields{
+		"task_id":    task.ID.Hex(),
+		"old_status": task.Status,
+		"new_status": newStatus,
+	}).Info("task status was updated")
+
+	if newStatus == "active" {
+		tuq.rotateTaskLogFile(task)
 	}
 }
 
@@ -273,6 +297,20 @@ func (tuq *TaskUpdateQueue) writeTaskLog(task *Task, logText string) error {
 	return nil
 }
 
+// rotateTaskLogFile rotates the task's log file, ignoring (but logging) any errors that occur.
+func (tuq *TaskUpdateQueue) rotateTaskLogFile(task *Task) {
+	dirpath, filename := tuq.taskLogPath(task.Job, task.ID)
+	filepath := path.Join(dirpath, filename)
+
+	if err := rotateLogFile(filepath); err != nil {
+		log.WithFields(log.Fields{
+			"task_id":    task.ID.Hex(),
+			"log_file":   filepath,
+			log.ErrorKey: err,
+		}).Warning("unable to rotate log; keeping them un-rotated")
+	}
+}
+
 // taskLogPath returns the directory and the filename suitable to write a log file.
 func (tuq *TaskUpdateQueue) taskLogPath(jobID, taskID bson.ObjectId) (string, string) {
 	jobHex := jobID.Hex()
@@ -281,9 +319,9 @@ func (tuq *TaskUpdateQueue) taskLogPath(jobID, taskID bson.ObjectId) (string, st
 	return dirpath, filename
 }
 
-// TaskStatusTransitionValid performs a query on the database to determine the current status,
+// taskStatusTransitionValid performs a query on the database to determine the current status,
 // then checks whether the new status is acceptable.
-func TaskStatusTransitionValid(taskColl *mgo.Collection, taskID bson.ObjectId, newStatus string) bool {
+func taskStatusTransitionValid(currentStatus, newStatus string) bool {
 	/* The only actual test we do is when the transition is from cancel-requested
 	   to something else. If the new status is valid for cancel-requeted, we don't
 	   even need to go to the database to fetch the current status. */
@@ -291,19 +329,9 @@ func TaskStatusTransitionValid(taskColl *mgo.Collection, taskID bson.ObjectId, n
 		return true
 	}
 
-	taskCurr := Task{}
-	if err := taskColl.FindId(taskID).Select(bson.M{"status": 1}).One(&taskCurr); err != nil {
-		log.WithFields(log.Fields{
-			"task_id":    taskID.Hex(),
-			"new_status": newStatus,
-			log.ErrorKey: err,
-		}).Warning("Unable to find task, not accepting status update")
-		return false
-	}
-
 	// We already know the new status is not valid for cancel-requested.
 	// All other statuses are fine, though.
-	return taskCurr.Status != "cancel-requested"
+	return currentStatus != "cancel-requested"
 }
 
 func validForCancelRequested(newStatus string) bool {
