@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 
 	auth "github.com/abbot/go-http-auth"
 	"github.com/kardianos/osext"
@@ -62,36 +61,41 @@ func httpKick(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Kicked task downloader")
 }
 
+func httpTaskLog(w http.ResponseWriter, r *http.Request) {
+	jobID, err := flamenco.ObjectIDFromRequest(w, r, "job-id")
+	if err != nil {
+		return
+	}
+	taskID, err := flamenco.ObjectIDFromRequest(w, r, "task-id")
+	if err != nil {
+		return
+	}
+
+	flamenco.ServeTaskLog(w, r, jobID, taskID, taskUpdateQueue)
+}
+
 func httpTaskUpdate(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 	mongoSess := session.Copy()
 	defer mongoSess.Close()
 
-	vars := mux.Vars(&r.Request)
-	taskID := vars["task-id"]
-
-	if !bson.IsObjectIdHex(taskID) {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Invalid ObjectID passed as task ID: %s\n", taskID)
+	taskID, err := flamenco.ObjectIDFromRequest(w, &r.Request, "task-id")
+	if err != nil {
 		return
 	}
 
-	taskUpdateQueue.QueueTaskUpdateFromWorker(w, r, mongoSess.DB(""), bson.ObjectIdHex(taskID))
+	taskUpdateQueue.QueueTaskUpdateFromWorker(w, r, mongoSess.DB(""), taskID)
 }
 
 func httpTaskReturn(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 	mongoSess := session.Copy()
 	defer mongoSess.Close()
 
-	vars := mux.Vars(&r.Request)
-	taskID := vars["task-id"]
-
-	if !bson.IsObjectIdHex(taskID) {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Invalid ObjectID passed as task ID: %s\n", taskID)
+	taskID, err := flamenco.ObjectIDFromRequest(w, &r.Request, "task-id")
+	if err != nil {
 		return
 	}
 
-	taskScheduler.ReturnTaskFromWorker(w, r, mongoSess.DB(""), bson.ObjectIdHex(taskID))
+	taskScheduler.ReturnTaskFromWorker(w, r, mongoSess.DB(""), taskID)
 }
 
 /**
@@ -101,16 +105,12 @@ func httpWorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 	mongoSess := session.Copy()
 	defer mongoSess.Close()
 
-	vars := mux.Vars(&r.Request)
-	taskID := vars["task-id"]
-
-	if !bson.IsObjectIdHex(taskID) {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Invalid ObjectID passed as task ID: %s\n", taskID)
+	taskID, err := flamenco.ObjectIDFromRequest(w, &r.Request, "task-id")
+	if err != nil {
 		return
 	}
 
-	taskScheduler.WorkerMayRunTask(w, r, mongoSess.DB(""), bson.ObjectIdHex(taskID))
+	taskScheduler.WorkerMayRunTask(w, r, mongoSess.DB(""), taskID)
 }
 
 func httpWorkerAckStatusChange(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
@@ -348,6 +348,7 @@ func normalMode() (*mux.Router, error) {
 	router.HandleFunc("/sign-on", workerAuthenticator.Wrap(httpWorkerSignOn)).Methods("POST")
 	router.HandleFunc("/sign-off", workerAuthenticator.Wrap(httpWorkerSignOff)).Methods("POST")
 	router.HandleFunc("/kick", httpKick)
+	router.HandleFunc("/logfile/{job-id}/{task-id}", httpTaskLog)
 
 	upstreamNotifier.SendStartupNotification()
 	taskUpdatePusher.Go()

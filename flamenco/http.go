@@ -3,6 +3,7 @@ package flamenco
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,12 +12,19 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/gorilla/mux"
 	"github.com/kardianos/osext"
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // IsoFormat is used for timestamp parsing
 const IsoFormat = "2006-01-02T15:04:05-0700"
+
+var (
+	errMissingVariable   = errors.New("missing variable")
+	errMalformedObjectID = errors.New("malformed Object ID")
+)
 
 // DecodeJSON decodes JSON from an io.Reader, and writes a Bad Request status if it fails.
 func DecodeJSON(w http.ResponseWriter, r io.Reader, document interface{},
@@ -126,4 +134,22 @@ func TemplatePathPrefix(fileToFind string) string {
 	// Append a slash so that we can later just concatenate strings.
 	log.WithField("exedirname", exedirname).Debug("found file")
 	return exedirname + string(os.PathSeparator)
+}
+
+func ObjectIDFromRequest(w http.ResponseWriter, r *http.Request, variableName string) (bson.ObjectId, error) {
+	vars := mux.Vars(r)
+	taskID, found := vars[variableName]
+	if !found {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "missing %s\n", variableName)
+		return "", errors.New("missing variable")
+	}
+
+	if !bson.IsObjectIdHex(taskID) {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Invalid ObjectID used for %s: %s\n", variableName, taskID)
+		return "", errMalformedObjectID
+	}
+
+	return bson.ObjectIdHex(taskID), nil
 }
