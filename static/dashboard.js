@@ -166,6 +166,19 @@ function load_workers() {
             }
             $row.append($task_td);
 
+            // Show link to download the task log.
+            $log_td = $('<td>');
+            if (typeof worker.current_task != 'undefined' && typeof worker.current_job != 'undefined') {
+                $loglink = $('<a>')
+                    .attr('href', '/logfile/' + worker.current_job + '/' + worker.current_task)
+                    .attr('target', '_blank')
+                    .text('download');
+                $log_td.append($loglink);
+            } else {
+                $log_td.text('-');
+            }
+            $row.append($log_td);
+
             $row.append($('<td>')
                 .text(time_diff(worker.last_activity))
                 .attr('title', new Date(worker.last_activity)));

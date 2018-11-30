@@ -134,8 +134,9 @@ type Worker struct {
 	Software           string         `bson:"software" json:"software"`
 
 	// For dashboard
-	CurrentTaskStatus  string     `bson:"current_task_status,omitempty" json:"current_task_status,omitempty"`
-	CurrentTaskUpdated *time.Time `bson:"current_task_updated,omitempty" json:"current_task_updated,omitempty"`
+	CurrentTaskStatus  string        `bson:"current_task_status,omitempty" json:"current_task_status,omitempty"`
+	CurrentTaskUpdated *time.Time    `bson:"current_task_updated,omitempty" json:"current_task_updated,omitempty"`
+	CurrentJob         bson.ObjectId `bson:"current_job,omitempty" json:"current_job,omitempty"`
 
 	// For controlling sleeping & waking up. For values, see the workerStatusXXX constants.
 	StatusRequested string `bson:"status_requested" json:"status_requested"`

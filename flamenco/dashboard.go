@@ -123,6 +123,7 @@ func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
 			"current_task_updated": 1,
 			"address":              1,
 			"current_task":         1,
+			"current_job":          "$_task.job",
 			"last_activity":        1,
 			"nickname":             1,
 			"platform":             1,
