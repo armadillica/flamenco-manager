@@ -335,3 +335,51 @@ func (s *TaskUpdatesTestSuite) TestUnknownJobIDValue(c *check.C) {
 	assert.Equal(c, 0, len(unknownJobID))
 	assert.Equal(c, "", unknownJobID.Hex())
 }
+
+func (s *TaskUpdatesTestSuite) TestLogRotation(c *check.C) {
+	tasksColl := s.db.C("flamenco_tasks")
+
+	task := ConstructTestTask("1aaaaaaaaaaaaaaaaaaaaaaa", "testing")
+	assert.Nil(c, tasksColl.Insert(task))
+
+	worker := Worker{
+		Platform:           "linux",
+		SupportedTaskTypes: []string{"testing"},
+	}
+	assert.Nil(c, StoreNewWorker(&worker, s.db))
+
+	logdir, logfname := s.queue.taskLogPath(task.Job, task.ID)
+	logFilename := path.Join(logdir, logfname)
+
+	assert.False(c, fileExists(logFilename), "The log file shouldn't exist yet")
+
+	sendUpdate := func(status, activity, log string) {
+		s.sendTaskUpdate(c, task.ID, worker.ID, status, activity, log)
+	}
+
+	logEntry1 := "many\nlines\nof\nlogging\nproduced\nby\nthis\nworker\nso\nmany\nmany\nmany\nlines\nit's\ncrazy.\n"
+	sendUpdate("", "doing stuff by worker", logEntry1)
+
+	// This should create a log file.
+	contents, err := ioutil.ReadFile(logFilename)
+	assert.Equal(c, logEntry1, string(contents), err.Error())
+
+	// A subsequent update should append to the same log file.
+	logEntry2 := "Some\nmore\nlogging going on.\n"
+	sendUpdate("", "some more stuff by worker", logEntry1)
+	contents, err = ioutil.ReadFile(logFilename)
+	assert.Equal(c, logEntry1+logEntry2, string(contents), err.Error())
+
+	// Mark as completed -- TODO: check that this file gets GZipped in the background.
+	logEntry3 := "final line\n"
+	sendUpdate(statusCompleted, "done", logEntry3)
+	assert.Equal(c, logEntry1+logEntry2+logEntry3, string(contents), err.Error())
+
+	// Sending another update reactivates the task, and thus should produce a new log file.
+	logEntry4 := "New run of this task\n"
+	sendUpdate(statusActive, "reactivating task", logEntry4)
+	contents, err = ioutil.ReadFile(logFilename)
+	assert.Equal(c, logEntry4, string(contents), err.Error())
+	contents, err = ioutil.ReadFile(logFilename + ".1")
+	assert.Equal(c, logEntry1+logEntry2+logEntry3, string(contents), err.Error())
+}

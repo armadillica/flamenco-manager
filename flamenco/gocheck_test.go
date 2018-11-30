@@ -4,6 +4,7 @@
 package flamenco
 
 import (
+	"os"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
@@ -45,4 +46,9 @@ func ConstructTestTaskWithPrio(taskID, taskType string, priority int) Task {
 		},
 		Worker: "worker1",
 	}
+}
+
+func fileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	return !os.IsNotExist(err)
 }
