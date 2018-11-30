@@ -221,6 +221,12 @@ func trimLogForTaskUpdate(logText string) string {
 }
 
 func (tuq *TaskUpdateQueue) writeTaskLog(task *Task, logText string) error {
+	// Shortcut to avoid creating an empty log file. It also solves an
+	// index out of bounds error further down when we check the last character.
+	if logText == "" {
+		return nil
+	}
+
 	logger := log.WithField("task_id", task.ID.Hex())
 	if task.Job == unknownJobID {
 		logger.Debug("not saving log, task as unknown job ID")
@@ -248,15 +254,22 @@ func (tuq *TaskUpdateQueue) writeTaskLog(task *Task, logText string) error {
 			"total_length": len(logText),
 			log.ErrorKey:   err,
 		}).Error("could only write partial log file")
+		file.Close()
 		return err
+	}
+
+	if logText[len(logText)-1] != '\n' {
+		if n, err := file.WriteString("\n"); n < 1 || err != nil {
+			logger.WithError(err).Error("could not append line end")
+			file.Close()
+			return err
+		}
 	}
 
 	if err := file.Close(); err != nil {
 		logger.WithError(err).Error("error closing log file")
 		return err
 	}
-
-	logger.Debug("successfully appended to log file")
 	return nil
 }
 

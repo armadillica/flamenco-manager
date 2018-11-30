@@ -54,6 +54,30 @@ func (s *TaskUpdatesTestSuite) TearDownTest(c *check.C) {
 	httpmock.DeactivateAndReset()
 }
 
+func (s *TaskUpdatesTestSuite) sendTaskUpdate(c *check.C,
+	taskID, workerID bson.ObjectId,
+	status, activity, log string) {
+	s.sendTaskUpdateWithCode(c, taskID, workerID, status, activity, log, http.StatusNoContent)
+}
+
+func (s *TaskUpdatesTestSuite) sendTaskUpdateWithCode(c *check.C,
+	taskID, workerID bson.ObjectId,
+	status, activity, log string,
+	expectedStatusCode int) {
+
+	tupdate := TaskUpdate{
+		TaskID:     taskID,
+		TaskStatus: status,
+		Activity:   activity,
+		Log:        log,
+	}
+	payloadBytes, err := json.Marshal(tupdate)
+	assert.Nil(c, err)
+	respRec, ar := WorkerTestRequestWithBody(workerID, bytes.NewBuffer(payloadBytes), "POST", "/tasks/"+taskID.Hex()+"/update")
+	s.queue.QueueTaskUpdateFromWorker(respRec, ar, s.db, taskID)
+	assert.Equal(c, expectedStatusCode, respRec.Code)
+}
+
 func (s *TaskUpdatesTestSuite) TestCancelRunningTasks(t *check.C) {
 	tasksColl := s.db.C("flamenco_tasks")
 
@@ -133,15 +157,7 @@ func (s *TaskUpdatesTestSuite) TestMultipleWorkersForOneTask(c *check.C) {
 	// Task should not be assigned to any worker
 	assert.Nil(c, task1.WorkerID)
 
-	tupdate := TaskUpdate{
-		TaskID:   task1.ID,
-		Activity: "doing stuff by worker1",
-	}
-	payloadBytes, err := json.Marshal(tupdate)
-	assert.Nil(c, err)
-	respRec, ar := WorkerTestRequestWithBody(worker1.ID, bytes.NewBuffer(payloadBytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
-	s.queue.QueueTaskUpdateFromWorker(respRec, ar, s.db, task1.ID)
-	assert.Equal(c, 204, respRec.Code)
+	s.sendTaskUpdate(c, task1.ID, worker1.ID, "", "doing stuff by worker1", "")
 
 	// Because of this update, the task should be assigned to worker 1
 	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
@@ -149,12 +165,7 @@ func (s *TaskUpdatesTestSuite) TestMultipleWorkersForOneTask(c *check.C) {
 	assert.Equal(c, task1.Activity, "doing stuff by worker1")
 
 	// An update by worker 2 should fail.
-	tupdate.Activity = "doing stuff by worker2"
-	payloadBytes, err = json.Marshal(tupdate)
-	assert.Nil(c, err)
-	respRec, ar = WorkerTestRequestWithBody(worker2.ID, bytes.NewBuffer(payloadBytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
-	s.queue.QueueTaskUpdateFromWorker(respRec, ar, s.db, task1.ID)
-	assert.Equal(c, http.StatusConflict, respRec.Code)
+	s.sendTaskUpdateWithCode(c, task1.ID, worker2.ID, "", "doing stuff by worker2", "", http.StatusConflict)
 
 	// The task should still be assigned to worker 1
 	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
@@ -179,18 +190,8 @@ func (s *TaskUpdatesTestSuite) TestUpdateForCancelRequestedTask(c *check.C) {
 		task.Activity = lastActivity
 		assert.Nil(c, tasksColl.Insert(task))
 
-		tupdate := TaskUpdate{
-			TaskID:     task.ID,
-			TaskStatus: "active",
-			Activity:   "doing stuff by worker1",
-		}
-		payload, err := json.Marshal(tupdate)
-		assert.Nil(c, err)
-		respRec, ar := WorkerTestRequestWithBody(worker1.ID, bytes.NewBuffer(payload), "POST", "/tasks/"+taskID+"/update")
-		s.queue.QueueTaskUpdateFromWorker(respRec, ar, s.db, task.ID)
-
 		// This update should be accepted, but not change the task's status.
-		assert.Equal(c, http.StatusNoContent, respRec.Code)
+		s.sendTaskUpdate(c, task.ID, worker1.ID, statusActive, "doing stuff by worker1", "")
 
 		assert.Nil(c, tasksColl.FindId(task.ID).One(&task))
 		assert.Equal(c, worker1.ID, *task.WorkerID)
@@ -222,24 +223,14 @@ func (s *TaskUpdatesTestSuite) TestTaskRescheduling(c *check.C) {
 
 	taskSched := CreateTaskScheduler(&s.config, s.upstream, s.session, s.queue)
 
-	tupdate := TaskUpdate{
-		TaskID:     task1.ID,
-		TaskStatus: "active",
-		Activity:   "doing stuff by worker1",
-	}
-	payloadBytes, err := json.Marshal(tupdate)
-	assert.Nil(c, err)
-	respRec, ar := WorkerTestRequestWithBody(worker1.ID, bytes.NewBuffer(payloadBytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
-	s.queue.QueueTaskUpdateFromWorker(respRec, ar, s.db, task1.ID)
-	assert.Equal(c, http.StatusNoContent, respRec.Code)
-
 	// Because of this update, the task should be assigned to worker 1.
+	s.sendTaskUpdate(c, task1.ID, worker1.ID, statusActive, "doing stuff by worker1", "")
 	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
 	assert.Equal(c, worker1.ID, *task1.WorkerID)
 	assert.Equal(c, "doing stuff by worker1", task1.Activity)
 
 	// Worker 1 signs off, so task becomes available again for scheduling to worker 2.
-	respRec, ar = WorkerTestRequest(worker1.ID, "POST", "/sign-off")
+	respRec, ar := WorkerTestRequest(worker1.ID, "POST", "/sign-off")
 	WorkerSignOff(respRec, ar, s.db, s.sched)
 	respRec, ar = WorkerTestRequest(worker2.ID, "POST", "/task")
 	taskSched.ScheduleTask(respRec, ar)
@@ -255,14 +246,7 @@ func (s *TaskUpdatesTestSuite) TestTaskRescheduling(c *check.C) {
 	time.Sleep(250 * time.Millisecond)
 
 	// An update by worker 2 should be accepted.
-	tupdate.Activity = "doing stuff by worker2"
-	tupdate.TaskStatus = "failed"
-	payloadBytes, err = json.Marshal(tupdate)
-	assert.Nil(c, err)
-	respRec, ar = WorkerTestRequestWithBody(worker2.ID, bytes.NewBuffer(payloadBytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
-	s.queue.QueueTaskUpdateFromWorker(respRec, ar, s.db, task1.ID)
-	assert.Equal(c, http.StatusNoContent, respRec.Code)
-
+	s.sendTaskUpdate(c, task1.ID, worker2.ID, statusFailed, "doing stuff by worker2", "")
 	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
 	assert.Equal(c, *task1.WorkerID, worker2.ID)
 	assert.Equal(c, task1.Status, "failed")
@@ -294,16 +278,8 @@ func (s *TaskUpdatesTestSuite) TestLogHandling(c *check.C) {
 	}
 	assert.Nil(c, StoreNewWorker(&worker, s.db))
 
-	tupdate := TaskUpdate{
-		TaskID:   task.ID,
-		Activity: "doing stuff by worker",
-		Log:      "many\nlines\nof\nlogging\nproduced\nby\nthis\nworker\nso\nmany\nmany\nmany\nlines\nit's\ncrazy.\n",
-	}
-	payloadBytes, err := json.Marshal(tupdate)
-	assert.Nil(c, err)
-	respRec, ar := WorkerTestRequestWithBody(worker.ID, bytes.NewBuffer(payloadBytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
-	s.queue.QueueTaskUpdateFromWorker(respRec, ar, s.db, task.ID)
-	assert.Equal(c, 204, respRec.Code)
+	logEntry1 := "many\nlines\nof\nlogging\nproduced\nby\nthis\nworker\nso\nmany\nmany\nmany\nlines\nit's\ncrazy.\n"
+	s.sendTaskUpdate(c, task.ID, worker.ID, statusActive, "doing stuff by worker", logEntry1)
 
 	// Because of this update, the task should be assigned to worker 1
 	found := Task{}
@@ -317,7 +293,7 @@ func (s *TaskUpdatesTestSuite) TestLogHandling(c *check.C) {
 	var queuedUpdates []TaskUpdate
 	assert.Nil(c, queueColl.Find(bson.M{"task_id": task.ID}).All(&queuedUpdates))
 	assert.Equal(c, 1, len(queuedUpdates))
-	assert.Equal(c, tupdate.Activity, queuedUpdates[0].Activity)
+	assert.Equal(c, "doing stuff by worker", queuedUpdates[0].Activity)
 	assert.Equal(c, found.Log, queuedUpdates[0].Log,
 		"The last 10 log lines should have been queued.")
 
@@ -326,29 +302,22 @@ func (s *TaskUpdatesTestSuite) TestLogHandling(c *check.C) {
 	logFilename := path.Join(logdir, logfname)
 	contents, err := ioutil.ReadFile(logFilename)
 	assert.Nil(c, err)
-	assert.Equal(c, tupdate.Log, string(contents))
+	assert.Equal(c, logEntry1, string(contents))
 
 	// A subsequent update should append to the log file but not to the task.
 	// Also, all logs should be complete lines, so the missing newline should be added.
-	firstLog := tupdate.Log
-	tupdate.Activity = "more stuff by worker"
-	tupdate.Log = "just\nsome\nmore\nlines"
-
-	payloadBytes, err = json.Marshal(tupdate)
-	assert.Nil(c, err)
-	respRec, ar = WorkerTestRequestWithBody(worker.ID, bytes.NewBuffer(payloadBytes), "POST", "/tasks/1aaaaaaaaaaaaaaaaaaaaaaa/update")
-	s.queue.QueueTaskUpdateFromWorker(respRec, ar, s.db, task.ID)
-	assert.Equal(c, 204, respRec.Code)
+	logEntry2 := "just\nsome\nmore\nlines"
+	s.sendTaskUpdate(c, task.ID, worker.ID, statusActive, "more stuff by worker", logEntry2)
 
 	assert.Nil(c, queueColl.Find(bson.M{"task_id": task.ID}).All(&queuedUpdates))
 	assert.Equal(c, 2, len(queuedUpdates))
-	assert.Equal(c, tupdate.Activity, queuedUpdates[1].Activity)
-	assert.Equal(c, tupdate.Log+"\n", queuedUpdates[1].Log,
+	assert.Equal(c, "more stuff by worker", queuedUpdates[1].Activity)
+	assert.Equal(c, logEntry2+"\n", queuedUpdates[1].Log,
 		"For a short update the entire log should be stored.")
 
 	contents, err = ioutil.ReadFile(logFilename)
 	assert.Nil(c, err)
-	assert.Equal(c, firstLog+tupdate.Log+"\n", string(contents))
+	assert.Equal(c, logEntry1+logEntry2+"\n", string(contents))
 }
 
 func (s *TaskUpdatesTestSuite) TestTrimLogForTaskUpdate(c *check.C) {
