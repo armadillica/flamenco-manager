@@ -82,7 +82,8 @@ type TaskUpdate struct {
 	TaskProgressPercentage    int           `bson:"task_progress_percentage" json:"task_progress_percentage"`
 	CurrentCommandIdx         int           `bson:"current_command_idx" json:"current_command_idx"`
 	CommandProgressPercentage int           `bson:"command_progress_percentage" json:"command_progress_percentage"`
-	Log                       string        `bson:"log,omitempty" json:"log,omitempty"`
+	Log                       string        `bson:"log,omitempty" json:"log,omitempty"`           // for appending to Server-side log
+	LogTail                   string        `bson:"log_tail,omitempty" json:"log_tail,omitempty"` // for overwriting on Server-side task
 	Worker                    string        `bson:"worker" json:"worker"`
 
 	isManagerLocal bool // when true, this update should only be applied locally and not be sent upstream.

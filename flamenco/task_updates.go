@@ -132,11 +132,13 @@ func (tuq *TaskUpdateQueue) QueueTaskUpdateWithExtra(task *Task, tupdate *TaskUp
 	tupdate.ReceivedOnManager = time.Now().UTC()
 	tupdate.ID = bson.NewObjectId()
 
-	// Store the log into a plain-text file for the task. However, we can only
-	// write to the log file after we've done some more investigation of the
+	// We can only write to the log file after we've done some more investigation of the
 	// situation (the task may be reactivated and the log may require rotating).
 	logToWrite := tupdate.Log
-	tupdate.Log = trimLogForTaskUpdate(tupdate.Log)
+
+	// Only send the tail of the log to the Server.
+	tupdate.LogTail = trimLogForTaskUpdate(tupdate.Log)
+	tupdate.Log = ""
 
 	// Store the update in the queue for sending to the Flamenco Server later.
 	if !tupdate.isManagerLocal {

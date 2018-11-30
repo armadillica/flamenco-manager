@@ -278,7 +278,8 @@ func (s *TaskUpdatesTestSuite) TestLogHandling(c *check.C) {
 	}
 	assert.Nil(c, StoreNewWorker(&worker, s.db))
 
-	logEntry1 := "many\nlines\nof\nlogging\nproduced\nby\nthis\nworker\nso\nmany\nmany\nmany\nlines\nit's\ncrazy.\n"
+	lastLines := "by\nthis\nworker\nso\nmany\nmany\nmany\nlines\nit's\ncrazy.\n"
+	logEntry1 := "many\nlines\nof\nlogging\nproduced\n" + lastLines
 	s.sendTaskUpdate(c, task.ID, worker.ID, statusActive, "doing stuff by worker", logEntry1)
 
 	// Because of this update, the task should be assigned to worker 1
@@ -286,15 +287,15 @@ func (s *TaskUpdatesTestSuite) TestLogHandling(c *check.C) {
 	assert.Nil(c, tasksColl.FindId(task.ID).One(&found))
 	assert.Equal(c, *found.WorkerID, worker.ID)
 	assert.Equal(c, found.Activity, "doing stuff by worker")
-	assert.Equal(c, found.Log, "by\nthis\nworker\nso\nmany\nmany\nmany\nlines\nit's\ncrazy.\n",
-		"The last 10 log lines should have been stored with the task.")
+	assert.Equal(c, found.Log, "")
 
 	// The outgoing queue should not have the entire log, but just the last 10 lines.
 	var queuedUpdates []TaskUpdate
 	assert.Nil(c, queueColl.Find(bson.M{"task_id": task.ID}).All(&queuedUpdates))
 	assert.Equal(c, 1, len(queuedUpdates))
 	assert.Equal(c, "doing stuff by worker", queuedUpdates[0].Activity)
-	assert.Equal(c, found.Log, queuedUpdates[0].Log,
+	assert.Equal(c, "", queuedUpdates[0].Log)
+	assert.Equal(c, lastLines, queuedUpdates[0].LogTail,
 		"The last 10 log lines should have been queued.")
 
 	// Check the log file
@@ -312,7 +313,7 @@ func (s *TaskUpdatesTestSuite) TestLogHandling(c *check.C) {
 	assert.Nil(c, queueColl.Find(bson.M{"task_id": task.ID}).All(&queuedUpdates))
 	assert.Equal(c, 2, len(queuedUpdates))
 	assert.Equal(c, "more stuff by worker", queuedUpdates[1].Activity)
-	assert.Equal(c, logEntry2+"\n", queuedUpdates[1].Log,
+	assert.Equal(c, logEntry2+"\n", queuedUpdates[1].LogTail,
 		"For a short update the entire log should be stored.")
 
 	contents, err = ioutil.ReadFile(logFilename)
