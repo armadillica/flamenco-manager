@@ -329,9 +329,10 @@ func (s *TaskUpdatesTestSuite) TestLogHandling(c *check.C) {
 	assert.Equal(c, tupdate.Log, string(contents))
 
 	// A subsequent update should append to the log file but not to the task.
+	// Also, all logs should be complete lines, so the missing newline should be added.
 	firstLog := tupdate.Log
 	tupdate.Activity = "more stuff by worker"
-	tupdate.Log = "just\nsome\nmore\nlines\n"
+	tupdate.Log = "just\nsome\nmore\nlines"
 
 	payloadBytes, err = json.Marshal(tupdate)
 	assert.Nil(c, err)
@@ -342,12 +343,12 @@ func (s *TaskUpdatesTestSuite) TestLogHandling(c *check.C) {
 	assert.Nil(c, queueColl.Find(bson.M{"task_id": task.ID}).All(&queuedUpdates))
 	assert.Equal(c, 2, len(queuedUpdates))
 	assert.Equal(c, tupdate.Activity, queuedUpdates[1].Activity)
-	assert.Equal(c, tupdate.Log, queuedUpdates[1].Log,
+	assert.Equal(c, tupdate.Log+"\n", queuedUpdates[1].Log,
 		"For a short update the entire log should be stored.")
 
 	contents, err = ioutil.ReadFile(logFilename)
 	assert.Nil(c, err)
-	assert.Equal(c, firstLog+tupdate.Log, string(contents))
+	assert.Equal(c, firstLog+tupdate.Log+"\n", string(contents))
 }
 
 func (s *TaskUpdatesTestSuite) TestTrimLogForTaskUpdate(c *check.C) {
