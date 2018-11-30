@@ -6,7 +6,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-// Some of the statuses we recognise.
+// Some of the task statuses we recognise.
 // TODO Sybren: list all used statuses here as constants, instead of using string literals.
 const (
 	statusQueued           = "queued"
