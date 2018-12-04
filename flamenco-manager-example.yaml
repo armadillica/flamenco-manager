@@ -9,6 +9,11 @@ database_url:
 # NOTE: only use local filesystems, and not a CIFS/Samba/NFS mount.
 #database_path: ./db
 
+# Where Flamenco Manager stores the task logs it receives from Workers.
+# As of Manager version 2.2 it no longer sends the entire log to the Server,
+# but stores them here in full and only sends the last few lines upstream.
+task_logs_path: /tmp/flamenco/logs
+
 # Flamenco Manager listens to incoming connections from workers on this address.
 # Set to '0.0.0.0:8083' if your system does not support IPv6 but only IPv4.
 listen: '[::0]:8083'
