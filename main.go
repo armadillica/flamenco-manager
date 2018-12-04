@@ -26,7 +26,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-const flamencoVersion = "2.2-dev2"
+const flamencoVersion = "2.2"
 const ssdpServiceType = "urn:flamenco:manager:0"
 
 // MongoDB session
