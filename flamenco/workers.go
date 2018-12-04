@@ -424,7 +424,7 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 	}
 
 	// Update the worker itself, to show it's down in the DB too.
-	if worker.Status == workerStatusAsleep {
+	if worker.Status == workerStatusAsleep && (worker.StatusRequested == "" || worker.StatusRequested == workerStatusShutdown) {
 		// Make sure that the worker remains asleep, even after signing on again.
 		defer worker.RequestStatusChange(workerStatusAsleep, db)
 	}

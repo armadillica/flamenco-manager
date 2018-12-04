@@ -235,6 +235,14 @@ func (s *WorkerTestSuite) TestWorkerSignOff(t *check.C) {
 	assert.Equal(t, workerStatusOffline, found.Status)
 	assert.Equal(t, workerStatusAsleep, found.StatusRequested)
 
+	// Signing off when asleep and awake requested
+	s.workerLnx.SetStatus(workerStatusAsleep, s.db)
+	s.workerLnx.RequestStatusChange(workerStatusAwake, s.db)
+	signoff()
+	getworker()
+	assert.Equal(t, workerStatusOffline, found.Status)
+	assert.Equal(t, "", found.StatusRequested)
+
 	// Signing off when timed out
 	s.workerLnx.SetStatus(workerStatusTimeout, s.db)
 	s.workerLnx.RequestStatusChange(workerStatusShutdown, s.db)
