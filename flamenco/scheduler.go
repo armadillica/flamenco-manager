@@ -125,33 +125,15 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	}
 
 	logger = logger.WithField("task_id", task.ID.Hex())
-	logger.Info("ScheduleTask: assigning task to worker")
-
-	// Update the task status to "active", pushing it as a task update to the Server too.
-	task.Status = "active"
-	tupdate := TaskUpdate{
-		TaskID:         task.ID,
-		TaskStatus:     task.Status,
-		isManagerLocal: task.isManagerLocalTask(),
-	}
-	localUpdates := bson.M{
-		"worker":           worker.Nickname,
-		"worker_id":        worker.ID,
-		"last_worker_ping": UtcNow(),
-	}
-	if err := ts.queue.QueueTaskUpdateWithExtra(task, &tupdate, db, localUpdates); err != nil {
-		logger.WithError(err).Error("Unable to queue task update while assigning task")
+	if err := ts.assignTaskToWorker(task, worker, db, logger); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	// Update the "Current task" on the Worker as well.
-	worker.SetCurrentTask(task.ID, db)
-
 	// Perform variable replacement on the task.
 	ReplaceVariables(ts.config, task, worker)
 
-	// Set it to this worker.
+	// Send it to this worker.
 	w.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
 	if err := encoder.Encode(task); err != nil {
@@ -166,6 +148,45 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	// This is done here, instead of by the worker, so that it's logged even if the worker fails.
 	msg := fmt.Sprintf("Manager assigned task %s to worker %s", task.ID.Hex(), worker.Identifier())
 	ts.queue.LogTaskActivity(worker, task, msg, time.Now().Format(IsoFormat)+": "+msg, db)
+}
+
+func (ts *TaskScheduler) assignTaskToWorker(task *Task, worker *Worker, db *mgo.Database, logger *log.Entry) error {
+	logger.Info("assignTaskToWorker: assigning task to worker")
+
+	// Update the task status to "active", pushing it as a task update to the Server too.
+	if task.Status != statusActive {
+		logger.WithFields(log.Fields{
+			"old_status": task.Status,
+			"new_status": statusActive,
+		}).Info("assignTaskToWorker: updating task status")
+
+		// Poke the task update queue to trigger log rotation.
+		// TODO(Sybren): move the mutation of tasks to a central place so that
+		//  such triggers are always handled properly.
+		ts.queue.onTaskStatusChanged(task, statusActive)
+		task.Status = statusActive
+	} else {
+		logger.Info("assignTaskToWorker: task already active")
+	}
+	tupdate := TaskUpdate{
+		TaskID:         task.ID,
+		TaskStatus:     task.Status,
+		isManagerLocal: task.isManagerLocalTask(),
+	}
+	localUpdates := bson.M{
+		"worker":           worker.Nickname,
+		"worker_id":        worker.ID,
+		"last_worker_ping": UtcNow(),
+	}
+	if err := ts.queue.QueueTaskUpdateWithExtra(task, &tupdate, db, localUpdates); err != nil {
+		logger.WithError(err).Error("Unable to queue task update while assigning task")
+		return err
+	}
+
+	// Update the "Current task" on the Worker as well.
+	worker.SetCurrentTask(task.ID, db)
+
+	return nil
 }
 
 func (ts *TaskScheduler) unassignTaskFromWorker(task *Task, worker *Worker, reason error, db *mgo.Database) {
@@ -371,10 +392,11 @@ func (ts *TaskScheduler) ReturnTask(worker *Worker, logFields log.Fields,
 
 	// Queue the actual task update to re-queue it.
 	wIdent := worker.Identifier()
+	task.Status = statusClaimedByManager
 	tupdate := TaskUpdate{
 		isManagerLocal: task.isManagerLocalTask(),
 		TaskID:         task.ID,
-		TaskStatus:     statusClaimedByManager,
+		TaskStatus:     task.Status,
 		Worker:         "-", // no longer assigned to any worker
 		Activity:       fmt.Sprintf("Re-queued task after unassigning from worker %s: %s", wIdent, reasonForReturn),
 		Log: fmt.Sprintf("%s: Manager re-queued task after unassigning it from worker %s: %s",
@@ -444,10 +466,10 @@ func (ts *TaskScheduler) WorkerMayRunTask(w http.ResponseWriter, r *auth.Authent
 
 // IsRunnableTaskStatus returns whether the given status is considered "runnable".
 func IsRunnableTaskStatus(status string) bool {
+	// 'queued' and 'claimed-by-manager' aren't considered runnable, as those
+	// statuses indicate the task wasn't assigned to a Worker by the scheduler.
 	runnableStatuses := map[string]bool{
-		"active":             true,
-		"claimed-by-manager": true,
-		"queued":             true,
+		statusActive: true,
 	}
 
 	runnable, found := runnableStatuses[status]

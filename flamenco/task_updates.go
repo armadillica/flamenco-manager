@@ -222,14 +222,17 @@ func (tuq *TaskUpdateQueue) onTaskStatusChanged(task *Task, newStatus string) {
 		return
 	}
 
-	log.WithFields(log.Fields{
+	logger := log.WithFields(log.Fields{
 		"task_id":    task.ID.Hex(),
 		"old_status": task.Status,
 		"new_status": newStatus,
-	}).Info("task status was updated")
+	})
 
-	if newStatus == "active" {
+	if newStatus == statusActive {
+		logger.Info("task status was updated and became active; rotating task log file")
 		tuq.rotateTaskLogFile(task)
+	} else {
+		logger.Info("task status was updated")
 	}
 }
 

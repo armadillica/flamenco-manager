@@ -157,9 +157,12 @@ func (s *TaskUpdatesTestSuite) TestMultipleWorkersForOneTask(c *check.C) {
 	// Task should not be assigned to any worker
 	assert.Nil(c, task1.WorkerID)
 
-	s.sendTaskUpdate(c, task1.ID, worker1.ID, "", "doing stuff by worker1", "")
+	// Task updates are only fully accepted when the task is active,
+	// which is normally done by the scheduler.
+	assert.Nil(c, tasksColl.UpdateId(task1.ID, bson.M{"$set": bson.M{"status": statusActive}}))
 
 	// Because of this update, the task should be assigned to worker 1
+	s.sendTaskUpdate(c, task1.ID, worker1.ID, "", "doing stuff by worker1", "")
 	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
 	assert.Equal(c, *task1.WorkerID, worker1.ID)
 	assert.Equal(c, task1.Activity, "doing stuff by worker1")
@@ -222,12 +225,13 @@ func (s *TaskUpdatesTestSuite) TestTaskRescheduling(c *check.C) {
 	assert.Nil(c, StoreNewWorker(&worker2, s.db))
 
 	taskSched := CreateTaskScheduler(&s.config, s.upstream, s.session, s.queue)
+	taskSched.assignTaskToWorker(&task1, &worker1, s.db, log.WithField("unittest", "TestTaskRescheduling"))
 
 	// Because of this update, the task should be assigned to worker 1.
 	s.sendTaskUpdate(c, task1.ID, worker1.ID, statusActive, "doing stuff by worker1", "")
 	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
-	assert.Equal(c, worker1.ID, *task1.WorkerID)
-	assert.Equal(c, "doing stuff by worker1", task1.Activity)
+	assert.Equal(c, *task1.WorkerID, worker1.ID)
+	assert.Equal(c, task1.Activity, "doing stuff by worker1")
 
 	// Worker 1 signs off, so task becomes available again for scheduling to worker 2.
 	respRec, ar := WorkerTestRequest(worker1.ID, "POST", "/sign-off")
@@ -237,7 +241,7 @@ func (s *TaskUpdatesTestSuite) TestTaskRescheduling(c *check.C) {
 	assert.Equal(c, http.StatusOK, respRec.Code)
 
 	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
-	assert.Equal(c, "active", task1.Status)
+	assert.Equal(c, task1.Status, statusActive)
 
 	// Sleep a bit before we update the task again, so that we can clearly see a difference
 	// in update timestamps.
@@ -249,7 +253,7 @@ func (s *TaskUpdatesTestSuite) TestTaskRescheduling(c *check.C) {
 	s.sendTaskUpdate(c, task1.ID, worker2.ID, statusFailed, "doing stuff by worker2", "")
 	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
 	assert.Equal(c, *task1.WorkerID, worker2.ID)
-	assert.Equal(c, task1.Status, "failed")
+	assert.Equal(c, task1.Status, statusFailed)
 	assert.Equal(c, task1.Activity, "doing stuff by worker2")
 
 	// The workers now should have different CurrentTaskUpdated fields.
@@ -270,6 +274,7 @@ func (s *TaskUpdatesTestSuite) TestLogHandling(c *check.C) {
 	queueColl := s.db.C(queueMgoCollection)
 
 	task := ConstructTestTask("1aaaaaaaaaaaaaaaaaaaaaaa", "testing")
+	task.Status = statusActive // make sure the assigned worker is allowed to update the task.
 	assert.Nil(c, tasksColl.Insert(task))
 
 	worker := Worker{
@@ -342,6 +347,7 @@ func (s *TaskUpdatesTestSuite) TestLogRotation(c *check.C) {
 
 	task := ConstructTestTask("1aaaaaaaaaaaaaaaaaaaaaaa", "testing")
 	assert.Nil(c, tasksColl.Insert(task))
+	logFields := log.Fields{"unittest": "TestLogRotation", "task_id": task.ID}
 
 	worker := Worker{
 		Platform:           "linux",
@@ -365,27 +371,34 @@ func (s *TaskUpdatesTestSuite) TestLogRotation(c *check.C) {
 	}
 
 	// This should create a log file.
+	log.Debug("............................. 1")
+	s.sched.assignTaskToWorker(&task, &worker, s.db, log.WithFields(logFields))
 	logEntry1 := "ENTRY 1: many\nlines\nof\nlogging\nproduced\nby\nthis\nworker\nso\nmany\nmany\nmany\nlines\nit's\ncrazy.\n"
 	sendUpdate(statusActive, "doing stuff by worker", logEntry1)
 	assert.Equal(c, logEntry1, read(logFilename))
 
 	// A subsequent update should append to the same log file.
+	log.Debug("............................. 2")
 	logEntry2 := "ENTRY 2: Some\nmore\nlogging going on.\n"
 	sendUpdate("", "some more stuff by worker", logEntry2)
 	assert.Equal(c, logEntry1+logEntry2, read(logFilename))
 
 	// Mark as completed -- TODO: check that this file gets GZipped in the background.
+	log.Debug("............................. 3")
 	logEntry3 := "ENTRY 3: final line\n"
 	sendUpdate(statusCompleted, "done", logEntry3)
 	assert.Equal(c, logEntry1+logEntry2+logEntry3, read(logFilename))
 
-	// Re-queue the task.
-	assert.Nil(c, s.db.C("flamenco_tasks").UpdateId(task.ID,
-		bson.M{"$set": bson.M{"status": statusClaimedByManager}}))
+	// Re-queue and re-assign the task.
+	log.Debug("............................. 4")
+	// mimick s.sched.ReturnTask() but without writing a timestamped line to the log
+	task.Status = statusClaimedByManager
+	s.sched.assignTaskToWorker(&task, &worker, s.db, log.WithFields(logFields))
 
-	// Sending another update reactivates the task, and thus should produce a new log file.
+	// Sending another update should produce a new log file.
+	log.Debug("............................. 5")
 	logEntry4 := "ENTRY 4: New run of this task\n"
-	sendUpdate(statusActive, "reactivating task", logEntry4)
+	sendUpdate(statusActive, "retrying task", logEntry4)
 	assert.Equal(c, logEntry4, read(logFilename))
 	assert.Equal(c, logEntry1+logEntry2+logEntry3, read(logFilename+".1"))
 }
