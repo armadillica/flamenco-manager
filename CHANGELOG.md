@@ -1,6 +1,11 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.2.1 (in development)
+
+- Fix an issue where a task could time out when its Worker goes to sleep or shuts down.
+
+
 ## Version 2.2 (2018-12-04)
 
 - Requires Flamenco Server 2.1 or newer.
