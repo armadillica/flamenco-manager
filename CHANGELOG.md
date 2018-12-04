@@ -3,6 +3,7 @@ Changelog for Flamenco Manager
 
 ## Version 2.2 (in development)
 
+- Requires Flamenco Server 2.1 or newer.
 - Accept log entries for tasks that are no longer runnable. In this case the task's status and
   activity doesn't change, but the logs are still accepted & forwarded to Flamenco Server. This
   helps to figure out why a task failed, even when the logs are lagging behind.
@@ -10,6 +11,12 @@ Changelog for Flamenco Manager
 - Send the set of task types supported by our workers to Flamenco Server. This will allow it to
   tailor some variable jobs to our capabilities.
 - Allow Workers to return tasks to the queue.
+- Store log entries in local files on the Manager, instead of sending all of them to the Server.
+  The log files are stored in a directory per job, and a file per task. When a task is restarted,
+  its log file is rotated (`{task-id}.log` becomes `{task-id}.log.1`). There is no automatic
+  cleanup of log files implemented; this can be handled by a system daemon or by manual deletion.
+  Log files can be accessed at http://manager/logfile/{job-id}/{task-id}. Requires Flamenco Server
+  version 2.1 or newer.
 
 
 ## Version 2.1.1 (2018-01-21)

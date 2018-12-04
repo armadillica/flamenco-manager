@@ -63,6 +63,13 @@ Can return different responses with different HTTP status codes:
 - `409 Conflict`: The task is assigned to another worker, so the update was not
   accepted.
 
+### `/logfile/{job-id}/{task-id}`
+
+Expects a `GET`.
+
+Serves the latest log file for that task. Rotated log files cannot be accessed
+via any URL.
+
 ### `/may-i-run/{task-id}`
 
 Expectes an authenticated `GET`.
