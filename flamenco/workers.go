@@ -403,7 +403,7 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 	var tasks []Task
 	query := bson.M{
 		"worker_id": worker.ID,
-		"status":    "active",
+		"status":    statusActive,
 	}
 	sentHeader := false
 	if err := db.C("flamenco_tasks").Find(query).All(&tasks); err != nil {
