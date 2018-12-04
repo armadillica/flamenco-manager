@@ -90,6 +90,16 @@
         </section>
 
         <section>
+            <h3>Task Logs</h3>
+
+            <div class="form-group">
+                <label for='task-log-path'>Task Logs</label>
+                <input id='task-logs-path' class="form-control" name='task-logs-path' placeholder='Task logs path' value='{{.Config.TaskLogsPath}}'>
+                <p class='help-block'>Where on the Manager's filesystem the task logs are stored.</p>
+            </div>
+        </section>
+
+        <section>
             <h3>MongoDB database</h3>
 
             <div class="form-group">

@@ -318,6 +318,7 @@ func (web *Routes) httpSaveConfig(w http.ResponseWriter, r *http.Request) {
 
 	web.config.DatabaseURL = r.FormValue("database-url")
 	web.config.DatabasePath = r.FormValue("database-path")
+	web.config.TaskLogsPath = r.FormValue("task-logs-path")
 	web.config.Listen = r.FormValue("listen")
 	web.config.OwnURL = r.FormValue("own-url")
 	web.config.SSDPDiscovery = r.FormValue("ssdp-discovery") != ""
