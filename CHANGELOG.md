@@ -1,7 +1,7 @@
 Changelog for Flamenco Manager
 ==============================
 
-## Version 2.2 (in development)
+## Version 2.2 (2018-12-04)
 
 - Requires Flamenco Server 2.1 or newer.
 - Accept log entries for tasks that are no longer runnable. In this case the task's status and
