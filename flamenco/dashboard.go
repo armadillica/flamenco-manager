@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -18,16 +20,23 @@ type Reporter struct {
 	session         *mgo.Session
 	config          *Conf
 	flamencoVersion string
-	server          string
+	serverName      string
+	serverURL       string
 	root            string
 }
 
 // CreateReporter creates a new Reporter object.
 func CreateReporter(config *Conf, session *mgo.Session, flamencoVersion string) *Reporter {
+	serverURL, err := url.Parse(config.FlamencoStr)
+	if err != nil {
+		log.WithError(err).Fatal("CreateReporter: unable to parse server URL")
+	}
+
 	return &Reporter{
 		session,
 		config,
 		flamencoVersion,
+		serverURL.Host,
 		config.FlamencoStr,
 		TemplatePathPrefix("templates/dashboard.html"),
 	}
@@ -63,9 +72,18 @@ func (rep *Reporter) showTemplate(templfname string, w http.ResponseWriter, r *h
 		return
 	}
 
+	// TODO(Sybren): cache this in memory and check mtime.
+	vueTemplates, err := ioutil.ReadFile(rep.root + "static/vue-components.html")
+	if err != nil {
+		log.WithError(err).Error("Error loading Vue.js templates")
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
 	data := map[string]interface{}{
-		"Version": rep.flamencoVersion,
-		"Config":  rep.config,
+		"Version":      rep.flamencoVersion,
+		"Config":       rep.config,
+		"VueTemplates": template.HTML(vueTemplates),
 	}
 
 	tmpl.Execute(w, data)
@@ -149,13 +167,14 @@ func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "close")
 
 	statusreport := StatusReport{
-		workerCount,
-		taskCount,
-		upstreamQueueSize,
-		rep.flamencoVersion,
-		workers,
-		rep.server,
+		NrOfWorkers:       workerCount,
+		NrOfTasks:         taskCount,
+		UpstreamQueueSize: upstreamQueueSize,
+		Version:           rep.flamencoVersion,
+		Workers:           workers,
 	}
+	statusreport.Server.Name = rep.serverName
+	statusreport.Server.URL = rep.serverURL
 
 	encoder := json.NewEncoder(w)
 	if err := encoder.Encode(statusreport); err != nil {

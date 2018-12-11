@@ -7,20 +7,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css">
-    <!-- Optional theme -->
-    <link rel="stylesheet" href="/static/bootstrap/css/bootstrap-theme.min.css">
     <link rel="stylesheet" href="/static/toastr/toastr.min.css">
     <link rel='stylesheet' href='/static/dashboard.css'>
 
+
+    <script src='/static/vuejs/vue{{if ne .Config.Mode "develop"}}.min{{end}}.js'></script>
     <script src="/static/jquery.min.js"></script>
     <script src="/static/toastr/toastr.min.js"></script>
     <script src="/static/bootstrap/js/bootstrap.min.js" async></script>
     <script src="/static/clipboard.min.js" async></script>
-    <script src="/static/dashboard.js" async defer></script>
     <script src="/static/imagewatch.js" async></script>
+
+    {{ .VueTemplates }}
 </head>
 <body>
-<div class="container theme-showcase" role="main">
+<div class="container theme-showcase" role="main" id='vue_app'>
 
     <header class='pageheader'><h1><img src='/static/flamenco.png' alt='Flamenco logo'> Flamenco Manager
         <span id='runmode'>{{if ne .Config.Mode "production"}}({{.Config.Mode}} mode){{end}}</span>
@@ -28,20 +29,24 @@
     </h1></header>
     <section class="row">
         <div class='col-md-5'>
-            <div class="panel panel-default">
-                <div class="panel-heading" id='statusheading'>
-                    <h3 class="panel-title">Status</h3>
-                    <button id='downloadkick'>Kick task downloader</button>
+            <div class="card">
+                <div class="card-header" id='statusheading'>
+                    <h3 class="card-title">Status</h3>
+                    <button id='downloadkick' class='btn btn-sm btn-outline-light'>Kick task downloader</button>
                 </div>
-                <div class="panel-body">
-                    <div id='status'></div>
+                <div class="card-body">
+                    <status id='status'
+                        v-bind:serverinfo="serverinfo"
+                        v-bind:idle_workers="idle_workers"
+                        v-bind:errormsg="errormsg">
+                    </status>
                 </div>
             </div>
         </div>
         <div class='col-md-7'>
-            <div class="panel panel-default">
-                <div class="panel-heading"><h3 class="panel-title">Last rendered image</h3></div>
-                <div class="panel-body imageholder">
+            <div class="card">
+                <div class="card-header"><h3 class="card-title">Last rendered image</h3></div>
+                <div class="card-body imageholder">
                     <a href='/latest-image'>
                     <img id='last_rendered_image'
                          class='small-last-rendered-image'
@@ -54,10 +59,14 @@
     </section>
 
     <section class="row table-responsive">
+        <action-bar
+            v-bind:workers="current_workers"
+            v-bind:selected_worker_ids="selected_worker_ids"
+        ></action-bar>
         <table class="table table-condensed table-striped">
             <thead>
                 <tr>
-                    <th>Actions</th>
+                    <th></th>
                     <th>Nickname</th>
                     <th>Status</th>
                     <th>Cur/last Task</th>
@@ -69,9 +78,17 @@
                 </tr>
             </thead>
             <tbody id='workers'>
+                <tr is="worker-row"
+                    v-for="worker in current_workers"
+                    v-bind:key="worker._id"
+                    v-bind:worker="worker"
+                    v-bind:selected_worker_ids="selected_worker_ids"
+                    @worker-selected="onWorkerSelected"
+                    ></tr>
             </tbody>
         </table>
     </section>
 </div>
+<script src="/static/dashboard.js"></script>
 </body>
 </html>

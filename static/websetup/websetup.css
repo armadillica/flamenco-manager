@@ -21,30 +21,36 @@ h1 img {
 input {
     color: black;
 }
-
-@media (min-width: 768px)
-.masthead {
-    height: 100%;
-    padding: 0;
-}
-.masthead {
-    display: table;
-    width: 100%;
-    padding: 100px 0;
-    text-align: center;
-    color: #fff;
-}
-.masthead .intro-body {
-    display: table-cell;
-    vertical-align: middle;
+code {
+    color: inherit;
+    padding: 0.2rem 0.4rem;
 }
 
-@media (min-width: 768px)
-.masthead .intro-body .brand-heading {
-    font-size: 100px;
+@media (min-width: 768px) {
+    .masthead {
+        height: 100%;
+        padding: 0;
+    }
+    .masthead {
+        display: table;
+        width: 100%;
+        padding: 100px 0;
+        text-align: center;
+        color: #fff;
+    }
+    .masthead .intro-body {
+        display: table-cell;
+        vertical-align: middle;
+    }
 }
-.masthead .intro-body .brand-heading {
-    font-size: 50px;
+
+@media (min-width: 768px) {
+    .masthead .intro-body .brand-heading {
+        font-size: 100px;
+    }
+    .masthead .intro-body .brand-heading {
+        font-size: 50px;
+    }
 }
 
 #config section {

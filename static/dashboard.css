@@ -3,6 +3,7 @@ html, body {
     color: white;
     background-color: #496977;
     text-shadow: 0.2ex 0.2ex 0.1ex rgba(0, 0, 0, 0.2);
+    margin-top: 1mm;
 }
 
 a, a:link { color: #aef0ff; }
@@ -46,11 +47,22 @@ input {
 button#refresh {
 }
 
-.panel-body { padding: 5px; }
-.panel { background-color: inherit; }
+.card-body { padding: 5px; }
+.card { background-color: inherit; }
+.card-title { margin-bottom: 0; }
+dl.row dd { margin-bottom: 0 }
+
 .table-striped>tbody>tr:nth-of-type(odd) { background-color: #578498; }
 .table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th {
     border-color: #6398af;
+}
+
+.table td, .table th {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+.table td label {
+    margin: 2px;
 }
 
 tr.status-awake td, tr.status-awake th { background-color: #3f9465; }
@@ -62,10 +74,6 @@ tr.status-testing td, tr.status-testing th { background-color: #b56b8d; }
 tr:nth-of-type(odd).status-testing td, tr:nth-of-type(odd).status-testing th { background-color: #ce92ae; }
 tr.status-error td, tr.status-error th { background-color: #9b5555; }
 tr:nth-of-type(odd).status-error td, tr:nth-of-type(odd).status-error th { background-color: #925959; }
-
-dl.dl-horizontal { margin: 0; }
-.dl-horizontal dt { width: 120px; }
-.dl-horizontal dd { margin-left: 140px; }
 
 .small-last-rendered-image {
     max-width: 100%;
@@ -82,7 +90,6 @@ span.idle-worker-name:not(:first-child)::before {
 
 *[title] {
     cursor: help;
-    border-bottom: 1px dashed #ddd;
 }
 
 #statusheading {
@@ -117,4 +124,15 @@ button#downloadkick {
     color: #f66;
     padding: 3px;
     margin-right: 5px;
+}
+
+.flash-on {
+	background-color: #b8f7d3 !important;
+	border-color: #b8f7d3 !important;
+    color: #3f9465 !important;
+    transition: all 0.05s ease-in;
+}
+
+.flash-off {
+	transition: all 0.2s ease-out;
 }

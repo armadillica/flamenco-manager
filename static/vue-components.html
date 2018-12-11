@@ -1,0 +1,100 @@
+<!-- Templates for the Vue.js components -->
+
+<!-- template for the 'status' Vue.js component -->
+<script type='text/x-template' id='template_status'>
+    <div id='status'>
+        <p v-if='errormsg' class='error'>{{ errormsg }}</p>
+        <dl v-else class="row">
+            <dt class='col-md-5'>Nr. of workers</dt>
+            <dd class='col-md-7'>{{ serverinfo.nr_of_workers }}</dd>
+            <dt class='col-md-5' title="Number of tasks in database. Probably not all queued.">Nr. of tasks</dt>
+            <dd class='col-md-7'>{{ serverinfo.nr_of_tasks }}</dd>
+            <dt class='col-md-5' title="Number of task updates queued for sending to Flamenco Server.">Upstream Queue</dt>
+            <dd class='col-md-7'>{{ serverinfo.upstream_queue_size }}</dd>
+            <dt class='col-md-5'>Server</dt>
+            <dd class='col-md-7'><a :href="serverinfo.server.url">{{ serverinfo.server.name }}</a></dd>
+            <dt class='col-md-5' title="Workers not seen in a long time.">Old workers</dt>
+            <dd class='col-md-7'>
+                <idle-worker
+                    v-for="worker in idle_workers"
+                    v-bind:key="worker._id"
+                    v-bind:worker="worker"
+                    v-on:forget-worker="forgetWorker(worker)">
+                </idle-worker>
+            </dd>
+        </dl>
+    </div>
+</script>
+
+<!-- template for the 'idle-worker' Vue.js component -->
+<script type='text/x-template' id='template_idle_worker'>
+    <span>
+        <span class="idle-worker-name" :title="worker._id">{{ worker.nickname }}</span>
+        <span @click="$emit('forget-worker', worker)" class="forget-worker worker-action" title="click to forget worker">x</span>
+    </span>
+</script>
+
+<!-- template for the 'worker-row' Vue.js component -->
+<script type='text/x-template' id='template_worker_row'>
+    <tr :id="worker._id" :class="'status-' + worker.status">
+        <td><label><input
+            type="checkbox"
+            :id="checkbox_id"
+            :value="worker._id"
+            :checked="is_checked"
+            @input="$emit('worker-selected', $event.target.checked, worker._id)"
+            ></label></td>
+        <td><label :for="checkbox_id">{{ worker.nickname }}</label></td>
+        <td>{{ worker.status || '-none-' }}
+            <span v-if="worker.status_requested">→ {{ worker.status_requested}}</span>
+        </td>
+        <td>
+            <template v-if="worker.current_task">
+                {{ task_id_text }}
+                <template v-if="worker.current_task_status">
+                    ({{ worker.current_task_status }}
+                    <template v-if="worker.current_task_updated">
+                        {{ current_task_updated() }}
+                    </template>
+                    )
+                </template>
+            </template>
+            <template v-else>-none-</template>
+        </td>
+        <td>
+            <a v-if="worker.current_task && worker.current_job"
+                :href="task_log_url" target="_blank">download</a>
+            <template v-else>-</template>
+        </td>
+        <td :title="last_activity_abs">{{ last_activity_rel() }}</td>
+        <td class="click-to-copy worker-id" :data-clipboard-text="worker._id">
+            …{{ worker._id.substr(-6)}}
+        </td>
+        <td class="click-to-copy worker-address" :data-clipboard-text="worker.address">
+            {{ worker.address }}
+        </td>
+        <td>{{ worker_software }}</td>
+    </tr>
+</script>
+
+<!-- template for the 'action_bar' Vue.js component -->
+<script type='text/x-template' id='template_action_bar'>
+    <form class='container'>
+        <div class="action-bar row">
+            <select
+                class="form-control form-control-sm col-md-3"
+                :disabled="selected_worker_ids.length == 0"
+                v-model="selected_action"
+                >
+                <option value="" selected><template v-if="selected_worker_ids.length == 0">select workers and </template>choose an action</option>
+                <option v-for="(action, key) in actions" :value="key">{{ action.label }}</option>
+            </select>
+            <button
+                type="button"
+                :disabled="selected_worker_ids.length == 0"
+                class="btn btn-primary btn-sm"
+                @click="performWorkerAction"
+                >Apply to {{ selected_worker_ids.length }} worker<template v-if="selected_worker_ids.length != 1">s</template></button>
+        </div>
+    </form>
+</script>

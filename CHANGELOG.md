@@ -1,9 +1,13 @@
 Changelog for Flamenco Manager
 ==============================
 
-## Version 2.2.1 (in development)
+## Version 2.3 (in development)
 
 - Fix an issue where a task could time out when its Worker goes to sleep or shuts down.
+- Upgraded the web interface to use Bootstrap 4.
+- Dashboard now uses Vue.js for a dynamic interface.
+- Dashboard drops support for Internet Explorer 11 due to it not supporting modern JavaScript.
+- Workers can be selected and sent actions with one button click.
 
 
 ## Version 2.2 (2018-12-04)

@@ -178,7 +178,10 @@ type StatusReport struct {
 	UpstreamQueueSize int      `json:"upstream_queue_size"`
 	Version           string   `json:"version"`
 	Workers           []Worker `json:"workers"`
-	Server            string   `json:"server"`
+	Server            struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	} `json:"server"`
 }
 
 // FileProduced is sent by the worker whenever it produces (e.g. renders)
