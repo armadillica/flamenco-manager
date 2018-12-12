@@ -19,10 +19,14 @@ h1 img {
     padding-right: 0.5ex;
 }
 
-#managerversion {
+#managerversion, #runmode {
     font-size: small;
     vertical-align: top;
     float: right;
+    margin-left: 1mm;
+}
+#runmode {
+    color: #e4a7a7;
 }
 
 input {

@@ -22,7 +22,10 @@
 <body>
 <div class="container theme-showcase" role="main">
 
-    <header class='pageheader'><h1><img src='/static/flamenco.png' alt='Flamenco logo'> Flamenco Manager <span id='managerversion'>{{ .Version}}</span></h1></header>
+    <header class='pageheader'><h1><img src='/static/flamenco.png' alt='Flamenco logo'> Flamenco Manager
+        <span id='runmode'>{{if ne .Config.Mode "production"}}({{.Config.Mode}} mode){{end}}</span>
+        <span id='managerversion'>{{ .Version}}</span>
+    </h1></header>
     <section class="row">
         <div class='col-md-5'>
             <div class="panel panel-default">

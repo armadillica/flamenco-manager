@@ -24,6 +24,12 @@ const (
 var (
 	// ErrDuplicateVariables is returned when the same name is used as regular and path-replacement variable.
 	ErrDuplicateVariables = errors.New("duplicate variables found")
+
+	// Valid values for the "mode" config variable.
+	validModes = map[string]bool{
+		"develop":    true,
+		"production": true,
+	}
 )
 
 // BlenderRenderConfig represents the configuration required for a test render.
@@ -39,6 +45,7 @@ type TestTasks struct {
 
 // Conf represents the Manager's configuration file.
 type Conf struct {
+	Mode          string   `yaml:"mode"` // either "develop" or "production"
 	DatabaseURL   string   `yaml:"database_url"`
 	DatabasePath  string   `yaml:"database_path"`
 	TaskLogsPath  string   `yaml:"task_logs_path"`
@@ -97,6 +104,7 @@ func LoadConf(filename string) (Conf, error) {
 
 	// Construct the struct with some more or less sensible defaults.
 	c := Conf{
+		Mode:                        "production",
 		Listen:                      ":8083",
 		DatabasePath:                "./db",
 		TaskLogsPath:                "./task-logs",
@@ -159,10 +167,14 @@ func LoadConf(filename string) (Conf, error) {
 	}
 	c.Flamenco, err = url.Parse(c.FlamencoStr)
 	if err != nil {
-		log.Errorf("bad Flamenco URL %q: %v", c.FlamencoStr, err)
+		log.WithFields(log.Fields{
+			"url":        c.FlamencoStr,
+			log.ErrorKey: err,
+		}).Error("bad Flamenco URL configured")
 	}
-	log.Warningf("Flamenco Server URL: %v", c.Flamenco)
+	log.WithField("url", c.Flamenco.String()).Warning("Flamenco Server URL")
 
+	c.checkMode(c.Mode)
 	c.checkDatabase()
 
 	err = c.processVariables()
@@ -287,6 +299,34 @@ func (c *Conf) processVariables() error {
 		return ErrDuplicateVariables
 	}
 	return nil
+}
+
+// OverrideMode checks the mode parameter for validity and logs that it's being overridden.
+func (c *Conf) OverrideMode(mode string) {
+	if mode == c.Mode {
+		log.WithField("mode", mode).Warning("trying to override run mode with current value; ignoring")
+		return
+	}
+	c.checkMode(mode)
+	log.WithFields(log.Fields{
+		"configured_mode": c.Mode,
+		"current_mode":    mode,
+	}).Warning("overriding run mode")
+	c.Mode = mode
+}
+
+func (c *Conf) checkMode(mode string) {
+	// Check mode for validity
+	if !validModes[mode] {
+		keys := make([]string, 0, len(validModes))
+		for k := range validModes {
+			keys = append(keys, k)
+		}
+		log.WithFields(log.Fields{
+			"valid_values":  keys,
+			"current_value": mode,
+		}).Fatal("bad value for 'mode' configuration parameter")
+	}
 }
 
 func transposeVariableMatrix(in, out *map[string]map[string]string) {

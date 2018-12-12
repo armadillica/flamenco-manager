@@ -247,6 +247,9 @@ var cliArgs struct {
 	version    bool
 	setup      bool
 	killPID    int
+
+	// Run mode, see validModes in flamenco/settings.go
+	mode string
 }
 
 func parseCliArgs() {
@@ -257,6 +260,7 @@ func parseCliArgs() {
 	flag.BoolVar(&cliArgs.purgeQueue, "purgequeue", false, "Purges all queued task updates from the local MongoDB")
 	flag.BoolVar(&cliArgs.version, "version", false, "Show the version of Flamenco Manager")
 	flag.BoolVar(&cliArgs.setup, "setup", false, "Enter setup mode, enabling the web-based configuration system")
+	flag.StringVar(&cliArgs.mode, "mode", "", "Run mode, either 'develop' or 'production'. Overrides the 'mode' in the configuration file.")
 	if runtime.GOOS == "windows" {
 		flag.IntVar(&cliArgs.killPID, "kill-after-start", 0, "Used on Windows for restarting the daemon")
 	}
@@ -414,6 +418,11 @@ func main() {
 		} else {
 			log.WithError(err).Fatal("Unable to load configuration")
 		}
+	}
+	if strings.TrimSpace(cliArgs.mode) != "" {
+		config.OverrideMode(cliArgs.mode)
+	} else {
+		log.WithField("mode", config.Mode).Info("Run mode")
 	}
 
 	var router *mux.Router
