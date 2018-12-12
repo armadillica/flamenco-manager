@@ -4,6 +4,51 @@ var clipboard;
 // from the browser's JS console.
 var load_workers_timeout_handle;
 
+/* Freeze to prevent Vue.js from creating getters & setters all over this object.
+ * We don't need it to be tracked, as it won't be changed anyway.
+ *
+ * The keys have some semantics; we assume that if the key is equal to a
+ * possible worker status, it brings the worker to that status, and thus
+ * the action should not be available to workers already in that status.
+ */
+WORKER_ACTIONS = Object.freeze({
+    offline: {
+        label: '✝ Shut Down',
+        icon: '✝',
+        title: 'The worker may automatically restart.',
+        payload: { action: 'shutdown' },
+    },
+    asleep: {
+        label: '😴 Send to Sleep',
+        icon: '😴',
+        title: 'Let the worker sleep',
+        payload: { action: 'set-status', status: 'asleep' },
+        available(worker_status) {
+            return worker_status != 'timeout';
+        },
+    },
+    wakeup: {
+        label: '😃 Wake Up',
+        icon: '😃',
+        title: 'Wake the worker up. A sleeping worker can take a minute to respond.',
+        payload: { action: 'set-status', status: 'awake' },
+        available(worker_status, requested_status) { return worker_status == 'asleep' || requested_status == 'asleep'; },
+    },
+    ack_timeout: {
+        label: '✓ Acknowledge Timeout',
+        icon: '✓',
+        payload: { action: 'ack-timeout' },
+        available(worker_status) { return worker_status == 'timeout'; },
+    },
+    testjob: {
+        label: 'Send a Test Job',
+        icon: 'T',
+        title: 'Requires the worker to be in test mode.',
+        payload: { action: 'send-test-job' },
+        available(worker_status) { return worker_status == 'testing'; },
+    },
+});
+
 Vue.component('status', {
     props: ['serverinfo', 'errormsg', 'idle_workers'],
     template: '#template_status',
@@ -33,35 +78,7 @@ Vue.component('action-bar', {
     data: function() {
         return {
             selected_action: '',
-
-            // Freeze to prevent Vue.js from creating getters & setters all over this object.
-            // We don't need it to be tracked, as it won't be changed anyway.
-            actions: Object.freeze({
-                offline: {
-                    label: '✝ Shut Down',
-                    title: 'The worker may automatically restart.',
-                    payload: { action: 'shutdown' },
-                },
-                asleep: {
-                    label: '😴 Send to Sleep',
-                    title: 'Let the worker sleep',
-                    payload: { action: 'set-status', status: 'asleep' },
-                },
-                wakeup: {
-                    label: '😃 Wake Up',
-                    title: 'Wake the worker up. A sleeping worker can take a minute to respond.',
-                    payload: { action: 'set-status', status: 'awake' },
-                },
-                ack_timeout: {
-                    label: '✓ Acknowledge Timeout',
-                    payload: { action: 'ack-timeout' },
-                },
-                testjob: {
-                    label: 'Send a Test Job',
-                    title: 'Requires the worker to be in test mode.',
-                    payload: { action: 'send-test-job' },
-                },
-            }),
+            actions: WORKER_ACTIONS,
         };
     },
     methods: {
@@ -72,6 +89,19 @@ Vue.component('action-bar', {
             for(worker_id of this.selected_worker_ids) {
                 workerAction(worker_id, payload);
             }
+        }
+    }
+})
+
+Vue.component('action-button', {
+    props: {
+        action_key: String,
+        worker_id: String,
+    },
+    template: '#template_action_button',
+    computed: {
+        action: function() {
+            return WORKER_ACTIONS[this.action_key];
         }
     }
 })
@@ -106,6 +136,26 @@ Vue.component('worker-row', {
         is_checked: function() {
             return this.selected_worker_ids.indexOf(this.worker._id) >= 0;
         },
+        actions_for_worker: function() {
+            let actions = [];
+            let status = this.worker.status;
+            let status_requested = this.worker.status_requested;
+
+            for (action_key in WORKER_ACTIONS) {
+                let action = WORKER_ACTIONS[action_key];
+                if (action_key == status || action_key == status_requested) {
+                    continue;
+                }
+
+                let checkfunc = action.available;
+                if (typeof checkfunc != 'undefined' &&  !checkfunc(status, status_requested)) {
+                    continue;
+                }
+
+                actions.push(action_key);
+            }
+            return actions;
+        },
     },
     methods: {
         current_task_updated: function () {
@@ -114,8 +164,12 @@ Vue.component('worker-row', {
         last_activity_rel: function () {
             return time_diff(this.worker.last_activity);
         },
+        performWorkerAction(worker_id, action_key) {
+            workerAction(worker_id, WORKER_ACTIONS[action_key].payload);
+        },
     }
 })
+
 
 // Load the selection from local storage.
 // This data is stored by the vueApp selected_worker_ids watch function.
