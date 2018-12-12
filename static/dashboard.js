@@ -109,6 +109,20 @@ Vue.component('worker-row', {
     }
 })
 
+// Load the selection from local storage.
+// This data is stored by the vueApp selected_worker_ids watch function.
+function loadSelectedWorkers() {
+    let workersAsJSON = localStorage.getItem('selected_worker_ids');
+    if (!workersAsJSON) return [];
+
+    try {
+        return JSON.parse(workersAsJSON) || [];
+    } catch(ex) {
+        localStorage.removeItem('selected_worker_ids');
+        return [];
+    }
+}
+
 
 var vueApp = new Vue({
     el: '#vue_app',
@@ -129,7 +143,7 @@ var vueApp = new Vue({
         },
         idle_workers: [],
         current_workers: [],
-        selected_worker_ids: [],
+        selected_worker_ids: loadSelectedWorkers(),
     },
     methods: {
         loadWorkers() {
@@ -150,6 +164,7 @@ var vueApp = new Vue({
                     let too_long = 14 * 24 * 3600000; // in milliseconds
                     let idle_workers = [];
                     let current_workers = [];
+                    let selectable_worker_ids = new Set();
                     if (typeof info.workers != 'undefined' && info.workers != null) {
                         for (worker of info.workers) {
                             if (typeof worker.last_activity == 'undefined') {
@@ -163,11 +178,18 @@ var vueApp = new Vue({
                                 idle_workers.push(worker);
                             } else {
                                 current_workers.push(worker);
+                                // Only current workers get a select box; a worker moving to 'idle' status
+                                // shouldn't keep it selected (because we can't even unselect it).
+                                selectable_worker_ids.add(worker._id);
                             }
                         }
                     }
                     this.idle_workers = idle_workers;
                     this.current_workers = current_workers;
+
+                    // Deselect all non-selectable workers. We should be able to iterate over all selected
+                    // workers later, and not worry about them not existing any more.
+                    this.selected_worker_ids = this.selected_worker_ids.filter(id => selectable_worker_ids.has(id));
 
                     // Everything went fine, let's try it again soon.
                     load_workers_timeout_handle = setTimeout(this.loadWorkers, 2000);
@@ -203,6 +225,15 @@ var vueApp = new Vue({
             else selected_ids.delete(worker_id);
 
             this.selected_worker_ids = Array.from(selected_ids);
+        },
+    },
+    watch: {
+        selected_worker_ids(worker_ids) {
+            if (worker_ids.length > 0) {
+                localStorage.setItem('selected_worker_ids', JSON.stringify(worker_ids));
+            } else {
+                localStorage.removeItem('selected_worker_ids');
+            }
         },
     },
 });
