@@ -8,6 +8,7 @@ Changelog for Flamenco Manager
 - Dashboard now uses Vue.js for a dynamic interface.
 - Dashboard drops support for Internet Explorer 11 due to it not supporting modern JavaScript.
 - Workers can be selected and sent actions with one button click.
+- Built with Golang 1.11
 
 
 ## Version 2.2 (2018-12-04)
