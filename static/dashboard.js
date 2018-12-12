@@ -342,9 +342,16 @@ function workerAction(workerID, payload, confirmation) {
             toastr.success(resp);
             vueApp.loadWorkers();
         })
-        .fail(function (resp) {
-            console.log(resp);
-            toastr.error(resp.responseText);
+        .fail(function (error) {
+            var msg, title;
+            if (error.status) {
+                title = 'Error ' + error.status;
+                msg = error.responseText;
+            } else {
+                title = 'Unable to perform the action';
+                msg = 'Is the Manager still running & reachable?';
+            }
+            toastr.error(msg, title);
         })
         ;
 }
