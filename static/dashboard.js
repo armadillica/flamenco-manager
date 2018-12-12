@@ -18,12 +18,17 @@ Vue.component('status', {
 })
 
 Vue.component('idle-worker', {
-    props: ['worker'],
+    props: {
+        worker: Object,
+    },
     template: '#template_idle_worker',
 })
 
 Vue.component('action-bar', {
-    props: ['workers', 'selected_worker_ids'],
+    props: {
+        workers: Array,
+        selected_worker_ids: Array,
+    },
     template: '#template_action_bar',
     data: function() {
         return {
@@ -72,7 +77,10 @@ Vue.component('action-bar', {
 })
 
 Vue.component('worker-row', {
-    props: ['worker', 'selected_worker_ids'],
+    props: {
+        worker: Object,
+        selected_worker_ids: Array,
+    },
     template: '#template_worker_row',
     computed: {
         checkbox_id: function () {
