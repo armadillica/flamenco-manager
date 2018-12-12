@@ -59,36 +59,14 @@
     </section>
 
     <section class="row table-responsive">
-        <action-bar
+        <worker-table
             :workers="current_workers"
             :selected_worker_ids="selected_worker_ids"
-        ></action-bar>
-        <table class="table table-condensed table-striped">
-            <thead>
-                <tr>
-                    <th>Select &amp; Act</th>
-                    <th>Nickname</th>
-                    <th>Status</th>
-                    <th>Cur/last Task</th>
-                    <th>Task Log</th>
-                    <th>Last Seen</th>
-                    <th>ID</th>
-                    <th>Address</th>
-                    <th>Software</th>
-                </tr>
-            </thead>
-            <tbody id='workers'>
-                <tr is="worker-row"
-                    v-for="worker in current_workers"
-                    :key="worker._id"
-                    :worker="worker"
-                    :selected_worker_ids="selected_worker_ids"
-                    @worker-selected="onWorkerSelected"
-                    ></tr>
-            </tbody>
-        </table>
+            @worker-selected="onWorkerSelected"
+        ></worker-table>
     </section>
 </div>
+
 <script src="/static/dashboard.js"></script>
 </body>
 </html>

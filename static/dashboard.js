@@ -168,8 +168,15 @@ Vue.component('worker-row', {
             workerAction(worker_id, WORKER_ACTIONS[action_key].payload);
         },
     }
-})
+});
 
+Vue.component('worker-table', {
+    props: {
+        workers: Array,
+        selected_worker_ids: Array,
+    },
+    template: '#template_worker_table',
+});
 
 // Load the selection from local storage.
 // This data is stored by the vueApp selected_worker_ids watch function.

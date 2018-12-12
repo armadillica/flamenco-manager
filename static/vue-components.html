@@ -41,6 +41,40 @@
     >{{action.icon}}</a>
 </script>
 
+<!-- template for the 'worker-table' Vue.js component -->
+<script type='text/x-template' id='template_worker_table'>
+    <div>
+        <action-bar
+            :workers="workers"
+            :selected_worker_ids="selected_worker_ids"
+        ></action-bar>
+        <table class="table table-condensed table-striped">
+            <thead>
+                <tr>
+                    <th>Select &amp; Act</th>
+                    <th>Nickname</th>
+                    <th>Status</th>
+                    <th>Cur/last Task</th>
+                    <th>Task Log</th>
+                    <th>Last Seen</th>
+                    <th>ID</th>
+                    <th>Address</th>
+                    <th>Software</th>
+                </tr>
+            </thead>
+            <tbody id='workers'>
+                <tr is="worker-row"
+                    v-for="worker in workers"
+                    :key="worker._id"
+                    :worker="worker"
+                    :selected_worker_ids="selected_worker_ids"
+                    @worker-selected="$emit('worker-selected', $event, worker._id)"
+                    ></tr>
+            </tbody>
+        </table>
+    </div>
+</script>
+
 <!-- template for the 'worker-row' Vue.js component -->
 <script type='text/x-template' id='template_worker_row'>
     <tr :id="worker._id" :class="'status-' + worker.status">
@@ -49,7 +83,7 @@
             :id="checkbox_id"
             :value="worker._id"
             :checked="is_checked"
-            @input="$emit('worker-selected', $event.target.checked, worker._id)"
+            @input="$emit('worker-selected', $event.target.checked)"
             ></label>
             <action-button v-for="action_key in actions_for_worker"
                 :key="action_key"
