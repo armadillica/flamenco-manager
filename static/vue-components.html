@@ -17,9 +17,9 @@
             <dd class='col-md-7'>
                 <idle-worker
                     v-for="worker in idle_workers"
-                    v-bind:key="worker._id"
-                    v-bind:worker="worker"
-                    v-on:forget-worker="forgetWorker(worker)">
+                    :key="worker._id"
+                    :worker="worker"
+                    @forget-worker="forgetWorker(worker)">
                 </idle-worker>
             </dd>
         </dl>

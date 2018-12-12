@@ -36,9 +36,9 @@
                 </div>
                 <div class="card-body">
                     <status id='status'
-                        v-bind:serverinfo="serverinfo"
-                        v-bind:idle_workers="idle_workers"
-                        v-bind:errormsg="errormsg">
+                        :serverinfo="serverinfo"
+                        :idle_workers="idle_workers"
+                        :errormsg="errormsg">
                     </status>
                 </div>
             </div>
@@ -60,8 +60,8 @@
 
     <section class="row table-responsive">
         <action-bar
-            v-bind:workers="current_workers"
-            v-bind:selected_worker_ids="selected_worker_ids"
+            :workers="current_workers"
+            :selected_worker_ids="selected_worker_ids"
         ></action-bar>
         <table class="table table-condensed table-striped">
             <thead>
@@ -80,9 +80,9 @@
             <tbody id='workers'>
                 <tr is="worker-row"
                     v-for="worker in current_workers"
-                    v-bind:key="worker._id"
-                    v-bind:worker="worker"
-                    v-bind:selected_worker_ids="selected_worker_ids"
+                    :key="worker._id"
+                    :worker="worker"
+                    :selected_worker_ids="selected_worker_ids"
                     @worker-selected="onWorkerSelected"
                     ></tr>
             </tbody>
