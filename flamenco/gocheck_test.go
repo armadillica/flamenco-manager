@@ -4,6 +4,12 @@
 package flamenco
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -16,7 +22,7 @@ import (
 // Hook up gocheck into the "go test" runner.
 // You only need one of these per package, or tests will run multiple times.
 func TestWithGocheck(t *testing.T) {
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.WarnLevel)
 	check.TestingT(t)
 }
 
@@ -59,4 +65,33 @@ func fileTouch(filename string) {
 		panic(err.Error())
 	}
 	file.Close()
+}
+
+func testRequestWithBody(body io.Reader, method, url string, vargs ...interface{}) (*httptest.ResponseRecorder, *http.Request) {
+	respRec := httptest.NewRecorder()
+	if respRec == nil {
+		panic("testRequestWithBody: respRec is nil")
+	}
+
+	request, err := http.NewRequest(method, fmt.Sprintf(url, vargs...), body)
+	if err != nil {
+		panic(err)
+	}
+	if request == nil {
+		panic("testRequestWithBody: request is nil")
+	}
+	request.RemoteAddr = "[::1]:47327"
+	return respRec, request
+}
+
+func testJSONRequest(payload interface{}, method, url string, vargs ...interface{}) (*httptest.ResponseRecorder, *http.Request) {
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		panic(err)
+	}
+
+	respRec, request := testRequestWithBody(bytes.NewBuffer(payloadBytes), method, url, vargs...)
+	request.Header.Set("Content-Type", "application/json")
+
+	return respRec, request
 }

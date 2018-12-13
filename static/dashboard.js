@@ -73,6 +73,7 @@ Vue.component('action-bar', {
     props: {
         workers: Array,
         selected_worker_ids: Array,
+        show_schedule: Boolean,
     },
     template: '#template_action_bar',
     data: function() {
@@ -106,15 +107,43 @@ Vue.component('action-button', {
     }
 })
 
+Vue.component('worker-table', {
+    props: {
+        workers: Array,
+        selected_worker_ids: Array,
+    },
+    data: function() { return {
+        show_schedule: localStorage.getItem('show_schedule') == 'true',
+    }},
+    template: '#template_worker_table',
+    watch: {
+        show_schedule(new_show) {
+            if (new_show) {
+                localStorage.setItem('show_schedule', 'true');
+            } else {
+                localStorage.removeItem('show_schedule');
+            }
+        },
+    },
+});
+
 Vue.component('worker-row', {
     props: {
         worker: Object,
         selected_worker_ids: Array,
+        show_schedule: Boolean,
     },
+    data: function() { return {
+        mode: this.show_schedule ? 'show_schedule' : '',
+        edit_schedule: {},
+    }},
     template: '#template_worker_row',
     computed: {
         checkbox_id: function () {
             return 'select_' + this.worker._id;
+        },
+        is_checked: function() {
+            return this.selected_worker_ids.indexOf(this.worker._id) >= 0;
         },
         task_id_text: function () {
             return this.worker.current_task.substr(-8);
@@ -132,9 +161,6 @@ Vue.component('worker-row', {
                 return this.worker.software.replace('Flamenco-Worker/', '');
             }
             return '-unknown-';
-        },
-        is_checked: function() {
-            return this.selected_worker_ids.indexOf(this.worker._id) >= 0;
         },
         actions_for_worker: function() {
             let actions = [];
@@ -167,16 +193,62 @@ Vue.component('worker-row', {
         performWorkerAction(worker_id, action_key) {
             workerAction(worker_id, WORKER_ACTIONS[action_key].payload);
         },
-    }
+        _cloneActiveSchedule() {
+            // Copy the current worker schedule, so that the worker can be
+            //  updated in the background without influencing the form.
+            return JSON.parse(JSON.stringify(this.worker.sleep_schedule))
+        },
+        scheduleEditMode() {
+            this.edit_schedule = this._cloneActiveSchedule();
+            this.mode = 'edit_schedule';
+        },
+        scheduleEditCancel() {
+            this.mode = 'show_schedule';
+        },
+        scheduleSetActive(schedule_active) {
+            let schedule = this._cloneActiveSchedule();
+            if (schedule.schedule_active == schedule_active) return;
+            schedule.schedule_active = schedule_active;
+            this._scheduleSave(schedule);
+        },
+        scheduleSave() {
+            this._scheduleSave(this.edit_schedule)
+            .done(resp => {
+                this.mode = 'show_schedule';
+            });
+        },
+        _scheduleSave(schedule) {
+            // TODO: show 'saving...' somewhere.
+            return $.ajax({
+                url: '/set-sleep-schedule/' + this.worker._id,
+                method: 'POST',
+                data: JSON.stringify(schedule),
+                contentType: 'application/json',
+            })
+            .done(resp => {
+                toastr.success(resp, "Sleep Schedule Saved");
+                vueApp.loadWorkers();
+            })
+            .fail(error => {
+                var msg, title;
+                if (error.status) {
+                    title = 'Error ' + error.status;
+                    msg = error.responseText;
+                } else {
+                    title = 'Unable to save sleep schedule';
+                    msg = 'Is the Manager still running & reachable?';
+                }
+                toastr.error(msg, title);
+            });
+        },
+    },
+    watch: {
+        show_schedule(new_show) {
+            this.mode = new_show ? 'show_schedule' : '';
+        }
+    },
 });
 
-Vue.component('worker-table', {
-    props: {
-        workers: Array,
-        selected_worker_ids: Array,
-    },
-    template: '#template_worker_table',
-});
 
 // Load the selection from local storage.
 // This data is stored by the vueApp selected_worker_ids watch function.

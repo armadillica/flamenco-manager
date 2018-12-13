@@ -171,3 +171,19 @@ static binary without impacting the locally installed version of Go. The process
     - Remove everything from the `bin` directories except `mongod` (or `mongod.exe` for the Windows
       version).
 4. Run `./build-via-docker.sh` to create the distributable packages.
+
+
+## Worker Sleep Schedule
+
+Each worker has a sleep schedule, which can be configured from the dashboard and behaves in the
+following way:
+
+- When the schedule is not active, it doesn't influence the worker at all.
+- When the schedule is active, the worker is requested to be active by default, unless the schedule
+  allows it to sleep.
+- When the schedule has 'days of week' set to a non-empty string, the worker is only sent to sleep
+  on those days. When 'days of week' is empty, the worker is allowed to sleep on every day.
+  The 'days of week' should be a space-separated list of the first two letters of the days, like
+  `"mo tu we"`.
+  - The worker is allowed to sleep between the schedule's start and end time. Those times default to
+  respectively the start and end of the day.

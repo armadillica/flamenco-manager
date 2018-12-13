@@ -139,7 +139,23 @@ type Worker struct {
 	CurrentJob         bson.ObjectId `bson:"current_job,omitempty" json:"current_job,omitempty"`
 
 	// For controlling sleeping & waking up. For values, see the workerStatusXXX constants.
-	StatusRequested string `bson:"status_requested" json:"status_requested"`
+	StatusRequested string       `bson:"status_requested" json:"status_requested"`
+	SleepSchedule   ScheduleInfo `bson:"sleep_schedule,omitempty" json:"sleep_schedule"`
+}
+
+// ScheduleInfo for automatically sending a Worker to sleep & waking up.
+type ScheduleInfo struct {
+	ScheduleActive bool `bson:"schedule_active" json:"schedule_active"`
+
+	// Space-separated two-letter strings indicating days of week the schedule is active.
+	// Empty means "every day".
+	DaysOfWeek string `bson:"days_of_week,omitempty" json:"days_of_week,omitempty"`
+
+	// Start and end time of the day at which the schedule is active.
+	// Applies only when today is in DaysOfWeek, or when DaysOfWeek is empty.
+	// No 'time_' prefix for BSON as it already serialises {time: "15:04:05"}.
+	TimeStart *TimeOfDay `bson:"start,omitempty" json:"time_start,omitempty"`
+	TimeEnd   *TimeOfDay `bson:"end,omitempty" json:"time_end,omitempty"`
 }
 
 // UpstreamNotification sent to upstream Flamenco Server upon startup and when

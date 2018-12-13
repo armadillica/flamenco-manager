@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	check "gopkg.in/check.v1"
-	"gopkg.in/jarcoal/httpmock.v1"
+	httpmock "gopkg.in/jarcoal/httpmock.v1"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )

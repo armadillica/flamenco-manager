@@ -9,6 +9,7 @@ Changelog for Flamenco Manager
 - Dashboard drops support for Internet Explorer 11 due to it not supporting modern JavaScript.
 - Workers can be selected and sent actions with one button click.
 - Built with Golang 1.11
+- Worker sleep time can now be managed from the Manager dashboard.
 
 
 ## Version 2.2 (2018-12-04)

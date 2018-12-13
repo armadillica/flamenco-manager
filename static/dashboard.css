@@ -44,9 +44,6 @@ input {
     text-shadow: none;
 }
 
-button#refresh {
-}
-
 .card-body { padding: 5px; }
 .card { background-color: inherit; }
 .card-title { margin-bottom: 0; }
@@ -135,4 +132,19 @@ button#downloadkick {
 
 .flash-off {
 	transition: all 0.2s ease-out;
+}
+
+td.col-narrow, td.col-sched-edit-active, td.col-sched-edit-actions {
+    white-space: nowrap;
+    width: 0;  /* make it as narrow as possible */
+}
+td.col-sched-edit-active {
+    text-align: center;
+}
+td.col-sched-edit-active input[type='checkbox'] {
+    margin-left: auto;
+    margin-right: auto;
+}
+td.col-sched-edit-actions {
+    text-align: right;
 }

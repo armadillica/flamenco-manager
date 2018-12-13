@@ -47,19 +47,30 @@
         <action-bar
             :workers="workers"
             :selected_worker_ids="selected_worker_ids"
+            :show_schedule="show_schedule"
+            @toggle-schedule='show_schedule = !show_schedule'
         ></action-bar>
         <table class="table table-condensed table-striped">
             <thead>
                 <tr>
-                    <th>Select &amp; Act</th>
+                    <th></th>
                     <th>Nickname</th>
                     <th>Status</th>
-                    <th>Cur/last Task</th>
-                    <th>Task Log</th>
-                    <th>Last Seen</th>
-                    <th>ID</th>
-                    <th>Address</th>
-                    <th>Software</th>
+                    <template v-if="show_schedule">
+                        <th>Active</th>
+                        <th>Sleep Days</th>
+                        <th>Sleep Start</th>
+                        <th>Sleep End</th>
+                        <th></th>
+                    </template>
+                    <template v-else>
+                        <th>Cur/last Task</th>
+                        <th>Task Log</th>
+                        <th>Last Seen</th>
+                        <th>ID</th>
+                        <th>Address</th>
+                        <th>Software</th>
+                    </template>
                 </tr>
             </thead>
             <tbody id='workers'>
@@ -68,6 +79,7 @@
                     :key="worker._id"
                     :worker="worker"
                     :selected_worker_ids="selected_worker_ids"
+                    :show_schedule="show_schedule"
                     @worker-selected="$emit('worker-selected', $event, worker._id)"
                     ></tr>
             </tbody>
@@ -78,7 +90,7 @@
 <!-- template for the 'worker-row' Vue.js component -->
 <script type='text/x-template' id='template_worker_row'>
     <tr :id="worker._id" :class="'status-' + worker.status">
-        <td><label><input
+        <td class='col-narrow'><label><input
             type="checkbox"
             :id="checkbox_id"
             :value="worker._id"
@@ -92,40 +104,68 @@
                 @worker-action="performWorkerAction"
                 ></action-button>
         </td>
-        <td><label :for="checkbox_id">{{ worker.nickname }}</label></td>
-        <td>{{ worker.status || '-none-' }}
+        <td class='col-narrow'><label :for="checkbox_id">{{ worker.nickname }}</label></td>
+        <td class='col-narrow'>{{ worker.status || '-none-' }}
             <span v-if="worker.status_requested">→ {{ worker.status_requested}}</span>
         </td>
-        <td>
-            <template v-if="worker.current_task">
-                {{ task_id_text }}
-                <template v-if="worker.current_task_status">
-                    ({{ worker.current_task_status }}
-                    <template v-if="worker.current_task_updated">
-                        {{ current_task_updated() }}
+
+        <template v-if="mode == 'show_schedule'">
+            <!-- Worker Schedule viewing template -->
+            <td class='col-sched-edit-active'>
+                <button v-if="worker.sleep_schedule.schedule_active" class='btn btn-sm btn-success' @click="scheduleSetActive(false)">✓</button>
+                <button v-else class='btn btn-sm btn-danger' @click="scheduleSetActive(true)">✗</button>
+            </td>
+            <td>{{ worker.sleep_schedule.days_of_week }}</td>
+            <td>{{ worker.sleep_schedule.time_start }}</td>
+            <td>{{ worker.sleep_schedule.time_end }}</td>
+            <td class='col-sched-edit-actions'>
+                <button class='btn btn-sm' @click="scheduleEditMode()" title='Edit'>✎</button>
+            </td>
+        </template>
+        <template v-else-if="mode == 'edit_schedule'">
+            <!-- Worker Schedule editing template -->
+            <td class='col-sched-edit-active'><input class='form-check-input' type='checkbox' v-model="edit_schedule.schedule_active"></td>
+            <td><input class='form-control form-control-sm' type='text' @keyup.enter="scheduleSave()" v-model="edit_schedule.days_of_week"></td>
+            <td><input class='form-control form-control-sm' type='text' @keyup.enter="scheduleSave()" v-model="edit_schedule.time_start"></td>
+            <td><input class='form-control form-control-sm' type='text' @keyup.enter="scheduleSave()" v-model="edit_schedule.time_end"></td>
+            <td class='col-sched-edit-actions'>
+                <button class='btn btn-sm' @click="scheduleEditCancel()" title='Cancel Editing'>✖</button>
+                <button class='btn btn-sm' @click="scheduleSave()" title='Save Schedule'>💾</button>
+            </td>
+        </template>
+        <template v-else>
+            <!-- Worker Info template -->
+            <td>
+                <template v-if="worker.current_task">
+                    {{ task_id_text }}
+                    <template v-if="worker.current_task_status">
+                        ({{ worker.current_task_status }}
+                        <template v-if="worker.current_task_updated">
+                            {{ current_task_updated() }}
+                        </template>
+                        )
                     </template>
-                    )
                 </template>
-            </template>
-            <template v-else>-none-</template>
-        </td>
-        <td>
-            <a v-if="worker.current_task && worker.current_job"
-                :href="task_log_url" target="_blank">download</a>
-            <template v-else>-</template>
-        </td>
-        <td :title="last_activity_abs">{{ last_activity_rel() }}</td>
-        <td class="click-to-copy worker-id" :data-clipboard-text="worker._id">
-            …{{ worker._id.substr(-6)}}
-        </td>
-        <td class="click-to-copy worker-address" :data-clipboard-text="worker.address">
-            {{ worker.address }}
-        </td>
-        <td>{{ worker_software }}</td>
+                <template v-else>-none-</template>
+            </td>
+            <td>
+                <a v-if="worker.current_task && worker.current_job"
+                    :href="task_log_url" target="_blank">download</a>
+                <template v-else>-</template>
+            </td>
+            <td :title="last_activity_abs">{{ last_activity_rel() }}</td>
+            <td class="click-to-copy worker-id" :data-clipboard-text="worker._id">
+                …{{ worker._id.substr(-6)}}
+            </td>
+            <td class="click-to-copy worker-address" :data-clipboard-text="worker.address">
+                {{ worker.address }}
+            </td>
+            <td>{{ worker_software }}</td>
+        </template>
     </tr>
 </script>
 
-<!-- template for the 'action_bar' Vue.js component -->
+<!-- template for the 'action-bar' Vue.js component -->
 <script type='text/x-template' id='template_action_bar'>
     <form class='container'>
         <div class="action-bar row">
@@ -139,10 +179,14 @@
             </select>
             <button
                 type="button"
-                :disabled="selected_worker_ids.length == 0"
+                :disabled="selected_worker_ids.length == 0 || !selected_action"
                 class="btn btn-primary btn-sm"
-                @click="performWorkerAction"
+                @click.prevent="performWorkerAction"
                 >Apply to {{ selected_worker_ids.length }} worker<template v-if="selected_worker_ids.length != 1">s</template></button>
+                <button
+                    class='btn btn-primary btn-sm ml-auto'
+                    @click.prevent="$emit('toggle-schedule')">Show <template v-if="show_schedule">Status</template><template v-else>Schedule</template></button>
+
         </div>
     </form>
 </script>

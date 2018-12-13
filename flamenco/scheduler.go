@@ -29,7 +29,11 @@ type TaskScheduler struct {
 }
 
 // CreateTaskScheduler constructs a new TaskScheduler, including private fields.
-func CreateTaskScheduler(config *Conf, upstream *UpstreamConnection, session *mgo.Session, queue *TaskUpdateQueue) *TaskScheduler {
+func CreateTaskScheduler(config *Conf,
+	upstream *UpstreamConnection,
+	session *mgo.Session,
+	queue *TaskUpdateQueue,
+) *TaskScheduler {
 	return &TaskScheduler{
 		config,
 		upstream,
@@ -51,7 +55,7 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 	})
 
 	// Fetch the worker's info
-	projection := M{"platform": 1, "supported_task_types": 1, "address": 1, "nickname": 1, "status_requested": 1, "status": 1}
+	projection := M{"hashed_secret": 0}
 	worker, err := FindWorker(r.Username, projection, db)
 	if err != nil {
 		logger.WithError(err).Warning("ScheduleTask: Unable to find worker")
@@ -59,6 +63,7 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 		fmt.Fprintf(w, "Unable to find worker: %s", err)
 		return
 	}
+
 	logger = logger.WithField("worker", worker.Identifier())
 	if worker.StatusRequested != "" {
 		logger = logger.WithField("status_requested", worker.StatusRequested)
@@ -260,7 +265,7 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 		}},
 		// 2: Unwind the parents array, so that we can do a lookup in the next stage.
 		M{"$unwind": M{
-			"path": "$parents",
+			"path":                       "$parents",
 			"preserveNullAndEmptyArrays": true,
 		}},
 		// 3: Look up the parent document for each unwound task.
@@ -273,7 +278,7 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 		}},
 		// 4: Unwind again, to turn the 1-length "parent_doc" arrays into a subdocument.
 		M{"$unwind": M{
-			"path": "$parent_doc",
+			"path":                       "$parent_doc",
 			"preserveNullAndEmptyArrays": true,
 		}},
 		// 5: Group by task ID to undo the unwind, and create an array parent_statuses
@@ -415,8 +420,8 @@ func (ts *TaskScheduler) WorkerMayRunTask(w http.ResponseWriter, r *auth.Authent
 	db *mgo.Database, taskID bson.ObjectId) {
 
 	worker, logFields := findWorkerForHTTP(w, r, db)
-	logFields["task_id"] = taskID.Hex()
 
+	logFields["task_id"] = taskID.Hex()
 	if worker.StatusRequested != "" {
 		logFields["worker_status_requested"] = worker.StatusRequested
 	}

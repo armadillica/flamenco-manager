@@ -19,6 +19,7 @@ import (
 type Dashboard struct {
 	session         *mgo.Session
 	config          *Conf
+	sleeper         *SleepScheduler
 	flamencoVersion string
 	serverName      string
 	serverURL       string
@@ -26,7 +27,7 @@ type Dashboard struct {
 }
 
 // CreateDashboard creates a new Dashboard object.
-func CreateDashboard(config *Conf, session *mgo.Session, flamencoVersion string) *Dashboard {
+func CreateDashboard(config *Conf, session *mgo.Session, sleeper *SleepScheduler, flamencoVersion string) *Dashboard {
 	serverURL, err := url.Parse(config.FlamencoStr)
 	if err != nil {
 		log.WithError(err).Fatal("CreateReporter: unable to parse server URL")
@@ -35,6 +36,7 @@ func CreateDashboard(config *Conf, session *mgo.Session, flamencoVersion string)
 	return &Dashboard{
 		session,
 		config,
+		sleeper,
 		flamencoVersion,
 		serverURL.Host,
 		config.FlamencoStr,
@@ -49,6 +51,7 @@ func (dash *Dashboard) AddRoutes(router *mux.Router) {
 	router.HandleFunc("/latest-image", dash.showLatestImagePage).Methods("GET")
 
 	router.HandleFunc("/worker-action/{worker-id}", dash.workerAction).Methods("POST")
+	router.HandleFunc("/set-sleep-schedule/{worker-id}", dash.setSleepSchedule).Methods("POST")
 
 	static := noDirListing(http.StripPrefix("/static/", http.FileServer(http.Dir(dash.root+"static"))))
 	router.PathPrefix("/static/").Handler(static).Methods("GET")
@@ -149,6 +152,7 @@ func (dash *Dashboard) sendStatusReport(w http.ResponseWriter, r *http.Request) 
 			"status":               1,
 			"status_requested":     1,
 			"supported_task_types": 1,
+			"sleep_schedule":       1,
 		}},
 		// 4: Sort.
 		M{"$sort": bson.D{
@@ -183,25 +187,20 @@ func (dash *Dashboard) sendStatusReport(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func (dash *Dashboard) workerAction(w http.ResponseWriter, r *http.Request) {
+func (dash *Dashboard) parseRequest(w http.ResponseWriter, r *http.Request, session *mgo.Session) (*Worker, *log.Entry, bool) {
 	workerIDstr := mux.Vars(r)["worker-id"]
-	action := r.FormValue("action")
 
 	logger := log.WithFields(log.Fields{
 		"remote_addr": r.RemoteAddr,
 		"worker_id":   workerIDstr,
-		"action":      action,
 	})
 
 	if !bson.IsObjectIdHex(workerIDstr) {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Invalid worker ID")
 		logger.Warning("workerAction: called with bad worker ID")
-		return
+		return nil, nil, false
 	}
-
-	session := dash.session.Clone()
-	defer session.Close()
 
 	db := session.DB("")
 	worker, err := FindWorker(workerIDstr, M{}, db)
@@ -209,9 +208,25 @@ func (dash *Dashboard) workerAction(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprint(w, "Worker not found")
 		logger.WithError(err).Warning("workerAction: error finding worker")
+		return nil, nil, false
+	}
+
+	return worker, logger, true
+}
+
+func (dash *Dashboard) workerAction(w http.ResponseWriter, r *http.Request) {
+	session := dash.session.Clone()
+	defer session.Close()
+
+	worker, logger, ok := dash.parseRequest(w, r, session)
+	if !ok {
 		return
 	}
 
+	action := r.FormValue("action")
+	logger = logger.WithField("action", action)
+
+	db := session.DB("")
 	var actionResult string
 	var actionErr error
 	actionHandlers := map[string]func(){
@@ -258,4 +273,32 @@ func (dash *Dashboard) workerAction(w http.ResponseWriter, r *http.Request) {
 		}
 		logger.Info("workerAction: action OK")
 	}
+}
+
+func (dash *Dashboard) setSleepSchedule(w http.ResponseWriter, r *http.Request) {
+	session := dash.session.Clone()
+	defer session.Close()
+
+	worker, logger, ok := dash.parseRequest(w, r, session)
+	if !ok {
+		return
+	}
+
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "expected JSON", http.StatusNotAcceptable)
+		return
+	}
+
+	var schedule ScheduleInfo
+	if err := DecodeJSON(w, r.Body, &schedule, "setSleepSchedule"); err != nil {
+		return
+	}
+
+	logger = logger.WithField("schedule", schedule)
+	logger.Info("setting worker sleep schedule")
+	if err := dash.sleeper.SetSleepSchedule(worker, schedule, session.DB("")); err != nil {
+		logger.WithError(err).Error("unable to set worker schedule")
+		http.Error(w, "Error setting sleep schedule: "+err.Error(), http.StatusInternalServerError)
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

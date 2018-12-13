@@ -41,6 +41,7 @@ var taskCleaner *flamenco.TaskCleaner
 var upstreamNotifier *flamenco.UpstreamNotifier
 var httpServer *http.Server
 var latestImageSystem *flamenco.LatestImageSystem
+var sleeper *flamenco.SleepScheduler
 var ssdp *gossdp.Ssdp
 var mongoRunner *bundledmongo.Runner
 var shutdownComplete chan struct{}
@@ -330,11 +331,12 @@ func normalMode() (*mux.Router, error) {
 	upstream = flamenco.ConnectUpstream(&config, session)
 	upstreamNotifier = flamenco.CreateUpstreamNotifier(&config, upstream, session)
 	taskUpdateQueue = flamenco.CreateTaskUpdateQueue(&config)
+	sleeper = flamenco.CreateSleepScheduler(session)
 	taskScheduler = flamenco.CreateTaskScheduler(&config, upstream, session, taskUpdateQueue)
 	taskUpdatePusher = flamenco.CreateTaskUpdatePusher(&config, upstream, session, taskUpdateQueue)
 	timeoutChecker = flamenco.CreateTimeoutChecker(&config, session, taskUpdateQueue)
 	taskCleaner = flamenco.CreateTaskCleaner(&config, session)
-	dashboard := flamenco.CreateDashboard(&config, session, flamencoVersion)
+	dashboard := flamenco.CreateDashboard(&config, session, sleeper, flamencoVersion)
 	latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
 
 	// Set up our own HTTP server
@@ -355,6 +357,7 @@ func normalMode() (*mux.Router, error) {
 	router.HandleFunc("/logfile/{job-id}/{task-id}", httpTaskLog)
 
 	upstreamNotifier.SendStartupNotification()
+	sleeper.Go()
 	taskUpdatePusher.Go()
 	timeoutChecker.Go()
 	taskCleaner.Go()
