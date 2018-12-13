@@ -65,7 +65,6 @@
                     </template>
                     <template v-else>
                         <th>Cur/last Task</th>
-                        <th>Task Log</th>
                         <th>Last Seen</th>
                         <th>ID</th>
                         <th>Address</th>
@@ -140,7 +139,7 @@
             <!-- Worker Info template -->
             <td>
                 <template v-if="worker.current_task">
-                    {{ task_id_text }}
+                    <a :href="task_server_url">{{ task_id_text }}</a>
                     <template v-if="worker.current_task_status">
                         ({{ worker.current_task_status }}
                         <template v-if="worker.current_task_updated">
@@ -148,13 +147,10 @@
                         </template>
                         )
                     </template>
+                    <a v-if="worker.current_task && worker.current_job"
+                        :href="task_log_url" target="_blank">(log)</a>
                 </template>
                 <template v-else>-none-</template>
-            </td>
-            <td>
-                <a v-if="worker.current_task && worker.current_job"
-                    :href="task_log_url" target="_blank">download</a>
-                <template v-else>-</template>
             </td>
             <td :title="last_activity_abs">{{ last_activity_rel() }}</td>
             <td class="click-to-copy worker-id" :data-clipboard-text="worker._id">

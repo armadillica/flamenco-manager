@@ -151,6 +151,9 @@ Vue.component('worker-row', {
         task_log_url: function () {
             return '/logfile/' + this.worker.current_job + '/' + this.worker.current_task;
         },
+        task_server_url: function() {
+            return '/tasks/' + this.worker.current_task + '/redir-to-server';
+        },
         last_activity_abs: function () {
             return new Date(this.worker.last_activity);
         },

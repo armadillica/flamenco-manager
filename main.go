@@ -53,6 +53,21 @@ func httpRegisterWorker(w http.ResponseWriter, r *http.Request) {
 	flamenco.RegisterWorker(w, r, mongoSess.DB(""))
 }
 
+func httpTaskRedirToServer(w http.ResponseWriter, r *http.Request) {
+	taskID, err := flamenco.ObjectIDFromRequest(w, r, "task-id")
+	if err != nil {
+		return
+	}
+
+	serverURL, err := config.Flamenco.Parse("/flamenco/tasks/" + taskID.Hex())
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Unable to construct URL: %s", err.Error()), http.StatusBadRequest)
+		return
+	}
+
+	http.Redirect(w, r, serverURL.String(), http.StatusTemporaryRedirect)
+}
+
 func httpScheduleTask(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
 	taskScheduler.ScheduleTask(w, r)
 }
@@ -348,6 +363,7 @@ func normalMode() (*mux.Router, error) {
 	router.HandleFunc("/task", workerAuthenticator.Wrap(httpScheduleTask)).Methods("POST")
 	router.HandleFunc("/tasks/{task-id}/update", workerAuthenticator.Wrap(httpTaskUpdate)).Methods("POST")
 	router.HandleFunc("/tasks/{task-id}/return", workerAuthenticator.Wrap(httpTaskReturn)).Methods("POST")
+	router.HandleFunc("/tasks/{task-id}/redir-to-server", httpTaskRedirToServer)
 	router.HandleFunc("/may-i-run/{task-id}", workerAuthenticator.Wrap(httpWorkerMayRunTask)).Methods("GET")
 	router.HandleFunc("/status-change", workerAuthenticator.Wrap(httpWorkerGetStatusChange)).Methods("GET")
 	router.HandleFunc("/ack-status-change/{ack-status}", workerAuthenticator.Wrap(httpWorkerAckStatusChange)).Methods("POST")

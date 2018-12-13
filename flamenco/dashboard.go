@@ -32,6 +32,7 @@ func CreateDashboard(config *Conf, session *mgo.Session, sleeper *SleepScheduler
 	if err != nil {
 		log.WithError(err).Fatal("CreateReporter: unable to parse server URL")
 	}
+	serverURL.Path = "/flamenco/"
 
 	return &Dashboard{
 		session,
@@ -39,7 +40,7 @@ func CreateDashboard(config *Conf, session *mgo.Session, sleeper *SleepScheduler
 		sleeper,
 		flamencoVersion,
 		serverURL.Host,
-		config.FlamencoStr,
+		serverURL.String(),
 		TemplatePathPrefix("templates/dashboard.html"),
 	}
 }
