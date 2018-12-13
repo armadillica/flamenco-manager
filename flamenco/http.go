@@ -136,6 +136,7 @@ func TemplatePathPrefix(fileToFind string) string {
 	return exedirname + string(os.PathSeparator)
 }
 
+// ObjectIDFromRequest parses the request variable value as Object ID.
 func ObjectIDFromRequest(w http.ResponseWriter, r *http.Request, variableName string) (bson.ObjectId, error) {
 	vars := mux.Vars(r)
 	taskID, found := vars[variableName]
