@@ -361,7 +361,7 @@ func (iw *ImageWatcher) imageMapLoop() {
 	// Checking the image map a few times per 'fileAgeThreshold' should provide
 	// enough precision for this purpose.
 	timer := Timer("ImageWatcher-maploop", fileAgeThreshold/2, 0, &iw.closable)
-	for _ = range timer {
+	for range timer {
 		iw.imageMapIteration()
 	}
 

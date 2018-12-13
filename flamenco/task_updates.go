@@ -387,7 +387,7 @@ func (pusher *TaskUpdatePusher) Go() {
 		timerChan := Timer("TaskUpdatePusherTimer",
 			taskQueueInspectPeriod, 0, &pusher.closable)
 
-		for _ = range timerChan {
+		for range timerChan {
 			// log.Info("TaskUpdatePusher: checking task update queue")
 			updateCount, err := Count(queue)
 			if err != nil {

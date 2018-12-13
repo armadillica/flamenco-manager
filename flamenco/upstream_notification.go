@@ -109,7 +109,7 @@ func (un *UpstreamNotifier) sendNotification(url *url.URL,
 		defer mongoSession.Close()
 		db := mongoSession.DB("")
 
-		for _ = range timer {
+		for range timer {
 			logger.Info("trying to send notification")
 
 			// Send the notification. The notification object is constructed inside the timer loop,

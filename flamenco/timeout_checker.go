@@ -47,7 +47,7 @@ func (ttc *TimeoutChecker) Go() {
 		// after the manager has started up.
 		timer := Timer("TimeoutCheck", timeoutCheckInterval, timeoutInitialSleep, &ttc.closable)
 
-		for _ = range timer {
+		for range timer {
 			ttc.checkTasks(db)
 			ttc.checkWorkers(db)
 		}

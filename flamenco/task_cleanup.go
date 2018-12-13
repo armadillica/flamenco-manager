@@ -50,7 +50,7 @@ func (tc *TaskCleaner) Go() {
 		// after the manager has started up.
 		timer := Timer("TaskTimeoutCheck", tc.interval, tc.initialSleep, &tc.closable)
 
-		for _ = range timer {
+		for range timer {
 			tc.check(db)
 		}
 	}()
