@@ -1,5 +1,6 @@
 html, body {
     font-family: Noto, Ubuntu, sans-serif;
+    font-size: 14px;
     color: white;
     background-color: #496977;
     text-shadow: 0.2ex 0.2ex 0.1ex rgba(0, 0, 0, 0.2);
