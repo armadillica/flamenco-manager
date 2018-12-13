@@ -173,3 +173,14 @@ func (ss *SleepScheduler) cleanupDaysOfWeek(daysOfWeek string) string {
 	}
 	return strings.Join(daynames, " ")
 }
+
+// DeactivateSleepSchedule deactivates the worker's sleep schedule.
+func (ss *SleepScheduler) DeactivateSleepSchedule(worker *Worker, db *mgo.Database) error {
+	updates := bson.M{"$set": bson.M{"sleep_schedule.schedule_active": false}}
+	if err := db.C("flamenco_workers").UpdateId(worker.ID, updates); err != nil {
+		return err
+	}
+
+	worker.SleepSchedule.ScheduleActive = false
+	return nil
+}

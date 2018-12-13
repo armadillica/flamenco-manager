@@ -1,7 +1,9 @@
 package flamenco
 
 import (
+	"bytes"
 	"net/http"
+	"net/url"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
@@ -127,5 +129,33 @@ func (s *DashboardTestSuite) TestDaysOfWeekCleanup(c *check.C) {
 	s.sendSleepSchedule(c, schedule, http.StatusNoContent)
 
 	schedule.DaysOfWeek = "mo tu we fr"
+	s.assertHasSchedule(c, schedule)
+}
+
+func (s *DashboardTestSuite) TestScheduleDeactivation(c *check.C) {
+	schedule := ScheduleInfo{
+		ScheduleActive: true,
+		DaysOfWeek:     "mo tu we fr",
+		TimeStart:      &TimeOfDay{6, 15},
+		TimeEnd:        &TimeOfDay{17, 30},
+	}
+	s.sendSleepSchedule(c, schedule, http.StatusNoContent)
+	s.assertHasSchedule(c, schedule)
+
+	// Explicitly send the worker to some status.
+	data := url.Values{}
+	data.Add("action", "set-status")
+	data.Add("status", "asleep")
+	b := bytes.NewBuffer([]byte(data.Encode()))
+
+	respRec, req := testRequestWithBody(b, "POST", "/worker-action/{worker-id}")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req = mux.SetURLVars(req, map[string]string{"worker-id": s.worker.ID.Hex()})
+
+	s.dashboard.workerAction(respRec, req)
+	assert.Equal(c, http.StatusNoContent, respRec.Code)
+
+	// Test that the schedule has been deactivated.
+	schedule.ScheduleActive = false
 	s.assertHasSchedule(c, schedule)
 }
