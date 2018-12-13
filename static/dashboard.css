@@ -148,3 +148,14 @@ td.col-sched-edit-active input[type='checkbox'] {
 td.col-sched-edit-actions {
     text-align: right;
 }
+
+.btn-schedule-active {
+    color: #fff;
+    background-color: #28a745;
+    border-color: #28a745;
+}
+.btn-schedule-inactive {
+    color: #adadad;
+    background-color: #19692c;
+    border-color: #19692c;
+}

@@ -56,8 +56,8 @@
                     <th></th>
                     <th>Nickname</th>
                     <th>Status</th>
+                    <th>Scheduled</th>
                     <template v-if="show_schedule">
-                        <th>Active</th>
                         <th>Sleep Days</th>
                         <th>Sleep Start</th>
                         <th>Sleep End</th>
@@ -109,12 +109,14 @@
             <span v-if="worker.status_requested">→ {{ worker.status_requested}}</span>
         </td>
 
+        <template v-if="mode != 'edit_schedule'">
+            <td class='col-sched-edit-active'>
+                <button v-if="worker.sleep_schedule.schedule_active" class='btn btn-sm btn-schedule-active' @click="scheduleSetActive(false)">✓</button>
+                <button v-else class='btn btn-sm btn-schedule-inactive' @click="scheduleSetActive(true)">✗</button>
+            </td>
+        </template>
         <template v-if="mode == 'show_schedule'">
             <!-- Worker Schedule viewing template -->
-            <td class='col-sched-edit-active'>
-                <button v-if="worker.sleep_schedule.schedule_active" class='btn btn-sm btn-success' @click="scheduleSetActive(false)">✓</button>
-                <button v-else class='btn btn-sm btn-danger' @click="scheduleSetActive(true)">✗</button>
-            </td>
             <td>{{ worker.sleep_schedule.days_of_week }}</td>
             <td>{{ worker.sleep_schedule.time_start }}</td>
             <td>{{ worker.sleep_schedule.time_end }}</td>
@@ -130,8 +132,8 @@
             <td><input class='form-control form-control-sm' type='text' @keyup.enter="scheduleSave()" v-model="edit_schedule.time_start"></td>
             <td><input class='form-control form-control-sm' type='text' @keyup.enter="scheduleSave()" v-model="edit_schedule.time_end"></td>
             <td class='col-sched-edit-actions'>
-                <button class='btn btn-sm' @click="scheduleEditCancel()" title='Cancel Editing'>✖</button>
                 <button class='btn btn-sm' @click="scheduleSave()" title='Save Schedule'>💾</button>
+                <button class='btn btn-sm' @click="scheduleEditCancel()" title='Cancel Editing'>✖</button>
             </td>
         </template>
         <template v-else>
