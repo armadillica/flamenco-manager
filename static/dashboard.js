@@ -41,7 +41,7 @@ WORKER_ACTIONS = Object.freeze({
         available(worker_status) { return worker_status == 'timeout'; },
     },
     testjob: {
-        label: 'Send a Test Job',
+        label: '🎥 Send a Test Job',
         icon: 'T',
         title: 'Requires the worker to be in test mode.',
         payload: { action: 'send-test-job' },
