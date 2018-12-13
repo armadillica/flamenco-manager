@@ -15,8 +15,8 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-// Reporter can show HTML and JSON reports.
-type Reporter struct {
+// Dashboard can show HTML and JSON reports.
+type Dashboard struct {
 	session         *mgo.Session
 	config          *Conf
 	flamencoVersion string
@@ -25,14 +25,14 @@ type Reporter struct {
 	root            string
 }
 
-// CreateReporter creates a new Reporter object.
-func CreateReporter(config *Conf, session *mgo.Session, flamencoVersion string) *Reporter {
+// CreateDashboard creates a new Dashboard object.
+func CreateDashboard(config *Conf, session *mgo.Session, flamencoVersion string) *Dashboard {
 	serverURL, err := url.Parse(config.FlamencoStr)
 	if err != nil {
 		log.WithError(err).Fatal("CreateReporter: unable to parse server URL")
 	}
 
-	return &Reporter{
+	return &Dashboard{
 		session,
 		config,
 		flamencoVersion,
@@ -43,14 +43,14 @@ func CreateReporter(config *Conf, session *mgo.Session, flamencoVersion string) 
 }
 
 // AddRoutes adds routes to serve reporting status requests.
-func (rep *Reporter) AddRoutes(router *mux.Router) {
-	router.HandleFunc("/", rep.showStatusPage).Methods("GET")
-	router.HandleFunc("/as-json", rep.sendStatusReport).Methods("GET")
-	router.HandleFunc("/latest-image", rep.showLatestImagePage).Methods("GET")
+func (dash *Dashboard) AddRoutes(router *mux.Router) {
+	router.HandleFunc("/", dash.showStatusPage).Methods("GET")
+	router.HandleFunc("/as-json", dash.sendStatusReport).Methods("GET")
+	router.HandleFunc("/latest-image", dash.showLatestImagePage).Methods("GET")
 
-	router.HandleFunc("/worker-action/{worker-id}", rep.workerAction).Methods("POST")
+	router.HandleFunc("/worker-action/{worker-id}", dash.workerAction).Methods("POST")
 
-	static := noDirListing(http.StripPrefix("/static/", http.FileServer(http.Dir(rep.root+"static"))))
+	static := noDirListing(http.StripPrefix("/static/", http.FileServer(http.Dir(dash.root+"static"))))
 	router.PathPrefix("/static/").Handler(static).Methods("GET")
 }
 
@@ -64,8 +64,8 @@ func noDirListing(h http.Handler) http.Handler {
 	})
 }
 
-func (rep *Reporter) showTemplate(templfname string, w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles(rep.root + templfname)
+func (dash *Dashboard) showTemplate(templfname string, w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles(dash.root + templfname)
 	if err != nil {
 		log.Error("Error parsing HTML template: ", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -73,7 +73,7 @@ func (rep *Reporter) showTemplate(templfname string, w http.ResponseWriter, r *h
 	}
 
 	// TODO(Sybren): cache this in memory and check mtime.
-	vueTemplates, err := ioutil.ReadFile(rep.root + "static/vue-components.html")
+	vueTemplates, err := ioutil.ReadFile(dash.root + "static/vue-components.html")
 	if err != nil {
 		log.WithError(err).Error("Error loading Vue.js templates")
 		http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -81,25 +81,25 @@ func (rep *Reporter) showTemplate(templfname string, w http.ResponseWriter, r *h
 	}
 
 	data := map[string]interface{}{
-		"Version":      rep.flamencoVersion,
-		"Config":       rep.config,
+		"Version":      dash.flamencoVersion,
+		"Config":       dash.config,
 		"VueTemplates": template.HTML(vueTemplates),
 	}
 
 	tmpl.Execute(w, data)
 }
 
-func (rep *Reporter) showStatusPage(w http.ResponseWriter, r *http.Request) {
-	rep.showTemplate("templates/dashboard.html", w, r)
+func (dash *Dashboard) showStatusPage(w http.ResponseWriter, r *http.Request) {
+	dash.showTemplate("templates/dashboard.html", w, r)
 }
 
-func (rep *Reporter) showLatestImagePage(w http.ResponseWriter, r *http.Request) {
-	rep.showTemplate("templates/latest_image.html", w, r)
+func (dash *Dashboard) showLatestImagePage(w http.ResponseWriter, r *http.Request) {
+	dash.showTemplate("templates/latest_image.html", w, r)
 }
 
 // sendStatusReport reports the status of the manager in JSON.
-func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
-	mongoSess := rep.session.Copy()
+func (dash *Dashboard) sendStatusReport(w http.ResponseWriter, r *http.Request) {
+	mongoSess := dash.session.Copy()
 	defer mongoSess.Close()
 	db := mongoSess.DB("")
 
@@ -129,7 +129,7 @@ func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
 		}},
 		// 2: Unwind the 1-element task array.
 		M{"$unwind": M{
-			"path": "$_task",
+			"path":                       "$_task",
 			"preserveNullAndEmptyArrays": true,
 		}},
 		// 3: Project to just get what we need.
@@ -170,11 +170,11 @@ func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
 		NrOfWorkers:       workerCount,
 		NrOfTasks:         taskCount,
 		UpstreamQueueSize: upstreamQueueSize,
-		Version:           rep.flamencoVersion,
+		Version:           dash.flamencoVersion,
 		Workers:           workers,
 	}
-	statusreport.Server.Name = rep.serverName
-	statusreport.Server.URL = rep.serverURL
+	statusreport.Server.Name = dash.serverName
+	statusreport.Server.URL = dash.serverURL
 
 	encoder := json.NewEncoder(w)
 	if err := encoder.Encode(statusreport); err != nil {
@@ -183,7 +183,7 @@ func (rep *Reporter) sendStatusReport(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (rep *Reporter) workerAction(w http.ResponseWriter, r *http.Request) {
+func (dash *Dashboard) workerAction(w http.ResponseWriter, r *http.Request) {
 	workerIDstr := mux.Vars(r)["worker-id"]
 	action := r.FormValue("action")
 
@@ -200,7 +200,7 @@ func (rep *Reporter) workerAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session := rep.session.Clone()
+	session := dash.session.Clone()
 	defer session.Close()
 
 	db := session.DB("")
@@ -227,7 +227,7 @@ func (rep *Reporter) workerAction(w http.ResponseWriter, r *http.Request) {
 			actionErr = worker.AckTimeout(db)
 		},
 		"send-test-job": func() {
-			actionResult, actionErr = SendTestJob(worker, rep.config, db)
+			actionResult, actionErr = SendTestJob(worker, dash.config, db)
 		},
 		"forget-worker": func() {
 			actionErr = forgetWorker(worker, db)

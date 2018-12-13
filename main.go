@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	"gopkg.in/mgo.v2"
+	mgo "gopkg.in/mgo.v2"
 
 	auth "github.com/abbot/go-http-auth"
 	"github.com/kardianos/osext"
@@ -334,13 +334,13 @@ func normalMode() (*mux.Router, error) {
 	taskUpdatePusher = flamenco.CreateTaskUpdatePusher(&config, upstream, session, taskUpdateQueue)
 	timeoutChecker = flamenco.CreateTimeoutChecker(&config, session, taskUpdateQueue)
 	taskCleaner = flamenco.CreateTaskCleaner(&config, session)
-	reporter := flamenco.CreateReporter(&config, session, flamencoVersion)
+	dashboard := flamenco.CreateDashboard(&config, session, flamencoVersion)
 	latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
 
 	// Set up our own HTTP server
 	workerAuthenticator := auth.NewBasicAuthenticator("Flamenco Manager", workerSecret)
 	router := mux.NewRouter().StrictSlash(true)
-	reporter.AddRoutes(router)
+	dashboard.AddRoutes(router)
 	latestImageSystem.AddRoutes(router, workerAuthenticator)
 	router.HandleFunc("/register-worker", httpRegisterWorker).Methods("POST")
 	router.HandleFunc("/task", workerAuthenticator.Wrap(httpScheduleTask)).Methods("POST")
