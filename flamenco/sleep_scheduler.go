@@ -69,6 +69,10 @@ func (ss *SleepScheduler) RefreshAllWorkers() {
 		log.WithError(err).Error("SleepScheduler: unable to count workers to refresh")
 		return
 	}
+	if count == 0 {
+		log.Debug("SleepScheduler: no workers to refresh")
+		return
+	}
 	log.WithField("workers_to_refresh", count).Info("SleepScheduler: refreshing workers")
 
 	iter := query.Iter()
