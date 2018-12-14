@@ -29,21 +29,23 @@ import (
 const flamencoVersion = "2.3-dev1"
 const ssdpServiceType = "urn:flamenco:manager:0"
 
-// MongoDB session
-var session *mgo.Session
-var config flamenco.Conf
-var upstream *flamenco.UpstreamConnection
-var taskScheduler *flamenco.TaskScheduler
-var taskUpdatePusher *flamenco.TaskUpdatePusher
-var taskUpdateQueue *flamenco.TaskUpdateQueue
-var timeoutChecker *flamenco.TimeoutChecker
-var taskCleaner *flamenco.TaskCleaner
-var upstreamNotifier *flamenco.UpstreamNotifier
-var httpServer *http.Server
-var latestImageSystem *flamenco.LatestImageSystem
-var sleeper *flamenco.SleepScheduler
-var ssdp *gossdp.Ssdp
-var mongoRunner *bundledmongo.Runner
+var (
+	config            flamenco.Conf
+	httpServer        *http.Server
+	latestImageSystem *flamenco.LatestImageSystem
+	mongoRunner       *bundledmongo.Runner
+	session           *mgo.Session
+	sleeper           *flamenco.SleepScheduler
+	ssdp              *gossdp.Ssdp
+	taskCleaner       *flamenco.TaskCleaner
+	taskScheduler     *flamenco.TaskScheduler
+	taskUpdatePusher  *flamenco.TaskUpdatePusher
+	taskUpdateQueue   *flamenco.TaskUpdateQueue
+	timeoutChecker    *flamenco.TimeoutChecker
+	upstream          *flamenco.UpstreamConnection
+	upstreamNotifier  *flamenco.UpstreamNotifier
+)
+
 var shutdownComplete chan struct{}
 var httpShutdownComplete chan struct{}
 
