@@ -166,8 +166,8 @@ static binary without impacting the locally installed version of Go. The process
       we listen on localhost anyway so SSL is not necessary.
     - Extract the files you downloaded (the Windows version may require `msiextract` from the
       `msitools` package if you're extracting on Linux).
-    - Make sure the contents can be found in `docker/mongodb-{linux,osx,windows}-version`,
-      so the Linux `bin` directory should be in `docker/mongodb-{linux,osx,windows}-version/bin`.
+    - Make sure the contents can be found in `docker/mongodb-{linux-x86_64,osx-x86_64,windows}-version`,
+      so the Linux `bin` directory should be in `docker/mongodb-{linux-x86_64,osx-x86_64,windows}-version/bin`.
     - Remove everything from the `bin` directories except `mongod` (or `mongod.exe` for the Windows
       version).
 4. Run `./build-via-docker.sh` to create the distributable packages.

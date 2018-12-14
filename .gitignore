@@ -10,4 +10,6 @@
 /docker/flamenco-manager-*windows*
 /docker/flamenco-manager-*darwin*
 
-*.blend[0-9]
+/docker/mongodb-linux-*
+/docker/mongodb-osx-*
+/docker/mongodb-windows-*

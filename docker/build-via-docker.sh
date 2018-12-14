@@ -20,32 +20,42 @@ fi
 
 # Use Docker to get Go in a way that allows overwriting the
 # standard library with statically linked versions.
+docker build -t flamenco-manager-build .
 docker run -i --rm \
     -v $(pwd):/docker \
     -v "${GOPATH}:/go-local" \
-    --env GOPATH=/go-local \
-     golang:1.11 /bin/bash -e << EOT
+    -v $(pwd)/vendor:/go-local/src/github.com/armadillica/flamenco-manager/vendor \
+    flamenco-manager-build /bin/bash -e << EOT
 echo -n "Using "
 go version
-cd \${GOPATH}/src/git.blender.org/flamenco-manager.git
 
 function build {
     export GOOS=\$1
     export GOARCH=\$2
     export SUFFIX=\$3
 
-    # GOARCH is always the same, so don't include in filename.
-    TARGET=/docker/flamenco-manager-\$GOOS\$SUFFIX
+    export GOPATH=/go-\$GOOS
 
-    echo "Building \$TARGET"
-    go get -ldflags '-s' github.com/golang/dep/cmd/dep
-    \$GOPATH/bin/dep ensure
-    go build -o \$TARGET
+    # Get a copy of the sources, so that building dependencies doesn't
+    # swap out the host's vendor directory with a root-owned one.
+    mkdir -p \${GOPATH}/src/github.com/armadillica/
+    cd \${GOPATH}/src/github.com/armadillica
+    cp -a /go-local/src/github.com/armadillica/flamenco-manager .
+    cd flamenco-manager
+
+    # GOARCH is always the same, so don't include in filename.
+    OUTFILE=/docker/flamenco-manager-\$GOOS\$SUFFIX
+
+    echo "Ensuring vendor directory is accurate"
+    \$GOPATH/bin/dep ensure -v -vendor-only
+
+    echo "Building \$OUTFILE"
+    go build -tags netgo -ldflags '-w -extldflags "-static"' -o \$OUTFILE
 
     if [ \$GOOS == linux ]; then
-        strip \$TARGET
+        strip \$OUTFILE
     fi
-    chown $UID:$GID \$TARGET
+    chown $UID:$GID \$OUTFILE
 }
 
 export CGO_ENABLED=0
@@ -96,9 +106,11 @@ zip -9 -r -q $PREFIX-darwin.zip $PREFIX/
 rm -rf $PREFIX/flamenco-manager $PREFIX/mongodb-darwin
 
 # Clean up after ourselves
+echo "Cleaning up"
 rm -rf $PREFIX/
 
 # Create the SHA256 sum file.
+echo "Creating sha256 file"
 sha256sum flamenco-manager-$FLAMENCO_VERSION-* | tee flamenco-manager-$FLAMENCO_VERSION.sha256
 
 echo "Done building & packaging Flamenco Manager $FLAMENCO_VERSION."

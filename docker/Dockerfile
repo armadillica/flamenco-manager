@@ -1,8 +1,35 @@
-FROM scratch
+FROM golang:1.11
 MAINTAINER Dr. Sybren <sybren@blender.studio>
 
-EXPOSE 80
+ENV GOARCH=amd64
+ENV CGO_ENABLED=0
 
-ADD flamenco-manager /
-ADD flamenco-manager.yaml /
-CMD ["/flamenco-manager"]
+RUN GOOS=linux GOPATH=/go-$GOOS \
+    set -e; \
+    echo "$GOOS: Making directory $GOPATH"; \
+    mkdir ${GOPATH}; \
+    echo "$GOOS: Getting dep"; \
+    go get -v github.com/golang/dep/cmd/dep; \
+    echo "$GOOS: Building everything statically"; \
+    cd $GOPATH/src/github.com/golang/dep/cmd/dep; \
+    go build -a -tags netgo -ldflags '-w -extldflags "-static"'
+
+RUN GOOS=windows GOPATH=/go-$GOOS \
+    set -e; \
+    echo "$GOOS: Making directory $GOPATH"; \
+    mkdir ${GOPATH}; \
+    echo "$GOOS: Getting dep"; \
+    go get -v github.com/golang/dep/cmd/dep; \
+    echo "$GOOS: Building everything statically"; \
+    cd $GOPATH/src/github.com/golang/dep/cmd/dep; \
+    go build -a -tags netgo -ldflags '-w -extldflags "-static"'
+
+RUN GOOS=darwin GOPATH=/go-$GOOS \
+    set -e; \
+    echo "$GOOS: Making directory $GOPATH"; \
+    mkdir ${GOPATH}; \
+    echo "$GOOS: Getting dep"; \
+    go get -v github.com/golang/dep/cmd/dep; \
+    echo "$GOOS: Building everything statically"; \
+    cd $GOPATH/src/github.com/golang/dep/cmd/dep; \
+    go build -a -tags netgo -ldflags '-w -extldflags "-static"'
