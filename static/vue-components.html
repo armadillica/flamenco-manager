@@ -80,6 +80,7 @@
                     :selected_worker_ids="selected_worker_ids"
                     :show_schedule="show_schedule"
                     @worker-selected="$emit('worker-selected', $event, worker._id)"
+                    @copy-schedule="copySchedule($event)"
                     ></tr>
             </tbody>
         </table>
@@ -121,6 +122,9 @@
             <td>{{ worker.sleep_schedule.time_end || '24:00'}}</td>
             <td class='col-sched-edit-actions'>
                 <button class='btn btn-sm' @click="scheduleEditMode()" title='Edit'>✎</button>
+                <button class='btn btn-sm' @click="$emit('copy-schedule', worker.sleep_schedule)"
+                    :disabled="selected_worker_ids.length == 0 || is_checked"
+                    title='Copy this schedule to all selected workers.'>⎘</button>
             </td>
         </template>
         <template v-else-if="mode == 'edit_schedule'">

@@ -116,6 +116,16 @@ Vue.component('worker-table', {
         show_schedule: localStorage.getItem('show_schedule') == 'true',
     }},
     template: '#template_worker_table',
+    methods: {
+        // Copy the given schedule to all selected workers.
+        copySchedule(schedule) {
+            let promises = []
+            for (worker_id of this.selected_worker_ids) {
+                promises.push(scheduleSave(worker_id, schedule));
+            }
+            Promise.all(promises).then(vueApp.loadWorkers);
+        }
+    },
     watch: {
         show_schedule(new_show) {
             if (new_show) {
@@ -212,36 +222,16 @@ Vue.component('worker-row', {
             let schedule = this._cloneActiveSchedule();
             if (schedule.schedule_active == schedule_active) return;
             schedule.schedule_active = schedule_active;
-            this._scheduleSave(schedule);
-        },
-        scheduleSave() {
-            this._scheduleSave(this.edit_schedule)
+            scheduleSave(this.worker._id, schedule)
             .done(resp => {
-                this.mode = 'show_schedule';
+                vueApp.loadWorkers();
             });
         },
-        _scheduleSave(schedule) {
-            // TODO: show 'saving...' somewhere.
-            return $.ajax({
-                url: '/set-sleep-schedule/' + this.worker._id,
-                method: 'POST',
-                data: JSON.stringify(schedule),
-                contentType: 'application/json',
-            })
+        scheduleSave() {
+            scheduleSave(this.worker._id, this.edit_schedule)
             .done(resp => {
-                toastr.success(resp, "Sleep Schedule Saved");
+                this.mode = 'show_schedule';
                 vueApp.loadWorkers();
-            })
-            .fail(error => {
-                var msg, title;
-                if (error.status) {
-                    title = 'Error ' + error.status;
-                    msg = error.responseText;
-                } else {
-                    title = 'Unable to save sleep schedule';
-                    msg = 'Is the Manager still running & reachable?';
-                }
-                toastr.error(msg, title);
             });
         },
     },
@@ -251,6 +241,30 @@ Vue.component('worker-row', {
         }
     },
 });
+
+function scheduleSave(worker_id, schedule) {
+    // TODO: show 'saving...' somewhere.
+    return $.ajax({
+        url: '/set-sleep-schedule/' + worker_id,
+        method: 'POST',
+        data: JSON.stringify(schedule),
+        contentType: 'application/json',
+    })
+    .done(resp => {
+        toastr.success(resp, "Sleep Schedule Saved");
+    })
+    .fail(error => {
+        var msg, title;
+        if (error.status) {
+            title = 'Error ' + error.status;
+            msg = error.responseText;
+        } else {
+            title = 'Unable to save sleep schedule';
+            msg = 'Is the Manager still running & reachable?';
+        }
+        toastr.error(msg, title);
+    });
+}
 
 
 // Load the selection from local storage.
