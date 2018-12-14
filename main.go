@@ -411,6 +411,7 @@ func showStartup() {
 	log.SetLevel(log.InfoLevel)
 	log.WithField("version", flamencoVersion).Info("Starting Flamenco Manager")
 }
+
 func showFlamencoServerURL() {
 	if config.Flamenco == nil {
 		log.Warning("no Flamenco Server URL configured")
