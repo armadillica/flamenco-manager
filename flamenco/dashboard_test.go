@@ -132,7 +132,7 @@ func (s *DashboardTestSuite) TestDaysOfWeekCleanup(c *check.C) {
 	s.assertHasSchedule(c, schedule)
 }
 
-func (s *DashboardTestSuite) TestScheduleDeactivation(c *check.C) {
+func (s *DashboardTestSuite) TestScheduleOverride(c *check.C) {
 	schedule := ScheduleInfo{
 		ScheduleActive: true,
 		DaysOfWeek:     "mo tu we fr",
@@ -145,7 +145,7 @@ func (s *DashboardTestSuite) TestScheduleDeactivation(c *check.C) {
 	// Explicitly send the worker to some status.
 	data := url.Values{}
 	data.Add("action", "set-status")
-	data.Add("status", "asleep")
+	data.Add("status", workerStatusAsleep)
 	b := bytes.NewBuffer([]byte(data.Encode()))
 
 	respRec, req := testRequestWithBody(b, "POST", "/worker-action/{worker-id}")
@@ -155,7 +155,11 @@ func (s *DashboardTestSuite) TestScheduleDeactivation(c *check.C) {
 	s.dashboard.workerAction(respRec, req)
 	assert.Equal(c, http.StatusNoContent, respRec.Code)
 
-	// Test that the schedule has been deactivated.
-	schedule.ScheduleActive = false
+	// Test that the schedule is still active but the worker is properly requested to sleep.
 	s.assertHasSchedule(c, schedule)
+
+	found := Worker{}
+	err := s.db.C("flamenco_workers").FindId(s.worker.ID).One(&found)
+	assert.Nil(c, err)
+	assert.Equal(c, workerStatusAsleep, found.StatusRequested)
 }

@@ -234,8 +234,6 @@ func (dash *Dashboard) workerAction(w http.ResponseWriter, r *http.Request) {
 		"set-status": func() {
 			requestedStatus := r.FormValue("status")
 			logger = logger.WithField("requested_status", requestedStatus)
-			logger.Info("deactivating sleep schedule due to request to go to explicit status")
-			dash.sleeper.DeactivateSleepSchedule(worker, db)
 			actionErr = worker.RequestStatusChange(requestedStatus, db)
 		},
 		"shutdown": func() {

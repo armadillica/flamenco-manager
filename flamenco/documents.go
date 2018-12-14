@@ -156,6 +156,7 @@ type ScheduleInfo struct {
 	// No 'time_' prefix for BSON as it already serialises {time: "15:04:05"}.
 	TimeStart *TimeOfDay `bson:"start,omitempty" json:"time_start,omitempty"`
 	TimeEnd   *TimeOfDay `bson:"end,omitempty" json:"time_end,omitempty"`
+	NextCheck *time.Time `bson:"next_check,omitempty" json:"next_check,omitempty"`
 }
 
 // UpstreamNotification sent to upstream Flamenco Server upon startup and when

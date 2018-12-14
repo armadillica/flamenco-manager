@@ -16,6 +16,7 @@ const sleepSchedulerCheckInterval = 1 * time.Minute
 type SleepScheduler struct {
 	closable
 	session *mgo.Session
+	now     func() time.Time // for mocking the time.Now() function
 }
 
 // CreateSleepScheduler creates a new SleepScheduler.
@@ -23,6 +24,7 @@ func CreateSleepScheduler(session *mgo.Session) *SleepScheduler {
 	return &SleepScheduler{
 		makeClosable(),
 		session,
+		time.Now,
 	}
 }
 
@@ -55,11 +57,25 @@ func (ss *SleepScheduler) RefreshAllWorkers() {
 	defer session.Close()
 
 	coll := db.C("flamenco_workers")
-	iter := coll.Find(bson.M{"sleep_schedule.schedule_active": true}).Iter()
+	queryDoc := bson.M{
+		"sleep_schedule.schedule_active": true,
+		// If 'next_check' is not after 'now', it means it either doesn't exist
+		// or it's before 'now'.
+		"sleep_schedule.next_check": bson.M{"$not": bson.M{"$gt": ss.now()}},
+	}
+	query := coll.Find(queryDoc)
+	count, err := query.Count()
+	if err != nil {
+		log.WithError(err).Error("SleepScheduler: unable to count workers to refresh")
+		return
+	}
+	log.WithField("workers_to_refresh", count).Info("SleepScheduler: refreshing workers")
+
+	iter := query.Iter()
 	worker := Worker{}
 
 	for iter.Next(&worker) {
-		ss.RequestWorkerStatus(&worker, db)
+		ss.refreshWorker(&worker, db)
 	}
 	if err := iter.Close(); err != nil {
 		log.WithError(err).Error("SleepScheduler: error querying MongoDB")
@@ -68,7 +84,7 @@ func (ss *SleepScheduler) RefreshAllWorkers() {
 
 // RequestWorkerStatus sets worker.StatusRequested if the scheduler demands a status change.
 func (ss *SleepScheduler) RequestWorkerStatus(worker *Worker, db *mgo.Database) {
-	scheduled := ss.scheduledWorkerStatus(worker, time.Now())
+	scheduled := ss.scheduledWorkerStatus(worker, ss.now())
 	if scheduled == "" || worker.StatusRequested == scheduled {
 		return
 	}
@@ -87,11 +103,20 @@ func (ss *SleepScheduler) RequestWorkerStatus(worker *Worker, db *mgo.Database) 
 	}
 }
 
+func (ss *SleepScheduler) refreshWorker(worker *Worker, db *mgo.Database) {
+	// Setting the schedule recalculates the NextCheck property and applies the schedule.
+	log.WithFields(log.Fields{
+		"worker":         worker.Identifier(),
+		"current_status": worker.Status,
+	}).Info("checking sleep schedule")
+	ss.SetSleepSchedule(worker, worker.SleepSchedule, db)
+}
+
 // scheduledWorkerStatus returns the expected worker status at the given timestamp.
 // Returns an empty string when the schedule is inactive or the worker already has
 // the appropriate status.
 func (ss *SleepScheduler) scheduledWorkerStatus(worker *Worker, forTime time.Time) string {
-	now := MakeTimeOfDay(forTime)
+	tod := MakeTimeOfDay(forTime)
 	logger := log.WithField("worker", worker.Identifier())
 	sched := worker.SleepSchedule
 	if !sched.ScheduleActive {
@@ -102,7 +127,7 @@ func (ss *SleepScheduler) scheduledWorkerStatus(worker *Worker, forTime time.Tim
 	weekdayName := strings.ToLower(forTime.Weekday().String()[:2])
 	logger = logger.WithFields(log.Fields{
 		"day_of_week": weekdayName,
-		"time_of_day": now.String(),
+		"time_of_day": tod.String(),
 	})
 
 	// Little inner function that allows us to return early¸ instead of
@@ -111,11 +136,11 @@ func (ss *SleepScheduler) scheduledWorkerStatus(worker *Worker, forTime time.Tim
 		if len(sched.DaysOfWeek) > 0 && !strings.Contains(sched.DaysOfWeek, weekdayName) {
 			// There are days configured, but today is not a sleeping day.
 			logger.WithField("sleep_days", sched.DaysOfWeek).Debug("today is not a sleep day")
-			return workerStatusAwake
+			return ""
 		}
 
-		beforeStart := sched.TimeStart != nil && now.IsBefore(*sched.TimeStart)
-		afterEnd := sched.TimeEnd != nil && now.IsAfter(*sched.TimeEnd)
+		beforeStart := sched.TimeStart != nil && tod.IsBefore(*sched.TimeStart)
+		afterEnd := sched.TimeEnd != nil && !tod.IsBefore(*sched.TimeEnd)
 
 		localLog := logger
 		if sched.TimeStart != nil {
@@ -146,10 +171,12 @@ func (ss *SleepScheduler) scheduledWorkerStatus(worker *Worker, forTime time.Tim
 	return scheduledStatus
 }
 
-// SetSleepSchedule stores the given schedule as the worker's new sleep schedule.
+// SetSleepSchedule stores the given schedule as the worker's new sleep schedule and applies it.
 // Updates both the Worker object itself and the Mongo database.
+// Instantly requests a new status for the worker according to the schedule.
 func (ss *SleepScheduler) SetSleepSchedule(worker *Worker, schedule ScheduleInfo, db *mgo.Database) error {
 	schedule.DaysOfWeek = ss.cleanupDaysOfWeek(schedule.DaysOfWeek)
+	schedule.NextCheck = schedule.calculateNextCheck(ss.now())
 
 	updates := bson.M{"$set": bson.M{"sleep_schedule": schedule}}
 	if err := db.C("flamenco_workers").UpdateId(worker.ID, updates); err != nil {
@@ -183,4 +210,36 @@ func (ss *SleepScheduler) DeactivateSleepSchedule(worker *Worker, db *mgo.Databa
 
 	worker.SleepSchedule.ScheduleActive = false
 	return nil
+}
+
+// Return a timestamp when the next scheck for this schedule is due.
+// This ignores the time of day, and just sets a time.
+// The returned timestamp can be used for ScheduleInfo.NextCheck.
+func (si ScheduleInfo) calculateNextCheck(forTime time.Time) *time.Time {
+	if si.TimeStart == nil && si.TimeEnd == nil {
+		return nil
+	}
+
+	calcNext := func(tod TimeOfDay) *time.Time {
+		nextCheck := tod.OnDate(forTime)
+		if nextCheck.Before(forTime) {
+			nextCheck = nextCheck.AddDate(0, 0, 1)
+		}
+		return &nextCheck
+	}
+
+	if si.TimeStart == nil {
+		return calcNext(*si.TimeEnd)
+	}
+
+	if si.TimeEnd == nil {
+		return calcNext(*si.TimeStart)
+	}
+
+	nextCheckStart := calcNext(*si.TimeStart)
+	nextCheckEnd := calcNext(*si.TimeEnd)
+	if nextCheckStart.Before(*nextCheckEnd) {
+		return nextCheckStart
+	}
+	return nextCheckEnd
 }

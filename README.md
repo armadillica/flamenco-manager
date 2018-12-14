@@ -185,5 +185,5 @@ following way:
   on those days. When 'days of week' is empty, the worker is allowed to sleep on every day.
   The 'days of week' should be a space-separated list of the first two letters of the days, like
   `"mo tu we"`.
-  - The worker is allowed to sleep between the schedule's start and end time. Those times default to
+- The worker is allowed to sleep between the schedule's start and end time. Those times default to
   respectively the start and end of the day.

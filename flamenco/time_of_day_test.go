@@ -2,6 +2,7 @@ package flamenco
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -42,6 +43,13 @@ func (s *TimeOfDayTestSuite) TestIsAfter(c *check.C) {
 	test(true, 1, 3, 1, 2)
 	test(true, 15, 1, 1, 2)
 	test(false, 8, 0, 17, 0)
+}
+
+func (s *TimeOfDayTestSuite) TestOnDate(c *check.C) {
+	theDate := time.Date(2018, 12, 13, 7, 59, 43, 123, time.Local)
+	tod := TimeOfDay{16, 47}
+	expect := time.Date(2018, 12, 13, 16, 47, 0, 0, time.Local)
+	assert.Equal(c, expect, tod.OnDate(theDate))
 }
 
 func (s *TimeOfDayTestSuite) TestMarshalJSON(c *check.C) {

@@ -47,6 +47,12 @@ func (ot TimeOfDay) IsAfter(other TimeOfDay) bool {
 	return ot.Minute > other.Minute
 }
 
+// OnDate returns the time of day in the local timezone on the given date.
+func (ot TimeOfDay) OnDate(date time.Time) time.Time {
+	year, month, day := date.Date()
+	return time.Date(year, month, day, ot.Hour, ot.Minute, 0, 0, time.Local)
+}
+
 func (ot TimeOfDay) String() string {
 	return fmt.Sprintf(timeOfDayStringFormat, ot.Hour, ot.Minute)
 }
