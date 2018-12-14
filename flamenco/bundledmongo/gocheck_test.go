@@ -14,6 +14,6 @@ import (
 // Hook up gocheck into the "go test" runner.
 // You only need one of these per package, or tests will run multiple times.
 func TestWithGocheck(t *testing.T) {
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.WarnLevel)
 	check.TestingT(t)
 }
