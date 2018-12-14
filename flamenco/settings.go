@@ -13,7 +13,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -172,7 +172,6 @@ func LoadConf(filename string) (Conf, error) {
 			log.ErrorKey: err,
 		}).Error("bad Flamenco URL configured")
 	}
-	log.WithField("url", c.Flamenco.String()).Warning("Flamenco Server URL")
 
 	c.checkMode(c.Mode)
 	c.checkDatabase()

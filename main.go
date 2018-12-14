@@ -409,6 +409,13 @@ func showStartup() {
 	log.SetLevel(log.InfoLevel)
 	log.WithField("version", flamencoVersion).Info("Starting Flamenco Manager")
 }
+func showFlamencoServerURL() {
+	// This *always* has to be logged.
+	oldLevel := log.GetLevel()
+	defer log.SetLevel(oldLevel)
+	log.SetLevel(log.InfoLevel)
+	log.WithField("url", config.Flamenco.String()).Info("Flamenco Server URL")
+}
 
 func main() {
 	parseCliArgs()
@@ -443,6 +450,7 @@ func main() {
 	} else {
 		log.WithField("mode", config.Mode).Info("Run mode")
 	}
+	showFlamencoServerURL()
 
 	var router *mux.Router
 	var setup *websetup.Routes
