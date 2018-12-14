@@ -243,11 +243,16 @@ Vue.component('worker-row', {
 });
 
 function scheduleSave(worker_id, schedule) {
+    // Erase empty time-of-day properties, instead of sending them empty.
+    let scheduleCopy = JSON.parse(JSON.stringify(schedule));
+    if (!scheduleCopy.time_start) delete scheduleCopy.time_start;
+    if (!scheduleCopy.time_end) delete scheduleCopy.time_end;
+
     // TODO: show 'saving...' somewhere.
     return $.ajax({
         url: '/set-sleep-schedule/' + worker_id,
         method: 'POST',
-        data: JSON.stringify(schedule),
+        data: JSON.stringify(scheduleCopy),
         contentType: 'application/json',
     })
     .done(resp => {
