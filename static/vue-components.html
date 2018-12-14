@@ -116,9 +116,9 @@
         </template>
         <template v-if="mode == 'show_schedule'">
             <!-- Worker Schedule viewing template -->
-            <td>{{ worker.sleep_schedule.days_of_week }}</td>
-            <td>{{ worker.sleep_schedule.time_start }}</td>
-            <td>{{ worker.sleep_schedule.time_end }}</td>
+            <td>{{ worker.sleep_schedule.days_of_week || 'every day'}}</td>
+            <td>{{ worker.sleep_schedule.time_start || '00:00'}}</td>
+            <td>{{ worker.sleep_schedule.time_end || '24:00'}}</td>
             <td class='col-sched-edit-actions'>
                 <button class='btn btn-sm' @click="scheduleEditMode()" title='Edit'>✎</button>
             </td>
