@@ -89,7 +89,7 @@
 
 <!-- template for the 'worker-row' Vue.js component -->
 <script type='text/x-template' id='template_worker_row'>
-    <tr :id="worker._id" :class="'status-' + worker.status">
+    <tr :id="worker._id" :class="'worker-row status-' + worker.status">
         <td class='col-narrow'><label><input
             type="checkbox"
             :id="checkbox_id"
@@ -117,9 +117,9 @@
         </template>
         <template v-if="mode == 'show_schedule'">
             <!-- Worker Schedule viewing template -->
-            <td>{{ worker.sleep_schedule.days_of_week || 'every day'}}</td>
-            <td>{{ worker.sleep_schedule.time_start || '00:00'}}</td>
-            <td>{{ worker.sleep_schedule.time_end || '24:00'}}</td>
+            <td :class="worker.sleep_schedule.days_of_week ? '' : 'implied'">{{ worker.sleep_schedule.days_of_week || 'every day'}}</td>
+            <td :class="worker.sleep_schedule.time_start ? '' : 'implied'">{{ worker.sleep_schedule.time_start || '00:00'}}</td>
+            <td :class="worker.sleep_schedule.time_end ? '' : 'implied'">{{ worker.sleep_schedule.time_end || '24:00'}}</td>
             <td class='col-sched-edit-actions'>
                 <button class='btn btn-sm' @click="scheduleEditMode()" title='Edit'>✎</button>
                 <button class='btn btn-sm' @click="$emit('copy-schedule', worker.sleep_schedule)"

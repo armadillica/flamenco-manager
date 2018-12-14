@@ -160,3 +160,10 @@ td.col-sched-edit-actions {
     background-color: #19692c;
     border-color: #19692c;
 }
+
+.worker-row .implied::before {
+    content: '(';
+}
+.worker-row .implied::after {
+    content: ')';
+}
