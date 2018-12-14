@@ -1,4 +1,0 @@
-[submodule "vendor/github.com/armadillica/gossdp"]
-	path = vendor/github.com/armadillica/gossdp
-	url = git@github.com:armadillica/gossdp.git
-	branch = logrus-compat

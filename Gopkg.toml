@@ -26,7 +26,7 @@
 
 [[constraint]]
   branch = "logrus-compat"
-  name = "github.com/armadillica/gossdp"
+  name = "gitlab.com/blender-institute/gossdp"
 
 [[constraint]]
   name = "github.com/fsnotify/fsnotify"

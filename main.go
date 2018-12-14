@@ -22,8 +22,8 @@ import (
 	"github.com/armadillica/flamenco-manager/flamenco"
 	"github.com/armadillica/flamenco-manager/flamenco/bundledmongo"
 	"github.com/armadillica/flamenco-manager/websetup"
-	"github.com/armadillica/gossdp"
 	"github.com/gorilla/mux"
+	"gitlab.com/blender-institute/gossdp"
 )
 
 const flamencoVersion = "2.3-dev1"

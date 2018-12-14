@@ -10,14 +10,6 @@
   version = "v0.4.0"
 
 [[projects]]
-  branch = "logrus-compat"
-  digest = "1:12f9eb93aa8ca3739933ee5935924c8fe44b146970b7efadd5c061182bc88dc4"
-  name = "github.com/armadillica/gossdp"
-  packages = ["."]
-  pruneopts = ""
-  revision = "0fce4178969b53dec04e8927c31c36e9a6d9738d"
-
-[[projects]]
   digest = "1:0deddd908b6b4b768cfc272c16ee61e7088a60f7fe2f06c547bd3d8e1f8b8e77"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -106,6 +98,14 @@
   version = "v1.2.2"
 
 [[projects]]
+  branch = "logrus-compat"
+  digest = "1:12f9eb93aa8ca3739933ee5935924c8fe44b146970b7efadd5c061182bc88dc4"
+  name = "gitlab.com/blender-institute/gossdp"
+  packages = ["."]
+  pruneopts = ""
+  revision = "0fce4178969b53dec04e8927c31c36e9a6d9738d"
+
+[[projects]]
   branch = "master"
   digest = "1:887074c37fcefc2f49b5ae9c6f9f36107341aec23185613d0e9f1ee81db7f94a"
   name = "golang.org/x/crypto"
@@ -185,12 +185,12 @@
   analyzer-version = 1
   input-imports = [
     "github.com/abbot/go-http-auth",
-    "github.com/armadillica/gossdp",
     "github.com/fsnotify/fsnotify",
     "github.com/gorilla/mux",
     "github.com/kardianos/osext",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
+    "gitlab.com/blender-institute/gossdp",
     "golang.org/x/crypto/bcrypt",
     "gopkg.in/check.v1",
     "gopkg.in/jarcoal/httpmock.v1",

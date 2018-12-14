@@ -27,7 +27,7 @@ docker run -i --rm \
      golang:1.11 /bin/bash -e << EOT
 echo -n "Using "
 go version
-cd \${GOPATH}/src/github.com/armadillica/flamenco-manager
+cd \${GOPATH}/src/git.blender.org/flamenco-manager.git
 
 function build {
     export GOOS=\$1
