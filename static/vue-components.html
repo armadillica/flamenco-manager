@@ -73,7 +73,7 @@
                 </tr>
             </thead>
             <tbody id='workers'>
-                <tr is="worker-row"
+                <worker-row
                     v-for="worker in workers"
                     :key="worker._id"
                     :worker="worker"
@@ -81,7 +81,7 @@
                     :show_schedule="show_schedule"
                     @worker-selected="$emit('worker-selected', $event, worker._id)"
                     @copy-schedule="copySchedule($event)"
-                    ></tr>
+                    ></worker-row>
             </tbody>
         </table>
     </div>
