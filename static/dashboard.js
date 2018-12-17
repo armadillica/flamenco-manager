@@ -156,7 +156,7 @@ Vue.component('worker-row', {
             return this.selected_worker_ids.indexOf(this.worker._id) >= 0;
         },
         task_id_text: function () {
-            return this.worker.current_task.substr(-8);
+            return '…' + this.worker.current_task.substr(-4);
         },
         task_log_url: function () {
             return '/logfile/' + this.worker.current_job + '/' + this.worker.current_task;
@@ -414,10 +414,10 @@ function time_diff(timestamp) {
         return 'just now';
     }
     if (timediff < 60000) {  // less than a minute
-        return Math.round(timediff / 1000) + ' seconds ago';
+        return Math.round(timediff / 1000) + ' sec ago';
     }
     if (timediff < 3600000) { // less than an hour
-        return Math.round(timediff / 60000) + ' minutes ago';
+        return Math.round(timediff / 60000) + ' min ago';
     }
     if (timediff < 2 * 24 * 3600000) { // less than two days
         return Math.round(timediff / 3600000) + ' hours ago';
