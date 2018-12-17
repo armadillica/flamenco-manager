@@ -111,6 +111,7 @@ Vue.component('worker-table', {
     props: {
         workers: Array,
         selected_worker_ids: Array,
+        server: Object,
     },
     data: function() { return {
         show_schedule: localStorage.getItem('show_schedule') == 'true',
@@ -137,11 +138,25 @@ Vue.component('worker-table', {
     },
 });
 
+Vue.component('worker-tbody', {
+    props: {
+        worker: Object,
+        selected_worker_ids: Array,
+        show_schedule: Boolean,
+        server: Object,
+    },
+    data: function() { return {
+        show_blacklist: false,
+    }; },
+    template: '#template_worker_tbody',
+});
+
 Vue.component('worker-row', {
     props: {
         worker: Object,
         selected_worker_ids: Array,
         show_schedule: Boolean,
+        show_blacklist: Boolean,
     },
     data: function() { return {
         mode: this.show_schedule ? 'show_schedule' : '',
@@ -239,6 +254,29 @@ Vue.component('worker-row', {
         show_schedule(new_show) {
             this.mode = new_show ? 'show_schedule' : '';
         }
+    },
+});
+
+
+Vue.component('blacklist-row', {
+    props: {
+        worker: Object,
+        listitem: Object,
+        server: Object,
+    },
+    template: '#template_blacklist_row',
+    computed: {
+        job_id_text: function () {
+            return this.listitem.job_id;
+        },
+        job_id_url: function() {
+            return this.server.url + 'jobs/' + this.listitem.job_id + '/redir';
+        }
+    },
+    methods: {
+        created: function () {
+            return time_diff(this.listitem._created);
+        },
     },
 });
 

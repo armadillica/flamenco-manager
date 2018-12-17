@@ -50,28 +50,28 @@ input {
 .card-title { margin-bottom: 0; }
 dl.row dd { margin-bottom: 0 }
 
-.table-striped>tbody>tr:nth-of-type(odd) { background-color: #578498; }
-.table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th {
-    border-color: #6398af;
+table.worker>tbody:nth-of-type(odd) { background-color: #578498; }
+table.worker>thead, table.worker>tbody {
+    border: none;
 }
-
-.table td, .table th {
+table.worker td, table.worker th {
     padding-top: 0;
     padding-bottom: 0;
+    border: none;
 }
-.table td label {
+table.worker td label {
     margin: 2px;
 }
 
-tr.status-awake td, tr.status-awake th { background-color: #3f9465; }
-tr:nth-of-type(odd).status-awake td, tr:nth-of-type(odd).status-awake th { background-color: #3faa6e; }
-tr.status-timeout td, tr.status-timeout th { background-color: #a77239; }
-tr:nth-of-type(odd).status-timeout td, tr:nth-of-type(odd).status-timeout th { background-color: #d09c4a; }
-tr.status-offline td, tr.status-offline th { color: #bbb; }
-tr.status-testing td, tr.status-testing th { background-color: #b56b8d; }
-tr:nth-of-type(odd).status-testing td, tr:nth-of-type(odd).status-testing th { background-color: #ce92ae; }
-tr.status-error td, tr.status-error th { background-color: #9b5555; }
-tr:nth-of-type(odd).status-error td, tr:nth-of-type(odd).status-error th { background-color: #925959; }
+tbody.status-awake tr:first-child td, tbody.status-awake tr:first-child th { background-color: #3f9465; }
+tbody:nth-of-type(odd).status-awake tr:first-child td, tbody:nth-of-type(odd).status-awake tr:first-child th { background-color: #3faa6e; }
+tbody.status-timeout tr:first-child td, tbody.status-timeout tr:first-child th { background-color: #a77239; }
+tbody:nth-of-type(odd).status-timeout tr:first-child td, tbody:nth-of-type(odd).status-timeout tr:first-child th { background-color: #d09c4a; }
+tbody.status-offline tr:first-child td, tbody.status-offline tr:first-child th { color: #bbb; }
+tbody.status-testing tr:first-child td, tbody.status-testing tr:first-child th { background-color: #b56b8d; }
+tbody:nth-of-type(odd).status-testing tr:first-child td, tbody:nth-of-type(odd).status-testing tr:first-child th { background-color: #ce92ae; }
+tbody.status-error tr:first-child td, tbody.status-error tr:first-child th { background-color: #9b5555; }
+tbody:nth-of-type(odd).status-error tr:first-child td, tbody:nth-of-type(odd).status-error tr:first-child th { background-color: #925959; }
 
 .small-last-rendered-image {
     max-width: 100%;
@@ -122,6 +122,11 @@ button#downloadkick {
     color: #f66;
     padding: 3px;
     margin-right: 5px;
+}
+
+.worker .btn-link {
+    color: inherit;
+    float: right;
 }
 
 .flash-on {

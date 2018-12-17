@@ -50,7 +50,7 @@
             :show_schedule="show_schedule"
             @toggle-schedule='show_schedule = !show_schedule'
         ></action-bar>
-        <table class="table table-condensed table-striped">
+        <table class="table table-condensed worker">
             <thead>
                 <tr>
                     <th></th>
@@ -72,24 +72,55 @@
                     </template>
                 </tr>
             </thead>
-            <tbody id='workers'>
-                <worker-row
-                    v-for="worker in workers"
-                    :key="worker._id"
-                    :worker="worker"
-                    :selected_worker_ids="selected_worker_ids"
-                    :show_schedule="show_schedule"
-                    @worker-selected="$emit('worker-selected', $event, worker._id)"
-                    @copy-schedule="copySchedule($event)"
-                    ></worker-row>
-            </tbody>
+            <worker-tbody
+                v-for="worker in workers"
+                :key="worker._id"
+                :worker="worker"
+                :selected_worker_ids="selected_worker_ids"
+                :show_schedule="show_schedule"
+                :server="server"
+                @worker-selected="$emit('worker-selected', $event, worker._id)"
+                @copy-schedule="copySchedule($event)"
+            ></worker-tbody>
         </table>
     </div>
 </script>
 
+<!-- template for the 'worker-tbody' Vue.js component -->
+<script type='text/x-template' id='template_worker_tbody'>
+    <tbody :class="'worker status-' + worker.status">
+        <worker-row
+            :worker="worker"
+            :selected_worker_ids="selected_worker_ids"
+            :show_schedule="show_schedule"
+            :show_blacklist="show_blacklist"
+            @worker-selected="$emit('worker-selected', $event)"
+            @copy-schedule="$emit('copy-schedule', $event)"
+            @toggle-blacklist="show_blacklist = !show_blacklist"
+        ></worker-row>
+        <template v-if="show_blacklist">
+            <tr class='blacklist'>
+                <td colspan='3'></td>
+                <th colspan='1'>Blacklist:</th>
+                <th colspan='2'>Job</th>
+                <th>Task Type</th>
+                <th colspan='2'>Blacklisted On</th>
+            </tr>
+            <blacklist-row
+                v-for="listitem in worker.blacklist"
+                :worker="worker"
+                :listitem="listitem"
+                :key="listitem.job_id + '-' + listitem.task_type"
+                :server="server"
+                class='blacklist'
+            ></blacklist-row>
+        </template>
+    </tbody>
+</script>
+
 <!-- template for the 'worker-row' Vue.js component -->
 <script type='text/x-template' id='template_worker_row'>
-    <tr :id="worker._id" :class="'worker-row status-' + worker.status">
+    <tr :id="worker._id" class="worker-row">
         <td class='col-narrow'><label><input
             type="checkbox"
             :id="checkbox_id"
@@ -163,8 +194,28 @@
             <td class="click-to-copy worker-address" :data-clipboard-text="worker.address">
                 {{ worker.address }}
             </td>
-            <td>{{ worker_software }}</td>
+            <td>
+                <button
+                    v-if="!!worker.blacklist" class='btn btn-link btn-sm' style='float: right'
+                    title="Toggle Blacklist"
+                    @click.prevent="$emit('toggle-blacklist')">
+                    <template v-if="show_blacklist">▼</template>
+                    <template v-else>▶</template>
+                </button>
+                {{ worker_software }}
+            </td>
         </template>
+    </tr>
+</script>
+
+<!-- template for the 'blacklist-row' Vue.js component -->
+<script type='text/x-template' id='template_blacklist_row'>
+    <tr>
+        <td colspan='3'></td>
+        <td colspan='1'></td>
+        <td colspan='2'><a :href="job_id_url" :title="'Open on ' + server.name" target='_blank'>{{ job_id_text }}</a></td>
+        <td>{{ listitem.task_type }}</td>
+        <td colspan='2'>{{ created() }}</td>
     </tr>
 </script>
 

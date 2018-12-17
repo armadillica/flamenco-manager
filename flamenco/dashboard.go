@@ -131,6 +131,13 @@ func (dash *Dashboard) sendStatusReport(w http.ResponseWriter, r *http.Request) 
 			"foreignField": "_id",
 			"as":           "_task",
 		}},
+		// Look up the blacklist for this worker.
+		M{"$lookup": M{
+			"from":         "worker_blacklist",
+			"localField":   "_id",
+			"foreignField": "worker_id",
+			"as":           "blacklist",
+		}},
 		// 2: Unwind the 1-element task array.
 		M{"$unwind": M{
 			"path":                       "$_task",
@@ -154,11 +161,15 @@ func (dash *Dashboard) sendStatusReport(w http.ResponseWriter, r *http.Request) 
 			"status_requested":     1,
 			"supported_task_types": 1,
 			"sleep_schedule":       1,
+			"blacklist":            1,
 		}},
 		// 4: Sort.
 		M{"$sort": bson.D{
 			{Name: "nickname", Value: 1},
 			{Name: "status", Value: 1},
+		}},
+		M{"$project": M{
+			"blacklist.worker_id": 0,
 		}},
 	})
 

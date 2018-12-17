@@ -61,6 +61,7 @@
     <section class="row table-responsive">
         <worker-table
             :workers="current_workers"
+            :server="serverinfo.server"
             :selected_worker_ids="selected_worker_ids"
             @worker-selected="onWorkerSelected"
         ></worker-table>

@@ -139,8 +139,9 @@ type Worker struct {
 	CurrentJob         bson.ObjectId `bson:"current_job,omitempty" json:"current_job,omitempty"`
 
 	// For controlling sleeping & waking up. For values, see the workerStatusXXX constants.
-	StatusRequested string       `bson:"status_requested" json:"status_requested"`
-	SleepSchedule   ScheduleInfo `bson:"sleep_schedule,omitempty" json:"sleep_schedule"`
+	StatusRequested string                 `bson:"status_requested" json:"status_requested"`
+	SleepSchedule   ScheduleInfo           `bson:"sleep_schedule,omitempty" json:"sleep_schedule"`
+	Blacklist       []WorkerBlacklistEntry `json:"blacklist,omitempty"`
 }
 
 // ScheduleInfo for automatically sending a Worker to sleep & waking up.
@@ -209,8 +210,8 @@ type FileProduced struct {
 
 // WorkerBlacklistEntry prevents a certain worker from running certain task types on certain jobs.
 type WorkerBlacklistEntry struct {
-	Created  time.Time     `bson:"_created"`
-	WorkerID bson.ObjectId `bson:"worker_id"`
-	JobID    bson.ObjectId `bson:"job_id"`
-	TaskType string        `bson:"task_type"`
+	Created  time.Time     `bson:"_created" json:"_created"`
+	WorkerID bson.ObjectId `bson:"worker_id" json:"worker_id,omitempty"`
+	JobID    bson.ObjectId `bson:"job_id" json:"job_id"`
+	TaskType string        `bson:"task_type" json:"task_type"`
 }
