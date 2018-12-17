@@ -30,6 +30,7 @@ const flamencoVersion = "2.3-dev1"
 const ssdpServiceType = "urn:flamenco:manager:0"
 
 var (
+	blacklist         *flamenco.WorkerBlacklist
 	config            flamenco.Conf
 	httpServer        *http.Server
 	latestImageSystem *flamenco.LatestImageSystem
@@ -347,9 +348,10 @@ func normalMode() (*mux.Router, error) {
 
 	upstream = flamenco.ConnectUpstream(&config, session)
 	upstreamNotifier = flamenco.CreateUpstreamNotifier(&config, upstream, session)
-	taskUpdateQueue = flamenco.CreateTaskUpdateQueue(&config)
+	blacklist = flamenco.CreateWorkerBlackList(&config, session)
+	taskUpdateQueue = flamenco.CreateTaskUpdateQueue(&config, blacklist)
 	sleeper = flamenco.CreateSleepScheduler(session)
-	taskScheduler = flamenco.CreateTaskScheduler(&config, upstream, session, taskUpdateQueue)
+	taskScheduler = flamenco.CreateTaskScheduler(&config, upstream, session, taskUpdateQueue, blacklist)
 	taskUpdatePusher = flamenco.CreateTaskUpdatePusher(&config, upstream, session, taskUpdateQueue)
 	timeoutChecker = flamenco.CreateTimeoutChecker(&config, session, taskUpdateQueue)
 	taskCleaner = flamenco.CreateTaskCleaner(&config, session)
@@ -375,6 +377,8 @@ func normalMode() (*mux.Router, error) {
 	router.HandleFunc("/logfile/{job-id}/{task-id}", httpTaskLog)
 
 	upstreamNotifier.SendStartupNotification()
+	blacklist.EnsureDBIndices()
+
 	sleeper.Go()
 	taskUpdatePusher.Go()
 	timeoutChecker.Go()

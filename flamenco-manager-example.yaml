@@ -69,6 +69,11 @@ active_worker_timeout_interval: 15m
 # manager's database. If the Server updates them, they will be re-downloaded.
 task_cleanup_max_age: 336h
 
+
+# This many failures (on a given job+task type combination) will ban a worker
+# from that task type on that job. Defaults to 3.
+blacklist_threshold: 3
+
 # If set, Flamenco Manager will recursively monitor this path, and show the latest
 # image placed there on the status dashboard.
 # watch_for_latest_image: /path/to/render/outputs

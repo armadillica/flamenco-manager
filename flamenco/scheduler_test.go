@@ -21,10 +21,11 @@ type SchedulerTestSuite struct {
 	workerLnx Worker
 	workerWin Worker
 
-	db       *mgo.Database
-	upstream *UpstreamConnection
-	sched    *TaskScheduler
-	queue    *TaskUpdateQueue
+	db        *mgo.Database
+	upstream  *UpstreamConnection
+	sched     *TaskScheduler
+	queue     *TaskUpdateQueue
+	blacklist *WorkerBlacklist
 }
 
 var _ = check.Suite(&SchedulerTestSuite{})
@@ -48,13 +49,14 @@ func (s *SchedulerTestSuite) SetUpTest(c *check.C) {
 	s.db = session.DB("")
 
 	s.upstream = ConnectUpstream(&config, session)
-	s.queue = CreateTaskUpdateQueue(&config)
-	s.sched = CreateTaskScheduler(&config, s.upstream, session, s.queue)
+	s.blacklist = CreateWorkerBlackList(&config, session)
+	s.queue = CreateTaskUpdateQueue(&config, s.blacklist)
+	s.sched = CreateTaskScheduler(&config, s.upstream, session, s.queue, s.blacklist)
 
 	// Store workers in DB, on purpose in the opposite order as the tasks.
 	s.workerLnx = Worker{
 		Platform:           "linux",
-		SupportedTaskTypes: []string{"sleeping"},
+		SupportedTaskTypes: []string{"sleeping", "blender-render", "file-management", "video-encoding"},
 		Nickname:           "workerLnx",
 	}
 	if err := StoreNewWorker(&s.workerLnx, s.db); err != nil {
@@ -62,7 +64,7 @@ func (s *SchedulerTestSuite) SetUpTest(c *check.C) {
 	}
 	s.workerWin = Worker{
 		Platform:           "windows",
-		SupportedTaskTypes: []string{"testing"},
+		SupportedTaskTypes: []string{"testing", "blender-render", "file-management", "video-encoding"},
 		Nickname:           "workerWin",
 	}
 	if err := StoreNewWorker(&s.workerWin, s.db); err != nil {
@@ -558,4 +560,54 @@ func (s *SchedulerTestSuite) TestWorkerMayRun(t *check.C) {
 	resp = MayKeepRunningResponse{}
 	parseJSON(t, respRec, 200, &resp)
 	assert.Equal(t, false, resp.MayKeepRunning)
+}
+
+func (s *SchedulerTestSuite) TestBlacklist(c *check.C) {
+	// Insert a number of tasks of different type & job.
+	job1 := bson.NewObjectId()
+	job2 := bson.NewObjectId()
+
+	createTask := func(jobID bson.ObjectId, taskPrio int, taskType string) *Task {
+		task := ConstructTestTaskWithPrio(bson.NewObjectId().Hex(), taskType, taskPrio)
+		task.Job = jobID
+		if err := s.db.C("flamenco_tasks").Insert(task); err != nil {
+			c.Fatal("Unable to insert test task", err)
+		}
+		return &task
+	}
+
+	task1fm := createTask(job1, 100, "file-management")
+	task1br := createTask(job1, 80, "blender-render")
+	task1ve := createTask(job1, 80, "video-encoding")
+
+	createTask(job2, 50, "file-management")
+	createTask(job2, 50, "blender-render")
+	task2ve := createTask(job2, 50, "video-encoding")
+
+	assert.Nil(c, s.blacklist.Add(s.workerLnx.ID, task1fm))
+	assert.Nil(c, s.blacklist.Add(s.workerLnx.ID, task1br))
+	assert.Nil(c, s.blacklist.Add(s.workerLnx.ID, task2ve))
+	assert.Nil(c, s.blacklist.Add(s.workerWin.ID, task1ve))
+
+	// Perform HTTP request to the scheduler.
+	respRec := httptest.NewRecorder()
+	request, _ := http.NewRequest("GET", "/task", nil)
+	ar := &auth.AuthenticatedRequest{Request: *request, Username: s.workerLnx.ID.Hex()}
+	s.sched.ScheduleTask(respRec, ar)
+
+	// We would have gotten task 1fm, because it has the highest priority, but since that is
+	// blacklisted we should get task1ve
+	jsonTask := Task{}
+	parseJSON(c, respRec, 200, &jsonTask)
+	assert.Equal(c, task1ve.ID.Hex(), jsonTask.ID.Hex())
+
+	// Perform HTTP request to the scheduler for the other worker.
+	respRec = httptest.NewRecorder()
+	request, _ = http.NewRequest("GET", "/task", nil)
+	ar = &auth.AuthenticatedRequest{Request: *request, Username: s.workerWin.ID.Hex()}
+	s.sched.ScheduleTask(respRec, ar)
+
+	// workerWin should get task1fm because it has highest prio and this worker isn't blacklisted for it.
+	parseJSON(c, respRec, 200, &jsonTask)
+	assert.Equal(c, task1fm.ID.Hex(), jsonTask.ID.Hex())
 }

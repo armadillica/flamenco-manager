@@ -16,10 +16,11 @@ import (
 
 // TaskScheduler offers tasks to Workers when they ask for them.
 type TaskScheduler struct {
-	config   *Conf
-	upstream *UpstreamConnection
-	session  *mgo.Session
-	queue    *TaskUpdateQueue
+	config    *Conf
+	upstream  *UpstreamConnection
+	session   *mgo.Session
+	queue     *TaskUpdateQueue
+	blacklist *WorkerBlacklist
 
 	/* Timestamp of the last time we kicked the task downloader because there weren't any
 	 * tasks left for workers. */
@@ -33,12 +34,14 @@ func CreateTaskScheduler(config *Conf,
 	upstream *UpstreamConnection,
 	session *mgo.Session,
 	queue *TaskUpdateQueue,
+	blacklist *WorkerBlacklist,
 ) *TaskScheduler {
 	return &TaskScheduler{
 		config,
 		upstream,
 		session,
 		queue,
+		blacklist,
 		time.Time{},
 		new(sync.Mutex),
 	}
@@ -168,7 +171,7 @@ func (ts *TaskScheduler) assignTaskToWorker(task *Task, worker *Worker, db *mgo.
 		// Poke the task update queue to trigger log rotation.
 		// TODO(Sybren): move the mutation of tasks to a central place so that
 		//  such triggers are always handled properly.
-		ts.queue.onTaskStatusChanged(task, statusActive)
+		ts.queue.onTaskStatusMayHaveChanged(task, statusActive, db)
 		task.Status = statusActive
 	} else {
 		logger.Info("assignTaskToWorker: task already active")
@@ -239,6 +242,7 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 	tasksColl := db.C("flamenco_tasks")
 
 	// First check for any active tasks already assigned to the worker.
+	// Note that this task type could be blacklisted, but since it's active that is unlikely.
 	alreadyAssignedTask := Task{}
 	findErr := tasksColl.Find(M{
 		"status":    statusActive,
@@ -255,20 +259,24 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 		log.WithFields(logFields).WithError(findErr).Error("TaskScheduler: unable to query for active tasks assigned to worker")
 	}
 
+	blacklist := ts.blacklist.BlacklistForWorker(worker.ID)
+
 	// Perform the monster MongoDB aggregation query to schedule a task.
 	result := aggregationPipelineResult{}
 	pipe := tasksColl.Pipe([]M{
-		// 1: Select only tasks that have a runnable status & acceptable task type.
+		// Select only tasks that have a runnable status & acceptable task type.
 		M{"$match": M{
 			"status":    M{"$in": []string{statusQueued, statusClaimedByManager}},
 			"task_type": M{"$in": worker.SupportedTaskTypes},
 		}},
-		// 2: Unwind the parents array, so that we can do a lookup in the next stage.
+		// Filter out any task type that's blacklisted.
+		M{"$match": blacklist},
+		// Unwind the parents array, so that we can do a lookup in the next stage.
 		M{"$unwind": M{
 			"path":                       "$parents",
 			"preserveNullAndEmptyArrays": true,
 		}},
-		// 3: Look up the parent document for each unwound task.
+		// Look up the parent document for each unwound task.
 		// This produces 1-length "parent_doc" arrays.
 		M{"$lookup": M{
 			"from":         "flamenco_tasks",
@@ -276,12 +284,12 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 			"foreignField": "_id",
 			"as":           "parent_doc",
 		}},
-		// 4: Unwind again, to turn the 1-length "parent_doc" arrays into a subdocument.
+		// Unwind again, to turn the 1-length "parent_doc" arrays into a subdocument.
 		M{"$unwind": M{
 			"path":                       "$parent_doc",
 			"preserveNullAndEmptyArrays": true,
 		}},
-		// 5: Group by task ID to undo the unwind, and create an array parent_statuses
+		// Group by task ID to undo the unwind, and create an array parent_statuses
 		// with booleans indicating whether the parent status is "completed".
 		M{"$group": M{
 			"_id": "$_id",
@@ -292,25 +300,25 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 			// This allows us to keep all dynamic properties of the original task document:
 			"task": M{"$first": "$$ROOT"},
 		}},
-		// 6: Turn the list of "parent_statuses" booleans into a single boolean
+		// Turn the list of "parent_statuses" booleans into a single boolean
 		M{"$project": M{
 			"_id":               0,
 			"parents_completed": M{"$allElementsTrue": []string{"$parent_statuses"}},
 			"task":              1,
 		}},
-		// 7: Select only those tasks for which the parents have completed.
+		// Select only those tasks for which the parents have completed.
 		M{"$match": M{
 			"parents_completed": true,
 		}},
-		// 8: just keep the task info, the "parents_runnable" is no longer needed.
+		// just keep the task info, the "parents_runnable" is no longer needed.
 		M{"$project": M{"task": 1}},
-		// 9: Sort by priority, with highest prio first. If prio is equal, use oldest task.
+		// Sort by priority, with highest prio first. If prio is equal, use oldest task.
 		M{"$sort": bson.D{
 			{Name: "task.job_priority", Value: -1},
 			{Name: "task.priority", Value: -1},
 			{Name: "task._id", Value: 1},
 		}},
-		// 10: Only return one task.
+		// Only return one task.
 		M{"$limit": 1},
 	})
 

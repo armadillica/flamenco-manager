@@ -21,11 +21,12 @@ type WorkerTestSuite struct {
 	workerLnx Worker
 	workerWin Worker
 
-	db       *mgo.Database
-	upstream *UpstreamConnection
-	sched    *TaskScheduler
-	notifier *UpstreamNotifier
-	queue    *TaskUpdateQueue
+	db        *mgo.Database
+	upstream  *UpstreamConnection
+	sched     *TaskScheduler
+	notifier  *UpstreamNotifier
+	queue     *TaskUpdateQueue
+	blacklist *WorkerBlacklist
 }
 
 var _ = check.Suite(&WorkerTestSuite{})
@@ -38,8 +39,9 @@ func (s *WorkerTestSuite) SetUpTest(c *check.C) {
 	s.db = session.DB("")
 
 	s.upstream = ConnectUpstream(&config, session)
-	s.queue = CreateTaskUpdateQueue(&config)
-	s.sched = CreateTaskScheduler(&config, s.upstream, session, s.queue)
+	s.blacklist = CreateWorkerBlackList(&config, session)
+	s.queue = CreateTaskUpdateQueue(&config, s.blacklist)
+	s.sched = CreateTaskScheduler(&config, s.upstream, session, s.queue, s.blacklist)
 	s.notifier = CreateUpstreamNotifier(&config, s.upstream, session)
 
 	// Store workers in DB, on purpose in the opposite order as the tasks.
@@ -60,7 +62,6 @@ func (s *WorkerTestSuite) SetUpTest(c *check.C) {
 	if err := StoreNewWorker(&s.workerWin, s.db); err != nil {
 		c.Fatal("Unable to insert test workerWin", err)
 	}
-
 }
 
 func (s *WorkerTestSuite) TearDownTest(c *check.C) {

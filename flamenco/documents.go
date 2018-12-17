@@ -206,3 +206,11 @@ type StatusReport struct {
 type FileProduced struct {
 	Paths []string `json:"paths"`
 }
+
+// WorkerBlacklistEntry prevents a certain worker from running certain task types on certain jobs.
+type WorkerBlacklistEntry struct {
+	Created  time.Time     `bson:"_created"`
+	WorkerID bson.ObjectId `bson:"worker_id"`
+	JobID    bson.ObjectId `bson:"job_id"`
+	TaskType string        `bson:"task_type"`
+}

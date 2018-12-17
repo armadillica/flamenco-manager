@@ -1,4 +1,5 @@
 # This file is loaded by unit tests in the 'flamenco' package.
+mode: production
 database_url: mongodb://localhost/flamanager_test
 listen: '[::0]:8083'
 own_url: http://192.168.3.108:8083/
@@ -10,6 +11,8 @@ download_task_recheck_throttle: -1s
 cancel_task_fetch_max_interval: 10s
 
 task_logs_path: /tmp/flamenco-unittests
+
+blacklist_threshold: 3
 
 variables:
     blender:

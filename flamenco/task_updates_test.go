@@ -3,6 +3,7 @@ package flamenco
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -13,18 +14,19 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	check "gopkg.in/check.v1"
-	"gopkg.in/jarcoal/httpmock.v1"
+	httpmock "gopkg.in/jarcoal/httpmock.v1"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
 type TaskUpdatesTestSuite struct {
-	config   Conf
-	session  *mgo.Session
-	db       *mgo.Database
-	upstream *UpstreamConnection
-	sched    *TaskScheduler
-	queue    *TaskUpdateQueue
+	config    Conf
+	session   *mgo.Session
+	db        *mgo.Database
+	upstream  *UpstreamConnection
+	sched     *TaskScheduler
+	queue     *TaskUpdateQueue
+	blacklist *WorkerBlacklist
 }
 
 var _ = check.Suite(&TaskUpdatesTestSuite{})
@@ -41,8 +43,9 @@ func (s *TaskUpdatesTestSuite) SetUpTest(c *check.C) {
 	s.session = MongoSession(&s.config)
 	s.db = s.session.DB("")
 	s.upstream = ConnectUpstream(&s.config, s.session)
-	s.queue = CreateTaskUpdateQueue(&s.config)
-	s.sched = CreateTaskScheduler(&s.config, s.upstream, s.session, s.queue)
+	s.blacklist = CreateWorkerBlackList(&s.config, s.session)
+	s.queue = CreateTaskUpdateQueue(&s.config, s.blacklist)
+	s.sched = CreateTaskScheduler(&s.config, s.upstream, s.session, s.queue, s.blacklist)
 }
 
 func (s *TaskUpdatesTestSuite) TearDownTest(c *check.C) {
@@ -224,7 +227,7 @@ func (s *TaskUpdatesTestSuite) TestTaskRescheduling(c *check.C) {
 	assert.Nil(c, StoreNewWorker(&worker1, s.db))
 	assert.Nil(c, StoreNewWorker(&worker2, s.db))
 
-	taskSched := CreateTaskScheduler(&s.config, s.upstream, s.session, s.queue)
+	taskSched := CreateTaskScheduler(&s.config, s.upstream, s.session, s.queue, s.blacklist)
 	taskSched.assignTaskToWorker(&task1, &worker1, s.db, log.WithField("unittest", "TestTaskRescheduling"))
 
 	// Because of this update, the task should be assigned to worker 1.
@@ -401,4 +404,78 @@ func (s *TaskUpdatesTestSuite) TestLogRotation(c *check.C) {
 	sendUpdate(statusActive, "retrying task", logEntry4)
 	assert.Equal(c, logEntry4, read(logFilename))
 	assert.Equal(c, logEntry1+logEntry2+logEntry3, read(logFilename+".1"))
+}
+
+func (s *TaskUpdatesTestSuite) TestBlacklisting(c *check.C) {
+	// This test really assumes that after 3 failures the worker is blacklisted.
+	if s.config.BlacklistThreshold != 3 {
+		assert.FailNow(c, "config.BlacklistThreshold should be 3, is %v", s.config.BlacklistThreshold)
+	}
+	tasksColl := s.db.C("flamenco_tasks")
+
+	construct := func(taskID string) Task {
+		task := ConstructTestTask(taskID, "testing")
+		assert.Nil(c, tasksColl.Insert(task))
+		return task
+	}
+	tasks := []Task{
+		construct("1aaaaaaaaaaaaaaaaaaaaaaa"),
+		construct("2aaaaaaaaaaaaaaaaaaaaaaa"),
+		construct("3aaaaaaaaaaaaaaaaaaaaaaa"),
+		construct("4aaaaaaaaaaaaaaaaaaaaaaa"),
+	}
+
+	worker := Worker{
+		Platform:           "linux",
+		Nickname:           "worker",
+		SupportedTaskTypes: []string{"testing"},
+	}
+	assert.Nil(c, StoreNewWorker(&worker, s.db))
+
+	// Run (and fail) task 1, 2, and 3.
+	for idx := 0; idx < 3; idx++ {
+		s.sched.assignTaskToWorker(&tasks[idx], &worker, s.db, log.WithField("unittest", "TestBlacklisting"))
+		s.sendTaskUpdate(c, tasks[idx].ID, worker.ID, statusFailed,
+			fmt.Sprintf("failing task #%d", idx), "")
+	}
+
+	// Verify that a blacklist entry has been made, and the tasks were requeued.
+	blacklist := s.blacklist.BlacklistForWorker(worker.ID)
+	assert.Equal(c, M{"$nor": []M{
+		M{
+			"job":       tasks[0].Job,
+			"task_type": M{"$in": []string{"testing"}},
+		},
+	}}, blacklist)
+
+	found := Task{}
+	for idx := range tasks {
+		assert.Nil(c, tasksColl.FindId(tasks[idx].ID).One(&found))
+		if idx < 3 {
+			assert.Equal(c, worker.ID, *found.WorkerID)
+			assert.Equal(c, statusClaimedByManager, found.Status)
+		} else {
+			assert.Nil(c, found.WorkerID)
+			// This is the status set by ConstructTestTask, and this shouldn't have been touched.
+			assert.Equal(c, statusQueued, found.Status)
+		}
+	}
+
+	// The queued task updates should not include the last failed task (task[2]), as this failure
+	// was reverted by blacklisting and re-queueing.
+	queueColl := s.db.C(queueMgoCollection)
+	assertQueueSize := func(taskID bson.ObjectId, expectedCount int) {
+		count, err := queueColl.Find(M{"task_id": taskID}).Count()
+		assert.Nil(c, err)
+		assert.Equal(c, expectedCount, count, "for task "+taskID.Hex())
+	}
+	assertQueueSize(tasks[0].ID, 3) // activation + failure + re-queue
+	assertQueueSize(tasks[1].ID, 3) // activation + failure + re-queue
+	assertQueueSize(tasks[2].ID, 2) // activation + re-queue
+	assertQueueSize(tasks[3].ID, 0) // untouched
+
+	// There shouldn't be any failure updates queued for the task that triggered the blacklisting.
+	count, err := queueColl.Find(M{"task_id": tasks[2].ID, "task_status": statusFailed}).Count()
+	assert.Nil(c, err)
+	assert.Equal(c, 0, count)
 }

@@ -39,7 +39,7 @@ func ConstructTestTaskWithPrio(taskID, taskType string, priority int) Task {
 		Project:  bson.ObjectIdHex("dddddddddddddddddddddddd"),
 		User:     bson.ObjectIdHex("eeeeeeeeeeeeeeeeeeeeeeee"),
 		Name:     "Test task",
-		Status:   "queued",
+		Status:   statusQueued,
 		Priority: priority,
 		JobType:  "unittest",
 		TaskType: taskType,

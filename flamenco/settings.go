@@ -85,6 +85,10 @@ type Conf struct {
 
 	TaskCleanupMaxAge time.Duration `yaml:"task_cleanup_max_age"`
 
+	/* This many failures (on a given job+task type combination) will ban a worker
+	 * from that task type on that job. */
+	BlacklistThreshold int `yaml:"blacklist_threshold"`
+
 	WatchForLatestImage string `yaml:"watch_for_latest_image"`
 
 	SSDPDiscovery  bool   `yaml:"ssdp_discovery"`
@@ -118,9 +122,10 @@ func LoadConf(filename string) (Conf, error) {
 		FlamencoStr:                 defaultServerURL,
 		// Days are assumed to be 24 hours long. This is not exactly accurate, but should
 		// be accurate enough for this type of cleanup.
-		TaskCleanupMaxAge: 14 * 24 * time.Hour,
-		SSDPDiscovery:     true,
-		SSDPDeviceUUID:    "7401c189-ef69-434b-b4d8-56d00075faf5",
+		TaskCleanupMaxAge:  14 * 24 * time.Hour,
+		SSDPDiscovery:      true,
+		SSDPDeviceUUID:     "7401c189-ef69-434b-b4d8-56d00075faf5",
+		BlacklistThreshold: 3,
 
 		VariablesByVarname: map[string]map[string]string{
 			"blender": map[string]string{

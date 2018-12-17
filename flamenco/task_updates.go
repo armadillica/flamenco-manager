@@ -39,12 +39,16 @@ type TaskUpdatePusher struct {
 
 // TaskUpdateQueue queues task updates for later pushing, and writes log files to disk.
 type TaskUpdateQueue struct {
-	config *Conf
+	config    *Conf
+	blacklist *WorkerBlacklist
 }
 
 // CreateTaskUpdateQueue creates a new TaskUpdateQueue.
-func CreateTaskUpdateQueue(config *Conf) *TaskUpdateQueue {
-	tuq := TaskUpdateQueue{config}
+func CreateTaskUpdateQueue(config *Conf, blacklist *WorkerBlacklist) *TaskUpdateQueue {
+	tuq := TaskUpdateQueue{
+		config,
+		blacklist,
+	}
 	return &tuq
 }
 
@@ -109,6 +113,12 @@ func (tuq *TaskUpdateQueue) QueueTaskUpdateFromWorker(w http.ResponseWriter, r *
 		log.WithFields(logFields).Debug("QueueTaskUpdateFromWorker: task has non-runnable status, ignoring new task status & activity")
 	}
 
+	// Handle blacklisting and re-queueing before actually queueing this task update.
+	// If this task failure results in a blacklist + re-queue, the server shouldn't even know about the failure.
+	if tupdate.TaskStatus == statusFailed {
+		tuq.maybeBlacklistWorker(&task, &tupdate, db)
+	}
+
 	tupdate.isManagerLocal = task.isManagerLocalTask()
 	if err := tuq.QueueTaskUpdate(&task, &tupdate, db); err != nil {
 		log.WithFields(logFields).WithError(err).Warning("QueueTaskUpdateFromWorker: unable to update task")
@@ -164,7 +174,6 @@ func (tuq *TaskUpdateQueue) QueueTaskUpdateWithExtra(task *Task, tupdate *TaskUp
 		// Before blindly applying the task status, first check if the transition is valid.
 		if taskStatusTransitionValid(task.Status, tupdate.TaskStatus) {
 			updates["status"] = tupdate.TaskStatus
-			tuq.onTaskStatusChanged(task, tupdate.TaskStatus)
 		} else {
 			log.WithFields(logFields).Warning("QueueTaskUpdate: not locally applying task status")
 		}
@@ -193,6 +202,11 @@ func (tuq *TaskUpdateQueue) QueueTaskUpdateWithExtra(task *Task, tupdate *TaskUp
 		log.WithFields(logFields).Debug("QueueTaskUpdate: nothing to do locally")
 	}
 
+	// Only respond to status changes after they have been updated in the database.
+	if tupdate.TaskStatus != "" {
+		tuq.onTaskStatusMayHaveChanged(task, tupdate.TaskStatus, db)
+	}
+
 	return nil
 }
 
@@ -217,7 +231,7 @@ func (tuq *TaskUpdateQueue) LogTaskActivity(worker *Worker, task *Task, activity
 }
 
 // Called when a task status update is queued for sending to the Server.
-func (tuq *TaskUpdateQueue) onTaskStatusChanged(task *Task, newStatus string) {
+func (tuq *TaskUpdateQueue) onTaskStatusMayHaveChanged(task *Task, newStatus string, db *mgo.Database) {
 	if task.Status == newStatus {
 		return
 	}
@@ -228,10 +242,11 @@ func (tuq *TaskUpdateQueue) onTaskStatusChanged(task *Task, newStatus string) {
 		"new_status": newStatus,
 	})
 
-	if newStatus == statusActive {
+	switch newStatus {
+	case statusActive:
 		logger.Info("task status was updated and became active; rotating task log file")
 		tuq.rotateTaskLogFile(task)
-	} else {
+	default:
 		logger.Info("task status was updated")
 	}
 }
@@ -322,6 +337,82 @@ func (tuq *TaskUpdateQueue) taskLogPath(jobID, taskID bson.ObjectId) (string, st
 	dirpath := path.Join(tuq.config.TaskLogsPath, "job-"+jobHex[:4], jobHex)
 	filename := "task-" + taskID.Hex() + ".txt"
 	return dirpath, filename
+}
+
+/* Blacklists the worker if this failure pushes it over the threshold.
+ * If the task is re-queued due to blacklisting the worker, tupdate.Status is reset to "claimed-by-manager"
+ * to avoid sending the failure status to the Server (but logs are still sent). Preventing the failure
+ * status from reaching the server is important because the server should not cancel the entire job because
+ * of this. */
+func (tuq *TaskUpdateQueue) maybeBlacklistWorker(task *Task, tupdate *TaskUpdate, db *mgo.Database) {
+	coll := db.C("flamenco_tasks")
+
+	queryFields := M{
+		"worker_id": task.WorkerID,
+		"job":       task.Job,
+		"task_type": task.TaskType,
+		"status":    statusFailed,
+	}
+	logger := log.WithFields(log.Fields{
+		"worker_id": task.WorkerID.Hex(),
+		"job":       task.Job.Hex(),
+		"task_type": task.TaskType,
+	})
+
+	query := coll.Find(queryFields)
+	failedCount, err := query.Count()
+	if err != nil {
+		logger.WithError(err).Error("unable to count failed tasks for worker")
+		return
+	}
+
+	// The received task update hasn't been persisted in the database yet,
+	// so we should count that too.
+	failedCount++
+	logger = logger.WithField("failed_task_count", failedCount)
+
+	if failedCount < tuq.config.BlacklistThreshold {
+		logger.Debug("counted failed tasks for worker")
+		return
+	}
+
+	logger.Info("too many failed tasks, adding to blacklist")
+
+	// Blacklist this worker.
+	err = tuq.blacklist.Add(*task.WorkerID, task)
+	if err != nil {
+		logger.WithError(err).Error("unable to blacklist worker")
+		return
+	}
+
+	// Re-queue all tasks this worker failed (on this job, of the same task type),
+	// so that other workers can pick them up again. This has to go through the
+	// task queue, so that the updates are also sent to the Server.
+	logger.Debug("re-queueing all failed tasks of this worker")
+
+	// Prevent the failure status from reaching the server, so that we don't trigger a job-wide cancellation.
+	tupdate.TaskStatus = statusClaimedByManager
+
+	updateMessage := fmt.Sprintf("Manager re-queued task after blacklisting worker %s", task.Worker)
+	found := Task{}
+	iter := query.Iter()
+	for iter.Next(&found) {
+		update := TaskUpdate{
+			ID:                        bson.NewObjectId(),
+			TaskID:                    found.ID,
+			TaskStatus:                statusClaimedByManager,
+			Activity:                  updateMessage,
+			TaskProgressPercentage:    0,
+			CurrentCommandIdx:         0,
+			CommandProgressPercentage: 0,
+			LogTail:                   updateMessage,
+			Worker:                    found.Worker,
+		}
+		tuq.QueueTaskUpdate(&found, &update, db)
+	}
+	if err := iter.Close(); err != nil {
+		log.WithError(err).Error("maybeBlacklistWorker: error querying MongoDB, task re-queue could be partial")
+	}
 }
 
 // taskStatusTransitionValid performs a query on the database to determine the current status,
