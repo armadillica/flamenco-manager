@@ -10,6 +10,10 @@ Changelog for Flamenco Manager
 - Workers can be selected and sent actions with one button click.
 - Built with Golang 1.11
 - Worker sleep time can now be managed from the Manager dashboard.
+- Workers that fail multiple tasks of the same type on the same job (threshold is configurable,
+  defaults to 3) are blacklisted. This means that they cannot perform tasks of that type on
+  that job any more, and previously failed tasks are requeued so that they become available
+  to other workers.
 
 
 ## Version 2.2 (2018-12-04)
