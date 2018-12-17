@@ -13,3 +13,4 @@
 /docker/mongodb-linux-*
 /docker/mongodb-osx-*
 /docker/mongodb-windows-*
+/task-logs/
