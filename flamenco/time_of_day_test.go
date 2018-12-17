@@ -50,6 +50,17 @@ func (s *TimeOfDayTestSuite) TestOnDate(c *check.C) {
 	tod := TimeOfDay{16, 47}
 	expect := time.Date(2018, 12, 13, 16, 47, 0, 0, time.Local)
 	assert.Equal(c, expect, tod.OnDate(theDate))
+
+	// Midnight on the same day.
+	tod = TimeOfDay{0, 0}
+	expect = time.Date(2018, 12, 13, 0, 0, 0, 0, time.Local)
+	assert.Equal(c, expect, tod.OnDate(theDate))
+
+	// Midnight a day later.
+	tod = TimeOfDay{24, 0}
+	expect = time.Date(2018, 12, 14, 0, 0, 0, 0, time.Local)
+	assert.Equal(c, expect, tod.OnDate(theDate))
+
 }
 
 func (s *TimeOfDayTestSuite) TestMarshalJSON(c *check.C) {

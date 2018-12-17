@@ -150,6 +150,7 @@ func (s *SleepSchedulerTestSuite) TestScheduleInfoNextCheck(c *check.C) {
 	var now time.Time
 	timeStart := TimeOfDay{8, 0}
 	timeEnd := TimeOfDay{17, 0}
+	nextMidnight := TimeOfDay{24, 0}
 	schedule := ScheduleInfo{
 		TimeStart: &timeStart,
 		TimeEnd:   &timeEnd,
@@ -163,22 +164,23 @@ func (s *SleepSchedulerTestSuite) TestScheduleInfoNextCheck(c *check.C) {
 	now = time.Date(2018, 12, 12, 8, 0, 43, 0, time.Local)
 	assert.Equal(c, timeEnd.OnDate(now), *schedule.calculateNextCheck(now))
 
-	// timeStart < timeEnd < now → the next check should be on timeStart a day later.
+	// timeStart < timeEnd < now → the next check should be on 00:00 a day later.
 	now = time.Date(2018, 12, 12, 17, 0, 43, 0, time.Local)
-	assert.Equal(c, timeStart.OnDate(now.AddDate(0, 0, 1)), *schedule.calculateNextCheck(now))
+	assert.Equal(c, nextMidnight.OnDate(now), *schedule.calculateNextCheck(now))
 
 	// now < timeEnd → the next check should be on timeEnd
 	now = time.Date(2018, 12, 12, 7, 59, 43, 0, time.Local)
 	schedule.TimeStart = nil
 	assert.Equal(c, timeEnd.OnDate(now), *schedule.calculateNextCheck(now))
 
+	// No start/end time → next check should be on midnight the next day.
 	schedule.TimeEnd = nil
-	assert.Nil(c, schedule.calculateNextCheck(now))
+	assert.Equal(c, nextMidnight.OnDate(now), *schedule.calculateNextCheck(now))
 
-	// timeStart < now → the next check should be on timeStart a day later.
+	// timeStart < now → the next check should be on 00:00 a day later.
 	now = time.Date(2018, 12, 12, 8, 0, 43, 0, time.Local)
 	schedule.TimeStart = &timeStart
-	assert.Equal(c, timeStart.OnDate(now.AddDate(0, 0, 1)), *schedule.calculateNextCheck(now))
+	assert.Equal(c, nextMidnight.OnDate(now), *schedule.calculateNextCheck(now))
 }
 
 func (s *SleepSchedulerTestSuite) TestRefresh(c *check.C) {
@@ -244,5 +246,5 @@ func (s *SleepSchedulerTestSuite) TestRefresh(c *check.C) {
 	log.Info("checking timeStart < timeEnd < now")
 	now = time.Date(2018, 12, 12, 20, 0, 0, 0, time.Local)
 	s.ss.RefreshAllWorkers()
-	check(workerStatusAsleep, workerStatusAwake, timeStart.OnDate(now).AddDate(0, 0, 1))
+	check(workerStatusAsleep, workerStatusAwake, TimeOfDay{24, 0}.OnDate(now))
 }

@@ -220,30 +220,45 @@ func (ss *SleepScheduler) DeactivateSleepSchedule(worker *Worker, db *mgo.Databa
 // This ignores the time of day, and just sets a time.
 // The returned timestamp can be used for ScheduleInfo.NextCheck.
 func (si ScheduleInfo) calculateNextCheck(forTime time.Time) *time.Time {
-	if si.TimeStart == nil && si.TimeEnd == nil {
-		return nil
-	}
-
-	calcNext := func(tod TimeOfDay) *time.Time {
+	calcNext := func(tod TimeOfDay) time.Time {
 		nextCheck := tod.OnDate(forTime)
 		if nextCheck.Before(forTime) {
 			nextCheck = nextCheck.AddDate(0, 0, 1)
 		}
-		return &nextCheck
+		return nextCheck
+	}
+
+	if si.TimeStart == nil && si.TimeEnd == nil {
+		next := calcNext(TimeOfDay{24, 0})
+		return &next
 	}
 
 	if si.TimeStart == nil {
-		return calcNext(*si.TimeEnd)
+		next := calcNext(*si.TimeEnd)
+		return &next
 	}
 
 	if si.TimeEnd == nil {
-		return calcNext(*si.TimeStart)
+		// No end time implies midnight the next day.
+		next := calcNext(TimeOfDay{24, 0})
+		return &next
 	}
 
-	nextCheckStart := calcNext(*si.TimeStart)
-	nextCheckEnd := calcNext(*si.TimeEnd)
-	if nextCheckStart.Before(*nextCheckEnd) {
-		return nextCheckStart
+	nextChecks := []time.Time{
+		calcNext(*si.TimeStart),
+		calcNext(*si.TimeEnd),
+		calcNext(TimeOfDay{24, 0}),
 	}
-	return nextCheckEnd
+	next := earliestTime(nextChecks)
+	return &next
+}
+
+func earliestTime(timestamps []time.Time) time.Time {
+	earliest := timestamps[0]
+	for _, timestamp := range timestamps[1:] {
+		if timestamp.Before(earliest) {
+			earliest = timestamp
+		}
+	}
+	return earliest
 }
