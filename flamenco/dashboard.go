@@ -168,9 +168,6 @@ func (dash *Dashboard) sendStatusReport(w http.ResponseWriter, r *http.Request) 
 			{Name: "nickname", Value: 1},
 			{Name: "status", Value: 1},
 		}},
-		M{"$project": M{
-			"blacklist.worker_id": 0,
-		}},
 	})
 
 	if err := pipe.All(&workers); err != nil {
