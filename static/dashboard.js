@@ -12,19 +12,36 @@ var load_workers_timeout_handle;
  * the action should not be available to workers already in that status.
  */
 WORKER_ACTIONS = Object.freeze({
-    offline: {
-        label: '✝ Shut Down',
+    offline_lazy: {
+        label: '✝ Shut Down (after task is finished)',
         icon: '✝',
-        title: 'The worker may automatically restart.',
-        payload: { action: 'shutdown' },
+        title: 'Shut down the worker after the current task finishes. The worker may automatically restart.',
+        payload: { action: 'shutdown', lazy: true },
+        available(worker_status) { return worker_status != 'offline'; },
     },
-    asleep: {
-        label: '😴 Send to Sleep',
+    offline_immediate: {
+        label: '✝! Shut Down (immediately)',
+        icon: '✝!',
+        title: 'Immediately shut down the worker. It may automatically restart.',
+        payload: { action: 'shutdown', lazy: false },
+        available(worker_status) { return false },
+    },
+    asleep_lazy: {
+        label: '😴 Send to Sleep (after task is finished)',
         icon: '😴',
-        title: 'Let the worker sleep',
-        payload: { action: 'set-status', status: 'asleep' },
+        title: 'Let the worker sleep after finishing this task.',
+        payload: { action: 'set-status', status: 'asleep', lazy: true },
         available(worker_status) {
-            return worker_status != 'timeout';
+            return worker_status != 'timeout' && worker_status != 'asleep';
+        },
+    },
+    asleep_immediate: {
+        label: '😴! Send to Sleep (immediately)',
+        icon: '😴!',
+        title: 'Let the worker sleep immediately.',
+        payload: { action: 'set-status', status: 'asleep', lazy: false },
+        available(worker_status) {
+            return worker_status != 'timeout' && worker_status != 'asleep';
         },
     },
     wakeup: {
@@ -32,7 +49,9 @@ WORKER_ACTIONS = Object.freeze({
         icon: '😃',
         title: 'Wake the worker up. A sleeping worker can take a minute to respond.',
         payload: { action: 'set-status', status: 'awake' },
-        available(worker_status, requested_status) { return worker_status == 'asleep' || requested_status == 'asleep'; },
+        available(worker_status, requested_status) {
+            return worker_status == 'asleep' || requested_status == 'asleep';
+        },
     },
     ack_timeout: {
         label: '✓ Acknowledge Timeout',

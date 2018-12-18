@@ -562,6 +562,37 @@ func (s *SchedulerTestSuite) TestWorkerMayRun(t *check.C) {
 	assert.Equal(t, false, resp.MayKeepRunning)
 }
 
+func (s *SchedulerTestSuite) TestWorkerMayRunStatusRequested(t *check.C) {
+	// Store task in DB.
+	task := ConstructTestTask("aaaaaaaaaaaaaaaaaaaaaaaa", "sleeping")
+	if err := s.db.C("flamenco_tasks").Insert(task); err != nil {
+		t.Fatal("Unable to insert test task", err)
+	}
+
+	// Make sure the scheduler gives us this task.
+	respRec, ar := WorkerTestRequest(s.workerLnx.ID, "GET", "/task")
+	s.sched.ScheduleTask(respRec, ar)
+
+	// When a lazy status change is requested, we should be allowed to keep running.
+	assert.Nil(t, s.workerLnx.RequestStatusChange(workerStatusAsleep, Lazy, s.db))
+	respRec, ar = WorkerTestRequest(s.workerLnx.ID, "GET", "/may-i-run/%s", task.ID.Hex())
+	s.sched.WorkerMayRunTask(respRec, ar, s.db, task.ID)
+
+	resp := MayKeepRunningResponse{}
+	parseJSON(t, respRec, 200, &resp)
+	assert.Equal(t, "", resp.Reason)
+	assert.Equal(t, true, resp.MayKeepRunning)
+
+	// When an immediate status change is requested, we shouldn't be allowed to keep running.
+	assert.Nil(t, s.workerLnx.RequestStatusChange(workerStatusAsleep, Immediate, s.db))
+	respRec, ar = WorkerTestRequest(s.workerLnx.ID, "GET", "/may-i-run/%s", task.ID.Hex())
+	s.sched.WorkerMayRunTask(respRec, ar, s.db, task.ID)
+
+	parseJSON(t, respRec, 200, &resp)
+	assert.Equal(t, "worker status change to asleep requested", resp.Reason)
+	assert.Equal(t, false, resp.MayKeepRunning)
+}
+
 func (s *SchedulerTestSuite) TestBlacklist(c *check.C) {
 	// Insert a number of tasks of different type & job.
 	job1 := bson.NewObjectId()

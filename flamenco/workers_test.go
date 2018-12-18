@@ -222,7 +222,7 @@ func (s *WorkerTestSuite) TestWorkerSignOff(t *check.C) {
 
 	// Signing off when awake and shutdown requested
 	s.workerLnx.SetStatus(workerStatusAwake, s.db)
-	s.workerLnx.RequestStatusChange(workerStatusShutdown, s.db)
+	s.workerLnx.RequestStatusChange(workerStatusShutdown, Immediate, s.db)
 	signoff()
 	getworker()
 	assert.Equal(t, workerStatusOffline, found.Status)
@@ -230,7 +230,7 @@ func (s *WorkerTestSuite) TestWorkerSignOff(t *check.C) {
 
 	// Signing off when asleep
 	s.workerLnx.SetStatus(workerStatusAsleep, s.db)
-	s.workerLnx.RequestStatusChange(workerStatusShutdown, s.db)
+	s.workerLnx.RequestStatusChange(workerStatusShutdown, Immediate, s.db)
 	signoff()
 	getworker()
 	assert.Equal(t, workerStatusOffline, found.Status)
@@ -238,7 +238,7 @@ func (s *WorkerTestSuite) TestWorkerSignOff(t *check.C) {
 
 	// Signing off when asleep and awake requested
 	s.workerLnx.SetStatus(workerStatusAsleep, s.db)
-	s.workerLnx.RequestStatusChange(workerStatusAwake, s.db)
+	s.workerLnx.RequestStatusChange(workerStatusAwake, Immediate, s.db)
 	signoff()
 	getworker()
 	assert.Equal(t, workerStatusOffline, found.Status)
@@ -246,7 +246,7 @@ func (s *WorkerTestSuite) TestWorkerSignOff(t *check.C) {
 
 	// Signing off when timed out
 	s.workerLnx.SetStatus(workerStatusTimeout, s.db)
-	s.workerLnx.RequestStatusChange(workerStatusShutdown, s.db)
+	s.workerLnx.RequestStatusChange(workerStatusShutdown, Immediate, s.db)
 	signoff()
 	getworker()
 	assert.Equal(t, workerStatusOffline, found.Status)
@@ -256,7 +256,7 @@ func (s *WorkerTestSuite) TestWorkerSignOff(t *check.C) {
 // Tests receiving the status change via /may-i-run and /task
 func (s *WorkerTestSuite) TestStatusChangeReceiving(t *check.C) {
 	// Requesting a new status should set it both on the instance and on the database.
-	err := s.workerLnx.RequestStatusChange(workerStatusAsleep, s.db)
+	err := s.workerLnx.RequestStatusChange(workerStatusAsleep, Immediate, s.db)
 	assert.Nil(t, err)
 	assert.Equal(t, workerStatusAsleep, s.workerLnx.StatusRequested)
 	assert.Equal(t, workerStatusAwake, s.workerLnx.Status)
@@ -300,7 +300,7 @@ func (s *WorkerTestSuite) TestWorkerStatusChange(t *check.C) {
 	assert.Equal(t, http.StatusNoContent, respRec.Code)
 
 	// Request a status change.
-	err := s.workerLnx.RequestStatusChange(workerStatusAsleep, s.db)
+	err := s.workerLnx.RequestStatusChange(workerStatusAsleep, Immediate, s.db)
 	assert.Nil(t, err)
 
 	// Now we should get the change back.
@@ -313,7 +313,7 @@ func (s *WorkerTestSuite) TestWorkerStatusChange(t *check.C) {
 }
 
 func (s *WorkerTestSuite) TestAckStatusChange(t *check.C) {
-	err := s.workerLnx.RequestStatusChange(workerStatusAsleep, s.db)
+	err := s.workerLnx.RequestStatusChange(workerStatusAsleep, Immediate, s.db)
 	assert.Nil(t, err)
 
 	// Tests direct function call.
@@ -331,7 +331,7 @@ func (s *WorkerTestSuite) TestAckStatusChange(t *check.C) {
 }
 
 func (s *WorkerTestSuite) TestAckStatusChangeHTTP(t *check.C) {
-	err := s.workerLnx.RequestStatusChange(workerStatusAsleep, s.db)
+	err := s.workerLnx.RequestStatusChange(workerStatusAsleep, Immediate, s.db)
 	assert.Nil(t, err)
 
 	// Tests requested status change.
@@ -377,7 +377,7 @@ func (s *WorkerTestSuite) TestTimeout(t *check.C) {
 
 func (s *WorkerTestSuite) TestStatusChangeNotRequestable(t *check.C) {
 	teststatus := func(status string) {
-		err := s.workerLnx.RequestStatusChange(status, s.db)
+		err := s.workerLnx.RequestStatusChange(status, Immediate, s.db)
 		assert.NotNil(t, err)
 		assert.Equal(t, "", s.workerLnx.StatusRequested)
 		assert.Equal(t, workerStatusAwake, s.workerLnx.Status)

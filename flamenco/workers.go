@@ -30,6 +30,16 @@ var workerStatusRunnable = map[string]bool{
 	"":                  true, // no status change was requested
 }
 
+// Lazyness indicates whether a worker's requested status change is lazy (true) or immediate (false).
+type Lazyness bool
+
+const (
+	// Immediate status change requests interrupt the currently running task.
+	Immediate Lazyness = false
+	// Lazy status change requests are applied when the currently running task finishes.
+	Lazy Lazyness = true
+)
+
 // Identifier returns the worker's address, with the nickname in parentheses (if set).
 //
 // Make sure that you include the nickname in the projection when you fetch
@@ -72,14 +82,19 @@ func (worker *Worker) SetCurrentTask(taskID bson.ObjectId, db *mgo.Database) err
 }
 
 // RequestStatusChange stores the new requested status in MongoDB, so that it gets picked up
-// by the worker the next time it asks for it.
-func (worker *Worker) RequestStatusChange(newStatus string, db *mgo.Database) error {
+// by the worker the next time it asks for it. Parameter 'lazy' indicates that the worker can
+// finish the current task first, before applying the status change.
+func (worker *Worker) RequestStatusChange(newStatus string, lazy Lazyness, db *mgo.Database) error {
 	if !workerStatusRequestable[newStatus] {
 		return fmt.Errorf("RequestStatusChange(%q): status cannot be requested", newStatus)
 	}
 
 	worker.StatusRequested = newStatus
-	updates := M{"status_requested": newStatus}
+	worker.LazyStatusRequest = lazy
+	updates := M{
+		"status_requested":    newStatus,
+		"lazy_status_request": lazy,
+	}
 	return db.C("flamenco_workers").UpdateId(worker.ID, M{"$set": updates})
 }
 
@@ -426,7 +441,7 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 	// Update the worker itself, to show it's down in the DB too.
 	if worker.Status == workerStatusAsleep && (worker.StatusRequested == "" || worker.StatusRequested == workerStatusShutdown) {
 		// Make sure that the worker remains asleep, even after signing on again.
-		defer worker.RequestStatusChange(workerStatusAsleep, db)
+		defer worker.RequestStatusChange(workerStatusAsleep, Immediate, db)
 	}
 
 	// Signing off is seen as acknowledgement of the "shutdown" status.

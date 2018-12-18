@@ -139,9 +139,12 @@ type Worker struct {
 	CurrentJob         bson.ObjectId `bson:"current_job,omitempty" json:"current_job,omitempty"`
 
 	// For controlling sleeping & waking up. For values, see the workerStatusXXX constants.
-	StatusRequested string                 `bson:"status_requested" json:"status_requested"`
-	SleepSchedule   ScheduleInfo           `bson:"sleep_schedule,omitempty" json:"sleep_schedule"`
-	Blacklist       []WorkerBlacklistEntry `json:"blacklist,omitempty"`
+	StatusRequested   string       `bson:"status_requested" json:"status_requested"`
+	LazyStatusRequest Lazyness     `bson:"lazy_status_request" json:"lazy_status_request"` // Only apply requested status when current task is finished.
+	SleepSchedule     ScheduleInfo `bson:"sleep_schedule,omitempty" json:"sleep_schedule"`
+
+	// For preventing a failing worker from eating up all tasks of a certain job.
+	Blacklist []WorkerBlacklistEntry `json:"blacklist,omitempty"`
 }
 
 // ScheduleInfo for automatically sending a Worker to sleep & waking up.

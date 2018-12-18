@@ -159,6 +159,7 @@ func (dash *Dashboard) sendStatusReport(w http.ResponseWriter, r *http.Request) 
 			"software":             1,
 			"status":               1,
 			"status_requested":     1,
+			"lazy_status_request":  1,
 			"supported_task_types": 1,
 			"sleep_schedule":       1,
 			"blacklist":            1,
@@ -241,11 +242,19 @@ func (dash *Dashboard) workerAction(w http.ResponseWriter, r *http.Request) {
 	actionHandlers := map[string]func(){
 		"set-status": func() {
 			requestedStatus := r.FormValue("status")
-			logger = logger.WithField("requested_status", requestedStatus)
-			actionErr = worker.RequestStatusChange(requestedStatus, db)
+			lazy := Lazyness(r.FormValue("lazy") == "true")
+			logger = logger.WithFields(log.Fields{
+				"requested_status": requestedStatus,
+				"lazy":             lazy,
+			})
+			actionErr = worker.RequestStatusChange(requestedStatus, lazy, db)
 		},
 		"shutdown": func() {
-			actionErr = worker.RequestStatusChange(workerStatusShutdown, db)
+			lazy := Lazyness(r.FormValue("lazy") == "true")
+			logger = logger.WithFields(log.Fields{
+				"lazy": lazy,
+			})
+			actionErr = worker.RequestStatusChange(workerStatusShutdown, lazy, db)
 		},
 		"ack-timeout": func() {
 			actionErr = worker.AckTimeout(db)

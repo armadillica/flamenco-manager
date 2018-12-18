@@ -428,10 +428,15 @@ func (ts *TaskScheduler) WorkerMayRunTask(w http.ResponseWriter, r *auth.Authent
 	db *mgo.Database, taskID bson.ObjectId) {
 
 	worker, logFields := findWorkerForHTTP(w, r, db)
+	statusRequested := ""
 
 	logFields["task_id"] = taskID.Hex()
+	if worker.StatusRequested != "" && worker.LazyStatusRequest == Immediate {
+		statusRequested = worker.StatusRequested
+	}
 	if worker.StatusRequested != "" {
 		logFields["worker_status_requested"] = worker.StatusRequested
+		logFields["lazy_status_request"] = worker.LazyStatusRequest
 	}
 	worker.SetAwake(db)
 	worker.Seen(&r.Request, db)
@@ -459,9 +464,9 @@ func (ts *TaskScheduler) WorkerMayRunTask(w http.ResponseWriter, r *auth.Authent
 			logFields["task_status"] = task.Status
 			log.WithFields(logFields).Warning("WorkerMayRunTask: task is in not-runnable status, worker will stop")
 			response.Reason = fmt.Sprintf("task %s in non-runnable status %s", taskID.Hex(), task.Status)
-		} else if !workerStatusRunnable[worker.StatusRequested] {
+		} else if !workerStatusRunnable[statusRequested] {
 			log.WithFields(logFields).Warning("WorkerMayRunTask: worker was requested to go to non-active status; will stop its current task")
-			response.Reason = fmt.Sprintf("worker status change to %s requested", worker.StatusRequested)
+			response.Reason = fmt.Sprintf("worker status change to %s requested", statusRequested)
 		} else {
 			response.MayKeepRunning = true
 			WorkerPingedTask(worker.ID, taskID, "", db)

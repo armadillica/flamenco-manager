@@ -102,7 +102,7 @@ func (ss *SleepScheduler) RequestWorkerStatus(worker *Worker, db *mgo.Database) 
 	} else {
 		logger.Info("requesting worker to switch to scheduled status")
 	}
-	if err := worker.RequestStatusChange(scheduled, db); err != nil {
+	if err := worker.RequestStatusChange(scheduled, Immediate, db); err != nil {
 		logger.WithError(err).Error("unable to store status change in database")
 	}
 }

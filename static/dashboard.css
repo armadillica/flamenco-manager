@@ -116,6 +116,12 @@ button#downloadkick {
     border-bottom: none;
 }
 
+.worker-action:hover {
+    text-shadow:
+        0 0 1px black,
+        0 0 3px fuchsia;
+}
+
 .worker-action.forget-worker {
     font-size: 85%;
     vertical-align: super;
