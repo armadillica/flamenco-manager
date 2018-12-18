@@ -165,7 +165,7 @@ Vue.component('worker-tbody', {
         server: Object,
     },
     data: function() { return {
-        show_blacklist: false,
+        show_details: false,
     }; },
     template: '#template_worker_tbody',
 });
@@ -175,7 +175,7 @@ Vue.component('worker-row', {
         worker: Object,
         selected_worker_ids: Array,
         show_schedule: Boolean,
-        show_blacklist: Boolean,
+        show_details: Boolean,
     },
     data: function() { return {
         mode: this.show_schedule ? 'show_schedule' : '',

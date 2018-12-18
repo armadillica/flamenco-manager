@@ -67,8 +67,6 @@
                     <template v-else>
                         <th>Cur/last Task</th>
                         <th>Last Seen</th>
-                        <th>ID</th>
-                        <th>Address</th>
                         <th>Software</th>
                     </template>
                 </tr>
@@ -94,16 +92,31 @@
             :worker="worker"
             :selected_worker_ids="selected_worker_ids"
             :show_schedule="show_schedule"
-            :show_blacklist="show_blacklist"
+            :show_details="show_details && !show_schedule"
             @worker-selected="$emit('worker-selected', $event)"
             @copy-schedule="$emit('copy-schedule', $event)"
-            @toggle-blacklist="show_blacklist = !show_blacklist"
+            @toggle-details="show_details = !show_details"
         ></worker-row>
-        <template v-if="show_blacklist">
+        <template v-if="show_details && !show_schedule">
+            <tr class='details'>
+                <td colspan='3'></td>
+                <th>Details:</th>
+                <th>Worker ID</th>
+                <th colspan='2'>Address</th>
+            </tr>
+            <tr class='details'>
+                <td colspan='4'></td>
+                <td class="click-to-copy worker-id" :data-clipboard-text="worker._id">
+                    {{ worker._id }}
+                </td>
+                <td colspan='2' class="click-to-copy worker-address" :data-clipboard-text="worker.address">
+                    {{ worker.address }}
+                </td>
+            </tr>
             <tr class='blacklist'>
                 <td colspan='3'></td>
-                <th colspan='1'>Blacklist:</th>
-                <th colspan='2'>Job</th>
+                <th>Blacklist:</th>
+                <th>Job</th>
                 <th>Task Type</th>
                 <th colspan='2'>Blacklisted On</th>
             </tr>
@@ -192,18 +205,12 @@
                 <template v-else>-none-</template>
             </td>
             <td :title="last_activity_abs">{{ last_activity_rel() }}</td>
-            <td class="click-to-copy worker-id" :data-clipboard-text="worker._id">
-                …{{ worker._id.substr(-6)}}
-            </td>
-            <td class="click-to-copy worker-address" :data-clipboard-text="worker.address">
-                {{ worker.address }}
-            </td>
             <td>
                 <button
-                    v-if="!!worker.blacklist" class='btn btn-link btn-sm' style='float: right'
-                    title="Toggle Blacklist"
-                    @click.prevent="$emit('toggle-blacklist')">
-                    <template v-if="show_blacklist">▼</template>
+                    class='btn btn-link btn-sm' style='float: right'
+                    title="Toggle Worker Details"
+                    @click.prevent="$emit('toggle-details')">
+                    <template v-if="show_details">▼</template>
                     <template v-else>▶</template>
                 </button>
                 {{ worker_software }}
@@ -215,9 +222,8 @@
 <!-- template for the 'blacklist-row' Vue.js component -->
 <script type='text/x-template' id='template_blacklist_row'>
     <tr>
-        <td colspan='3'></td>
-        <td colspan='1'></td>
-        <td colspan='2'><a :href="job_id_url" :title="'Open on ' + server.name" target='_blank'>{{ job_id_text }}</a></td>
+        <td colspan='4'></td>
+        <td><a :href="job_id_url" :title="'Open on ' + server.name" target='_blank'>{{ job_id_text }}</a></td>
         <td>{{ listitem.task_type }}</td>
         <td colspan='2'>{{ created() }}</td>
     </tr>
