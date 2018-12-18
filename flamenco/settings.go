@@ -133,6 +133,11 @@ func LoadConf(filename string) (Conf, error) {
 				"windows": "C:/windows/path/to/blender.exe",
 				"darwin":  "/Volume/Applications/Blender/blender",
 			},
+			"ffmpeg": map[string]string{
+				"linux":   "/usr/bin/ffmpeg",
+				"windows": "C:/windows/path/to/ffmpeg.exe",
+				"darwin":  "/Volume/Applications/FFmpeg/ffmpeg",
+			},
 		},
 
 		PathReplacementByVarname: map[string]map[string]string{
