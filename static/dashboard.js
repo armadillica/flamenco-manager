@@ -130,6 +130,7 @@ Vue.component('worker-table', {
     props: {
         workers: Array,
         selected_worker_ids: Array,
+        all_workers_selected: Boolean,
         server: Object,
     },
     data: function() { return {
@@ -144,7 +145,7 @@ Vue.component('worker-table', {
                 promises.push(scheduleSave(worker_id, schedule));
             }
             Promise.all(promises).then(vueApp.loadWorkers);
-        }
+        },
     },
     watch: {
         show_schedule(new_show) {
@@ -365,6 +366,11 @@ var vueApp = new Vue({
         current_workers: [],
         selected_worker_ids: loadSelectedWorkers(),
     },
+    computed: {
+        all_workers_selected: function() {
+            return this.current_workers.length && this.current_workers.length == this.selected_worker_ids.length;
+        },
+    },
     methods: {
         loadWorkers() {
             window.clearTimeout(load_workers_timeout_handle);
@@ -445,6 +451,14 @@ var vueApp = new Vue({
             else selected_ids.delete(worker_id);
 
             this.selected_worker_ids = Array.from(selected_ids);
+        },
+
+        toggleSelectAllWorkers() {
+            if (this.all_workers_selected) {
+                this.selected_worker_ids = [];
+            } else {
+                this.selected_worker_ids = this.current_workers.map(worker => worker._id);
+            }
         },
     },
     watch: {

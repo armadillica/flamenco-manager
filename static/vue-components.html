@@ -54,7 +54,12 @@
         <table class="table table-condensed worker">
             <thead>
                 <tr>
-                    <th></th>
+                    <td><label><input
+                        type="checkbox"
+                        value="all"
+                        :checked="all_workers_selected"
+                        @input="$emit('toggle-all-workers-selected')"
+                        > Select All</label></td>
                     <th>Nickname</th>
                     <th>Status</th>
                     <th>Scheduled</th>

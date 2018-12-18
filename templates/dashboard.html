@@ -63,7 +63,9 @@
             :workers="current_workers"
             :server="serverinfo.server"
             :selected_worker_ids="selected_worker_ids"
+            :all_workers_selected="all_workers_selected"
             @worker-selected="onWorkerSelected"
+            @toggle-all-workers-selected="toggleSelectAllWorkers"
         ></worker-table>
     </section>
 </div>
