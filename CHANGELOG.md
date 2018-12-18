@@ -14,6 +14,8 @@ Changelog for Flamenco Manager
   defaults to 3) are blacklisted. This means that they cannot perform tasks of that type on
   that job any more, and previously failed tasks are requeued so that they become available
   to other workers.
+- Workers can be requested to lazily change their state; such state changes are only applied
+  after the currently running task is finished.
 
 
 ## Version 2.2 (2018-12-04)
