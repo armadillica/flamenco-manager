@@ -536,7 +536,7 @@ func (pusher *TaskUpdatePusher) push(db *mgo.Database) error {
 	} else {
 		log.WithFields(logFields).Debug("TaskUpdatePusher: pushing updates to upstream Flamenco Server")
 	}
-	response, err := pusher.upstream.SendTaskUpdates(&result)
+	response, err := pusher.upstream.SendTaskUpdates(result)
 	if err != nil {
 		// TODO Sybren: implement some exponential backoff when things fail to get sent.
 		return err

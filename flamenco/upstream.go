@@ -256,7 +256,7 @@ func (uc *UpstreamConnection) SendJSON(logprefix, method string, url *url.URL,
 
 // SendTaskUpdates performs a POST to /api/flamenco/managers/{manager-id}/task-update-batch to
 // send a batch of task updates to the Server.
-func (uc *UpstreamConnection) SendTaskUpdates(updates *[]TaskUpdate) (*TaskUpdateResponse, error) {
+func (uc *UpstreamConnection) SendTaskUpdates(updates []TaskUpdate) (*TaskUpdateResponse, error) {
 	url, err := uc.ResolveURL("/api/flamenco/managers/%s/task-update-batch",
 		uc.config.ManagerID)
 	if err != nil {
