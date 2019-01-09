@@ -94,6 +94,15 @@ type TaskUpdateResponse struct {
 	ModifiedCount    int             `json:"modified_count"`
 	HandledUpdateIds []bson.ObjectId `json:"handled_update_ids,omitempty"`
 	CancelTasksIds   []bson.ObjectId `json:"cancel_task_ids,omitempty"`
+
+	// Job/Task IDs for which we should send the task log to the Server.
+	UploadTaskFileQueue []JobTask `json:"upload_task_file_queue,omitempty"`
+}
+
+// JobTask is a tuple (Job ID, Task ID)
+type JobTask struct {
+	Job  bson.ObjectId `json:"job"`
+	Task bson.ObjectId `json:"task"`
 }
 
 // WorkerRegistration is sent by the Worker to register itself at this Manager.

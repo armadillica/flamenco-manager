@@ -31,10 +31,11 @@ var unknownJobID bson.ObjectId
 // TaskUpdatePusher pushes queued task updates to the Flamenco Server.
 type TaskUpdatePusher struct {
 	closable
-	config   *Conf
-	upstream *UpstreamConnection
-	session  *mgo.Session
-	queue    *TaskUpdateQueue
+	config          *Conf
+	upstream        *UpstreamConnection
+	session         *mgo.Session
+	queue           *TaskUpdateQueue
+	taskLogUploader *TaskLogUploader
 }
 
 // TaskUpdateQueue queues task updates for later pushing, and writes log files to disk.
@@ -333,10 +334,7 @@ func (tuq *TaskUpdateQueue) rotateTaskLogFile(task *Task) {
 
 // taskLogPath returns the directory and the filename suitable to write a log file.
 func (tuq *TaskUpdateQueue) taskLogPath(jobID, taskID bson.ObjectId) (string, string) {
-	jobHex := jobID.Hex()
-	dirpath := path.Join(tuq.config.TaskLogsPath, "job-"+jobHex[:4], jobHex)
-	filename := "task-" + taskID.Hex() + ".txt"
-	return dirpath, filename
+	return taskLogPath(jobID, taskID, tuq.config)
 }
 
 /* Blacklists the worker if this failure pushes it over the threshold.
@@ -415,6 +413,14 @@ func (tuq *TaskUpdateQueue) maybeBlacklistWorker(task *Task, tupdate *TaskUpdate
 	}
 }
 
+// taskLogPath returns the directory and the filename suitable to write a log file.
+func taskLogPath(jobID, taskID bson.ObjectId, config *Conf) (string, string) {
+	jobHex := jobID.Hex()
+	dirpath := path.Join(config.TaskLogsPath, "job-"+jobHex[:4], jobHex)
+	filename := "task-" + taskID.Hex() + ".txt"
+	return dirpath, filename
+}
+
 // taskStatusTransitionValid performs a query on the database to determine the current status,
 // then checks whether the new status is acceptable.
 func taskStatusTransitionValid(currentStatus, newStatus string) bool {
@@ -443,13 +449,17 @@ func validForCancelRequested(newStatus string) bool {
 }
 
 // CreateTaskUpdatePusher creates a new task update pusher that runs in a separate goroutine.
-func CreateTaskUpdatePusher(config *Conf, upstream *UpstreamConnection, session *mgo.Session, queue *TaskUpdateQueue) *TaskUpdatePusher {
+func CreateTaskUpdatePusher(
+	config *Conf, upstream *UpstreamConnection, session *mgo.Session,
+	queue *TaskUpdateQueue, taskLogUploader *TaskLogUploader,
+) *TaskUpdatePusher {
 	return &TaskUpdatePusher{
 		makeClosable(),
 		config,
 		upstream,
 		session,
 		queue,
+		taskLogUploader,
 	}
 }
 
@@ -554,6 +564,8 @@ func (pusher *TaskUpdatePusher) push(db *mgo.Database) error {
 		_, errUnqueue = queue.RemoveAll(bson.M{"_id": bson.M{"$in": response.HandledUpdateIds}})
 	}
 	errCancel := pusher.handleIncomingCancelRequests(response.CancelTasksIds, db)
+
+	go pusher.taskLogUploader.QueueAll(response.UploadTaskFileQueue)
 
 	if errUnqueue != nil {
 		log.WithFields(logFields).WithError(errUnqueue).Warning(

@@ -16,6 +16,8 @@ Changelog for Flamenco Manager
   to other workers.
 - Workers can be requested to lazily change their state; such state changes are only applied
   after the currently running task is finished.
+- Added ability to compress & upload task log files to Flamenco Server. This requires Flamenco
+  Server version 2.2 or newer.
 
 
 ## Version 2.2 (2018-12-04)

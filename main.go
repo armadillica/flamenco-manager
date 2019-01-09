@@ -39,6 +39,7 @@ var (
 	sleeper           *flamenco.SleepScheduler
 	ssdp              *gossdp.Ssdp
 	taskCleaner       *flamenco.TaskCleaner
+	taskLogUploader   *flamenco.TaskLogUploader
 	taskScheduler     *flamenco.TaskScheduler
 	taskUpdatePusher  *flamenco.TaskUpdatePusher
 	taskUpdateQueue   *flamenco.TaskUpdateQueue
@@ -230,6 +231,9 @@ func shutdown(signum os.Signal) {
 		if taskUpdatePusher != nil {
 			taskUpdatePusher.Close()
 		}
+		if taskLogUploader != nil {
+			taskLogUploader.Close()
+		}
 		if upstream != nil {
 			upstream.Close()
 		}
@@ -351,8 +355,9 @@ func normalMode() (*mux.Router, error) {
 	blacklist = flamenco.CreateWorkerBlackList(&config, session)
 	taskUpdateQueue = flamenco.CreateTaskUpdateQueue(&config, blacklist)
 	sleeper = flamenco.CreateSleepScheduler(session)
+	taskLogUploader = flamenco.CreateTaskLogUploader(&config, upstream)
 	taskScheduler = flamenco.CreateTaskScheduler(&config, upstream, session, taskUpdateQueue, blacklist)
-	taskUpdatePusher = flamenco.CreateTaskUpdatePusher(&config, upstream, session, taskUpdateQueue)
+	taskUpdatePusher = flamenco.CreateTaskUpdatePusher(&config, upstream, session, taskUpdateQueue, taskLogUploader)
 	timeoutChecker = flamenco.CreateTimeoutChecker(&config, session, taskUpdateQueue)
 	taskCleaner = flamenco.CreateTaskCleaner(&config, session)
 	dashboard := flamenco.CreateDashboard(&config, session, sleeper, flamencoVersion)
@@ -384,6 +389,7 @@ func normalMode() (*mux.Router, error) {
 	timeoutChecker.Go()
 	taskCleaner.Go()
 	latestImageSystem.Go()
+	taskLogUploader.Go()
 
 	// Make ourselves discoverable through SSDP.
 	if config.SSDPDiscovery {

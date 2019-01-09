@@ -20,13 +20,14 @@ import (
 )
 
 type TaskUpdatesTestSuite struct {
-	config    Conf
-	session   *mgo.Session
-	db        *mgo.Database
-	upstream  *UpstreamConnection
-	sched     *TaskScheduler
-	queue     *TaskUpdateQueue
-	blacklist *WorkerBlacklist
+	config          Conf
+	session         *mgo.Session
+	db              *mgo.Database
+	upstream        *UpstreamConnection
+	sched           *TaskScheduler
+	queue           *TaskUpdateQueue
+	blacklist       *WorkerBlacklist
+	taskLogUploader *TaskLogUploader
 }
 
 var _ = check.Suite(&TaskUpdatesTestSuite{})
@@ -43,13 +44,14 @@ func (s *TaskUpdatesTestSuite) SetUpTest(c *check.C) {
 	s.session = MongoSession(&s.config)
 	s.db = s.session.DB("")
 	s.upstream = ConnectUpstream(&s.config, s.session)
+	s.taskLogUploader = CreateTaskLogUploader(&s.config, s.upstream)
 	s.blacklist = CreateWorkerBlackList(&s.config, s.session)
 	s.queue = CreateTaskUpdateQueue(&s.config, s.blacklist)
 	s.sched = CreateTaskScheduler(&s.config, s.upstream, s.session, s.queue, s.blacklist)
 }
 
 func (s *TaskUpdatesTestSuite) TearDownTest(c *check.C) {
-	log.Info("SchedulerTestSuite tearing down test, dropping database.")
+	log.Info("TaskUpdatesTestSuite tearing down test, dropping database.")
 	os.RemoveAll(s.config.TaskLogsPath)
 
 	s.upstream.Close()
@@ -112,7 +114,7 @@ func (s *TaskUpdatesTestSuite) TestCancelRunningTasks(t *check.C) {
 	s.config.TaskUpdatePushMaxCount = 4000
 	s.config.CancelTaskFetchInterval = 300 * time.Millisecond
 
-	tup := CreateTaskUpdatePusher(&s.config, s.upstream, s.session, s.queue)
+	tup := CreateTaskUpdatePusher(&s.config, s.upstream, s.session, s.queue, s.taskLogUploader)
 	tup.Go()
 	// Give the tup.Go() coroutine (and subsequent calls) time to run
 	// and actually start running the pusher timer.
