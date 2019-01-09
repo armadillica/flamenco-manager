@@ -152,7 +152,7 @@ func (s *WorkerTestSuite) TestWorkerSignOn(t *check.C) {
 	select {
 	case <-callMade:
 		break
-	case <-time.After(250 * time.Millisecond):
+	case <-time.After(1 * time.Second):
 		assert.Fail(t, "Timeout waiting for notification")
 	}
 	assert.Equal(t, 1, httpmock.GetCallCountInfo()[serverUpdateKey],
@@ -167,7 +167,7 @@ func (s *WorkerTestSuite) TestWorkerSignOn(t *check.C) {
 	select {
 	case <-callMade:
 		break
-	case <-time.After(250 * time.Millisecond):
+	case <-time.After(1 * time.Second):
 		assert.Fail(t, "Timeout waiting for notification")
 	}
 	assert.Equal(t, 2, httpmock.GetCallCountInfo()[serverUpdateKey],
