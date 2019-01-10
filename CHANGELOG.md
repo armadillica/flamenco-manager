@@ -1,7 +1,7 @@
 Changelog for Flamenco Manager
 ==============================
 
-## Version 2.3 (in development)
+## Version 2.3 (2019-01-10)
 
 - Fix an issue where a task could time out when its Worker goes to sleep or shuts down.
 - Upgraded the web interface to use Bootstrap 4.
