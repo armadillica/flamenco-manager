@@ -1,6 +1,13 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.3.1 (in development)
+
+- When the Server asks for a log file that does not exist, just create a log file that
+  states it does not exist, and send that. This makes the Server stop asking us for that
+  file over and over again.
+
+
 ## Version 2.3 (2019-01-10)
 
 - Fix an issue where a task could time out when its Worker goes to sleep or shuts down.

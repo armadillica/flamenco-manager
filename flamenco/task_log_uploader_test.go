@@ -1,7 +1,9 @@
 package flamenco
 
 import (
+	"bytes"
 	"compress/gzip"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -113,6 +115,27 @@ func (s *TaskLogUploaderTestSuite) TestCompressNoOriginalFile(t *check.C) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, gzPayload, decomp)
+}
+
+func (s *TaskLogUploaderTestSuite) TestCompressNoFile(t *check.C) {
+	fname := path.Join(s.config.TaskLogsPath, "testfile.txt")
+
+	gzPath, err := s.taskLogUploader.compressFile(fname, log.WithField("filepath", fname))
+	assert.Nil(t, err)
+	assert.Equal(t, fname+".gz", gzPath)
+
+	gzBuffer := bytes.Buffer{}
+	gzWriter, err := gzip.NewWriterLevel(&gzBuffer, 9)
+	assert.Nil(t, err)
+
+	_, err = io.Copy(gzWriter, bytes.NewBuffer([]byte("log file does not exist on Flamenco Manager")))
+	assert.Nil(t, err)
+	gzWriter.Close()
+
+	gzFileContents, err := ioutil.ReadFile(gzPath)
+	assert.Nil(t, err)
+
+	assert.Equal(t, gzBuffer.Bytes(), gzFileContents)
 }
 
 func (s *TaskLogUploaderTestSuite) TestUploadFile(t *check.C) {

@@ -157,14 +157,29 @@ func (tlu *TaskLogUploader) compressFile(filepath string, logger *log.Entry) (st
 
 	if gzErr == nil && os.IsNotExist(origErr) {
 		// The original is gone, but the gzipped log file is still there.
+		logger.Debug("plain log file does not exist, but gzipped does")
 		return gzPath, nil
 	}
 	if origErr == nil && gzErr == nil && origStat.ModTime().Before(gzStat.ModTime()) {
 		// Both exist, and gzipped file is newer.
+		logger.Debug("plain and gzipped log file does not exist, gzipped is newer")
 		return gzPath, nil
+	}
+	if os.IsNotExist(origErr) {
+		// Original file does not exist, so just create a file that states this so that
+		// we at least have something to send to the Server. Otherwise the server will
+		// keep asking us for the log file indefinitely.
+		logger.Debug("requested log file does not exist")
+		err := ioutil.WriteFile(filepath, []byte("log file does not exist on Flamenco Manager"), 0777)
+		if err != nil {
+			logger.WithError(err).Error("unable to write 'the log file does not exist'")
+			return "", err
+		}
+		origStat, origErr = os.Stat(filepath)
 	}
 	if origErr != nil {
 		// Original cannot be accessed, and gzipped file is not there either.
+		logger.WithError(origErr).Debug("log file cannot be accessed, but it does exist")
 		return "", origErr
 	}
 
@@ -173,24 +188,28 @@ func (tlu *TaskLogUploader) compressFile(filepath string, logger *log.Entry) (st
 
 	origFile, err := os.Open(filepath)
 	if err != nil {
+		logger.WithError(err).Debug("unable to open logfile for reading")
 		return "", err
 	}
 	defer origFile.Close()
 
 	gzFile, err := os.Create(gzPath)
 	if err != nil {
+		logger.WithError(err).Debug("error creating compressed logfile for writing")
 		return "", err
 	}
 	defer gzFile.Close()
 
 	gzWriter, err := gzip.NewWriterLevel(gzFile, 9)
 	if err != nil {
+		logger.WithError(err).Debug("unable to create GZip writer")
 		return "", err
 	}
 	defer gzWriter.Close()
 
 	_, err = io.Copy(gzWriter, origFile)
 	if err != nil {
+		logger.WithError(err).Debug("error copying bytes from plain to gzipped log")
 		return "", err
 	}
 	return gzPath, nil
@@ -199,7 +218,7 @@ func (tlu *TaskLogUploader) compressFile(filepath string, logger *log.Entry) (st
 func (tlu *TaskLogUploader) uploadFile(taskID bson.ObjectId, filepath string, url string, logger *log.Entry) {
 	fileReader, err := os.Open(filepath)
 	if err != nil {
-		logger.WithError(err).Error("unable to open compressed log file")
+		logger.WithError(err).Error("unable to open compressed log file for uploading")
 		return
 	}
 
