@@ -132,6 +132,7 @@ func (tlu *TaskLogUploader) compressAndUpload(jobTask JobTask) {
 	filepath, err := tlu.compressFile(filepath, logger)
 	if err != nil {
 		logger.WithError(err).Error("unable to compress log file for uploading to Server")
+		return
 	}
 
 	url, err := tlu.upstream.ResolveURL("/api/flamenco/managers/%s/attach-task-log/%s", tlu.config.ManagerID, jobTask.Task.Hex())
