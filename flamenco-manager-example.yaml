@@ -81,13 +81,14 @@ blacklist_threshold: 3
 
 variables:
     blender:
-        windows: c:/temp/blender.exe --enable-new-depsgraph --factory-startup
-        linux: /opt/myblenderbuild/blender --enable-new-depsgraph --factory-startup
-        darwin: /opt/myblenderbuild/blender --enable-new-depsgraph --factory-startup
+        darwin: /Users/gast/Downloads/blender-2.80/blender.app/Contents/MacOS/blender --factory-startup
+        linux: /home/sybren/bin/blender --factory-startup
+        windows: c:/data/blender-2.80/blender.exe --factory-startup
     ffmpeg:
-        windows: c:/temp/ffmpeg.exe
-        linux: /usr/bin/ffmpeg
-        darwin: /Applications/ffmpeg/ffmpeg
+        darwin: /usr/local/bin/ffmpeg
+        linux: /shared/software/ffmpeg/ffmpeg-flamenco/ffmpeg
+        windows: c:/data/ffmpeg-4.1-win64-static/bin/ffmpeg.exe
+
 
 # Two-way translations of POSIX-style paths.
 path_replacement:
