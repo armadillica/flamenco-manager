@@ -121,3 +121,40 @@ func (wbl *WorkerBlacklist) BlacklistForWorker(workerID bson.ObjectId) M {
 	// }
 	return M{"$nor": blacklist}
 }
+
+// WorkersLeft returns the number of workers NOT blacklisted for this task type on this job.
+func (wbl *WorkerBlacklist) WorkersLeft(jobID bson.ObjectId, taskType string) int {
+	logger := log.WithFields(log.Fields{
+		"job_id":    jobID.Hex(),
+		"task_type": taskType,
+	})
+	coll := wbl.collection()
+
+	// Construct list of blacklisted worker IDs.
+	query := coll.Find(M{"job_id": jobID, "task_type": taskType}).Select(M{"worker_id": true})
+	blacklisted := []bson.ObjectId{}
+	found := WorkerBlacklistEntry{}
+	iter := query.Iter()
+	for iter.Next(&found) {
+		blacklisted = append(blacklisted, found.WorkerID)
+	}
+	if err := iter.Close(); err != nil {
+		logger.WithError(err).Error("WorkersLeft: unable to query for blacklisted workers")
+	}
+
+	// Count how many workers were not blacklisted
+	workersColl := wbl.session.DB("").C("flamenco_workers")
+	count, err := workersColl.Find(M{
+		"_id":                  M{"$nin": blacklisted},
+		"supported_task_types": taskType,
+	}).Count()
+	if err != nil {
+		logger.WithError(err).Error("WorkersLeft: unable to count non-blacklisted workers")
+	}
+	logger.WithFields(log.Fields{
+		"workers_left":        count,
+		"workers_blacklisted": len(blacklisted),
+	}).Debug("WorkersLeft: counted non-blacklisted workers")
+
+	return count
+}

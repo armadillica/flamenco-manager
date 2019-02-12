@@ -383,6 +383,11 @@ func (tuq *TaskUpdateQueue) maybeBlacklistWorker(task *Task, tupdate *TaskUpdate
 		return
 	}
 
+	if tuq.blacklist.WorkersLeft(task.Job, task.TaskType) == 0 {
+		logger.WithField("task_id", task.ID.Hex()).Warning("no more workers can execute this task, keeping it failed")
+		return
+	}
+
 	// Re-queue all tasks this worker failed (on this job, of the same task type),
 	// so that other workers can pick them up again. This has to go through the
 	// task queue, so that the updates are also sent to the Server.

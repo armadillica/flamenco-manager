@@ -1,11 +1,14 @@
 Changelog for Flamenco Manager
 ==============================
 
-## Version 2.3.1 (in development)
+## Version 2.4 (in development)
 
 - When the Server asks for a log file that does not exist, just create a log file that
   states it does not exist, and send that. This makes the Server stop asking us for that
   file over and over again.
+- When blacklisting a worker for a given task type on a given job, the failed tasks are
+  only re-queued if there are any (non-blacklisted) workers left that can execute that
+  task type.
 
 
 ## Version 2.3 (2019-01-10)

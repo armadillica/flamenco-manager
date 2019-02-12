@@ -427,12 +427,20 @@ func (s *TaskUpdatesTestSuite) TestBlacklisting(c *check.C) {
 		construct("4aaaaaaaaaaaaaaaaaaaaaaa"),
 	}
 
+	// Create two workers, so that when one fails the other can pick up the task.
 	worker := Worker{
 		Platform:           "linux",
 		Nickname:           "worker",
 		SupportedTaskTypes: []string{"testing"},
 	}
 	assert.Nil(c, StoreNewWorker(&worker, s.db))
+
+	worker2 := Worker{
+		Platform:           "linux",
+		Nickname:           "worker2",
+		SupportedTaskTypes: []string{"testing"},
+	}
+	assert.Nil(c, StoreNewWorker(&worker2, s.db))
 
 	// Run (and fail) task 1, 2, and 3.
 	for idx := 0; idx < 3; idx++ {
@@ -480,4 +488,39 @@ func (s *TaskUpdatesTestSuite) TestBlacklisting(c *check.C) {
 	count, err := queueColl.Find(M{"task_id": tasks[2].ID, "task_status": statusFailed}).Count()
 	assert.Nil(c, err)
 	assert.Equal(c, 0, count)
+
+	// Now do the same thing with worker 2.
+	// Run (and fail) task 1, 2, and 3.
+	for idx := 0; idx < 3; idx++ {
+		s.sched.assignTaskToWorker(&tasks[idx], &worker2, s.db, log.WithField("unittest", "TestBlacklisting"))
+		s.sendTaskUpdate(c, tasks[idx].ID, worker2.ID, statusFailed,
+			fmt.Sprintf("failing task #%d", idx), "")
+	}
+
+	// Verify that a blacklist entry has been made.
+	blacklist = s.blacklist.BlacklistForWorker(worker2.ID)
+	assert.Equal(c, M{"$nor": []M{
+		M{
+			"job":       tasks[0].Job,
+			"task_type": M{"$in": []string{"testing"}},
+		},
+	}}, blacklist)
+
+	// By now the pool for workers has been exhausted and failures are real failures.
+	for idx := range tasks {
+		assert.Nil(c, tasksColl.FindId(tasks[idx].ID).One(&found))
+		if idx < 3 {
+			assert.Equal(c, worker2.ID, *found.WorkerID)
+			assert.Equal(c, statusFailed, found.Status)
+		} else {
+			assert.Nil(c, found.WorkerID)
+			// This is the status set by ConstructTestTask, and this shouldn't have been touched.
+			assert.Equal(c, statusQueued, found.Status)
+		}
+	}
+
+	assertQueueSize(tasks[0].ID, 5) // activation + failure + re-queue + activation + failure
+	assertQueueSize(tasks[1].ID, 5) // activation + failure + re-queue + activation + failure
+	assertQueueSize(tasks[2].ID, 4) // activation + re-queue + activation + failure
+	assertQueueSize(tasks[3].ID, 0) // untouched
 }
