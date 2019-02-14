@@ -114,8 +114,7 @@ func (tuq *TaskUpdateQueue) QueueTaskUpdateFromWorker(w http.ResponseWriter, r *
 		log.WithFields(logFields).Debug("QueueTaskUpdateFromWorker: task has non-runnable status, ignoring new task status & activity")
 	}
 
-	// Handle blacklisting and re-queueing before actually queueing this task update.
-	// If this task failure results in a blacklist + re-queue, the server shouldn't even know about the failure.
+	// Handle blacklisting and soft-failing before actually queueing this task update.
 	if tupdate.TaskStatus == statusFailed {
 		tuq.maybeBlacklistWorker(&task, &tupdate, db)
 	}
@@ -349,7 +348,10 @@ func (tuq *TaskUpdateQueue) maybeBlacklistWorker(task *Task, tupdate *TaskUpdate
 		"worker_id": task.WorkerID,
 		"job":       task.Job,
 		"task_type": task.TaskType,
-		"status":    statusFailed,
+		// For counting the number of failures so far (for this worker), we
+		// include both failure statuses. For hard-failing or re-queueing
+		// we ignore 'failed' tasks later.
+		"status": M{"$in": []string{statusFailed, statusSoftFailed}},
 	}
 	logger := log.WithFields(log.Fields{
 		"worker_id": task.WorkerID.Hex(),
@@ -370,7 +372,12 @@ func (tuq *TaskUpdateQueue) maybeBlacklistWorker(task *Task, tupdate *TaskUpdate
 	logger = logger.WithField("failed_task_count", failedCount)
 
 	if failedCount < tuq.config.BlacklistThreshold {
-		logger.Debug("counted failed tasks for worker")
+		logger.Debug("not enough failed tasks to blacklist worker")
+
+		// Not enough failure to blacklist the worker means this is a soft failure.
+		task.Status = statusSoftFailed
+		tupdate.TaskStatus = statusSoftFailed
+
 		return
 	}
 
@@ -383,27 +390,33 @@ func (tuq *TaskUpdateQueue) maybeBlacklistWorker(task *Task, tupdate *TaskUpdate
 		return
 	}
 
-	if tuq.blacklist.WorkersLeft(task.Job, task.TaskType) == 0 {
-		logger.WithField("task_id", task.ID.Hex()).Warning("no more workers can execute this task, keeping it failed")
-		return
+	var verb, newTaskStatus string
+	if tuq.blacklist.WorkersLeft(task.Job, task.TaskType) > 0 {
+		// There are still workers left to perform this task, so re-queue this task.
+		task.Status = statusClaimedByManager
+		tupdate.TaskStatus = statusClaimedByManager
+		verb = "re-queued"
+		newTaskStatus = statusClaimedByManager
+	} else {
+		// No more workers left, so hard-fail all previously soft-failed tasks.
+		logger.WithField("task_id", task.ID.Hex()).Warning("no more workers can execute this task, hard-failing")
+		logger.Debug("hard-failing all soft-failed tasks of this worker")
+		verb = "hard-failed"
+		newTaskStatus = statusFailed
 	}
 
-	// Re-queue all tasks this worker failed (on this job, of the same task type),
-	// so that other workers can pick them up again. This has to go through the
-	// task queue, so that the updates are also sent to the Server.
-	logger.Debug("re-queueing all failed tasks of this worker")
-
-	// Prevent the failure status from reaching the server, so that we don't trigger a job-wide cancellation.
-	tupdate.TaskStatus = statusClaimedByManager
-
-	updateMessage := fmt.Sprintf("Manager re-queued task after blacklisting worker %s", task.Worker)
+	updateMessage := fmt.Sprintf("Manager %s task after blacklisting worker %s", verb, task.Worker)
 	found := Task{}
 	iter := query.Iter()
 	for iter.Next(&found) {
+		if found.Status == statusFailed {
+			// Don't bother updating already-failed tasks.
+			continue
+		}
 		update := TaskUpdate{
 			ID:                        bson.NewObjectId(),
 			TaskID:                    found.ID,
-			TaskStatus:                statusClaimedByManager,
+			TaskStatus:                newTaskStatus,
 			Activity:                  updateMessage,
 			TaskProgressPercentage:    0,
 			CurrentCommandIdx:         0,
@@ -414,7 +427,11 @@ func (tuq *TaskUpdateQueue) maybeBlacklistWorker(task *Task, tupdate *TaskUpdate
 		tuq.QueueTaskUpdate(&found, &update, db)
 	}
 	if err := iter.Close(); err != nil {
-		log.WithError(err).Error("maybeBlacklistWorker: error querying MongoDB, task re-queue could be partial")
+		log.WithFields(log.Fields{
+			log.ErrorKey:      err,
+			"task_id":         found.ID,
+			"new_task_status": newTaskStatus,
+		}).Error("maybeBlacklistWorker: error querying MongoDB, task update could be partial")
 	}
 }
 

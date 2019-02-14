@@ -14,6 +14,7 @@ const (
 	statusActive           = "active"
 	statusCanceled         = "canceled"
 	statusFailed           = "failed"
+	statusSoftFailed       = "soft-failed"
 	statusCompleted        = "completed"
 	statusCancelRequested  = "cancel-requested"
 )

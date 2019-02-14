@@ -484,8 +484,8 @@ func (ts *TaskScheduler) WorkerMayRunTask(w http.ResponseWriter, r *auth.Authent
 
 // IsRunnableTaskStatus returns whether the given status is considered "runnable".
 func IsRunnableTaskStatus(status string) bool {
-	// 'queued' and 'claimed-by-manager' aren't considered runnable, as those
-	// statuses indicate the task wasn't assigned to a Worker by the scheduler.
+	// 'queued', 'claimed-by-manager', and 'soft-failed' aren't considered runnable,
+	// as those statuses indicate the task wasn't assigned to a Worker by the scheduler.
 	runnableStatuses := map[string]bool{
 		statusActive: true,
 	}

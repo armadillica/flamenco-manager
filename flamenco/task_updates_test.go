@@ -258,7 +258,8 @@ func (s *TaskUpdatesTestSuite) TestTaskRescheduling(c *check.C) {
 	s.sendTaskUpdate(c, task1.ID, worker2.ID, statusFailed, "doing stuff by worker2", "")
 	assert.Nil(c, tasksColl.FindId(task1.ID).One(&task1))
 	assert.Equal(c, *task1.WorkerID, worker2.ID)
-	assert.Equal(c, task1.Status, statusFailed)
+	// As long as worker 1 isn't blacklisted, worker 2's failure will be a soft one.
+	assert.Equal(c, task1.Status, statusSoftFailed)
 	assert.Equal(c, task1.Activity, "doing stuff by worker2")
 
 	// The workers now should have different CurrentTaskUpdated fields.
@@ -409,11 +410,29 @@ func (s *TaskUpdatesTestSuite) TestLogRotation(c *check.C) {
 }
 
 func (s *TaskUpdatesTestSuite) TestBlacklisting(c *check.C) {
+	log.SetLevel(log.InfoLevel)
 	// This test really assumes that after 3 failures the worker is blacklisted.
 	if s.config.BlacklistThreshold != 3 {
 		assert.FailNow(c, "config.BlacklistThreshold should be 3, is %v", s.config.BlacklistThreshold)
 	}
 	tasksColl := s.db.C("flamenco_tasks")
+
+	queueColl := s.db.C(queueMgoCollection)
+	assertQueued := func(taskID bson.ObjectId, expectedStatus ...string) {
+		query := queueColl.Find(M{"task_id": taskID}).Select(M{"task_status": true})
+		iter := query.Iter()
+		foundStatuses := []string{}
+		taskUpdate := TaskUpdate{}
+		for iter.Next(&taskUpdate) {
+			foundStatuses = append(foundStatuses, taskUpdate.TaskStatus)
+		}
+		assert.Nil(c, iter.Err())
+
+		if expectedStatus == nil {
+			expectedStatus = []string{}
+		}
+		assert.EqualValues(c, expectedStatus, foundStatuses)
+	}
 
 	construct := func(taskID string) Task {
 		task := ConstructTestTask(taskID, "testing")
@@ -442,14 +461,64 @@ func (s *TaskUpdatesTestSuite) TestBlacklisting(c *check.C) {
 	}
 	assert.Nil(c, StoreNewWorker(&worker2, s.db))
 
-	// Run (and fail) task 1, 2, and 3.
-	for idx := 0; idx < 3; idx++ {
+	assertTaskStatuses := func(status ...string) {
+		foundStatuses := []string{}
+		found := Task{}
+		for idx := range tasks {
+			assert.Nil(c, tasksColl.FindId(tasks[idx].ID).One(&found))
+			foundStatuses = append(foundStatuses, found.Status)
+		}
+		assert.EqualValues(c, status, foundStatuses)
+	}
+	assertAssignedToWorker := func(expectWorker ...*Worker) {
+		foundWorkers := []string{}
+		expectedWorkers := []string{}
+		for _, worker := range expectWorker {
+			if worker == nil {
+				expectedWorkers = append(expectedWorkers, "-nil-")
+			} else {
+				expectedWorkers = append(expectedWorkers, worker.ID.Hex())
+			}
+		}
+
+		found := Task{}
+		for idx := range tasks {
+			assert.Nil(c, tasksColl.FindId(tasks[idx].ID).One(&found))
+			if found.WorkerID == nil {
+				foundWorkers = append(foundWorkers, "-nil-")
+			} else {
+				foundWorkers = append(foundWorkers, found.WorkerID.Hex())
+			}
+		}
+		assert.EqualValues(c, expectedWorkers, foundWorkers)
+	}
+
+	// Run (and fail) task 0 and 1.
+	for idx := 0; idx < 2; idx++ {
 		s.sched.assignTaskToWorker(&tasks[idx], &worker, s.db, log.WithField("unittest", "TestBlacklisting"))
 		s.sendTaskUpdate(c, tasks[idx].ID, worker.ID, statusFailed,
 			fmt.Sprintf("failing task #%d", idx), "")
 	}
+	assertQueued(tasks[0].ID, statusActive, statusSoftFailed)
+	assertQueued(tasks[1].ID, statusActive, statusSoftFailed)
+	assertQueued(tasks[2].ID)
+	assertQueued(tasks[3].ID)
 
-	// Verify that a blacklist entry has been made, and the tasks were requeued.
+	assertTaskStatuses(statusSoftFailed, statusSoftFailed, statusQueued, statusQueued)
+	assertAssignedToWorker(&worker, &worker, nil, nil)
+
+	// Run (and fail) task 2; this should trigger blacklisting and re-queueing.
+	s.sched.assignTaskToWorker(&tasks[2], &worker, s.db, log.WithField("unittest", "TestBlacklisting"))
+	s.sendTaskUpdate(c, tasks[2].ID, worker.ID, statusFailed, "failing task #2", "")
+	assertQueued(tasks[0].ID, statusActive, statusSoftFailed, statusClaimedByManager)
+	assertQueued(tasks[1].ID, statusActive, statusSoftFailed, statusClaimedByManager)
+	assertQueued(tasks[2].ID, statusActive, statusClaimedByManager)
+	assertQueued(tasks[3].ID)
+
+	assertTaskStatuses(statusClaimedByManager, statusClaimedByManager, statusClaimedByManager, statusQueued)
+	assertAssignedToWorker(&worker, &worker, &worker, nil)
+
+	// Verify that a blacklist entry has been made.
 	blacklist := s.blacklist.BlacklistForWorker(worker.ID)
 	assert.Equal(c, M{"$nor": []M{
 		M{
@@ -457,43 +526,6 @@ func (s *TaskUpdatesTestSuite) TestBlacklisting(c *check.C) {
 			"task_type": M{"$in": []string{"testing"}},
 		},
 	}}, blacklist)
-
-	found := Task{}
-	for idx := range tasks {
-		assert.Nil(c, tasksColl.FindId(tasks[idx].ID).One(&found))
-		if idx < 3 {
-			assert.Equal(c, worker.ID, *found.WorkerID)
-			assert.Equal(c, statusClaimedByManager, found.Status)
-		} else {
-			assert.Nil(c, found.WorkerID)
-			// This is the status set by ConstructTestTask, and this shouldn't have been touched.
-			assert.Equal(c, statusQueued, found.Status)
-		}
-	}
-
-	// The queued task updates should not include the last failed task (task[2]), as this failure
-	// was reverted by blacklisting and re-queueing.
-	queueColl := s.db.C(queueMgoCollection)
-	assertQueued := func(taskID bson.ObjectId, expectedStatus ...string) {
-		query := queueColl.Find(M{"task_id": taskID}).Select(M{"task_status": true})
-		iter := query.Iter()
-		foundStatuses := []string{}
-		taskUpdate := TaskUpdate{}
-		for iter.Next(&taskUpdate) {
-			foundStatuses = append(foundStatuses, taskUpdate.TaskStatus)
-		}
-		assert.Nil(c, iter.Err())
-
-		if expectedStatus == nil {
-			expectedStatus = []string{}
-		}
-		assert.EqualValues(c, expectedStatus, foundStatuses)
-	}
-
-	assertQueued(tasks[0].ID, statusActive, statusFailed, statusClaimedByManager)
-	assertQueued(tasks[1].ID, statusActive, statusFailed, statusClaimedByManager)
-	assertQueued(tasks[2].ID, statusActive, statusClaimedByManager)
-	assertQueued(tasks[3].ID)
 
 	// There shouldn't be any failure updates queued for the task that triggered the blacklisting.
 	count, err := queueColl.Find(M{"task_id": tasks[2].ID, "task_status": statusFailed}).Count()
@@ -518,20 +550,11 @@ func (s *TaskUpdatesTestSuite) TestBlacklisting(c *check.C) {
 	}}, blacklist)
 
 	// By now the pool for workers has been exhausted and failures are real failures.
-	for idx := range tasks {
-		assert.Nil(c, tasksColl.FindId(tasks[idx].ID).One(&found))
-		if idx < 3 {
-			assert.Equal(c, worker2.ID, *found.WorkerID)
-			assert.Equal(c, statusFailed, found.Status)
-		} else {
-			assert.Nil(c, found.WorkerID)
-			// This is the status set by ConstructTestTask, and this shouldn't have been touched.
-			assert.Equal(c, statusQueued, found.Status)
-		}
-	}
-
-	assertQueued(tasks[0].ID, statusActive, statusFailed, statusClaimedByManager, statusActive, statusFailed)
-	assertQueued(tasks[1].ID, statusActive, statusFailed, statusClaimedByManager, statusActive, statusFailed)
+	assertQueued(tasks[0].ID, statusActive, statusSoftFailed, statusClaimedByManager, statusActive, statusSoftFailed, statusFailed)
+	assertQueued(tasks[1].ID, statusActive, statusSoftFailed, statusClaimedByManager, statusActive, statusSoftFailed, statusFailed)
 	assertQueued(tasks[2].ID, statusActive, statusClaimedByManager, statusActive, statusFailed)
 	assertQueued(tasks[3].ID)
+
+	assertTaskStatuses(statusFailed, statusFailed, statusFailed, statusQueued)
+	assertAssignedToWorker(&worker2, &worker2, &worker2, nil)
 }
