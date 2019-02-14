@@ -9,6 +9,9 @@ Changelog for Flamenco Manager
 - When blacklisting a worker for a given task type on a given job, the failed tasks are
   only re-queued if there are any (non-blacklisted) workers left that can execute that
   task type.
+- When a worker fails a task, it's marked as `soft-failed` before sending it to the Server.
+  If the worker is blacklisted, its `soft-failed` tasks either transition to
+  `claimed-by-manager` if there is another worker to execute it or to `failed` otherwise.
 
 
 ## Version 2.3 (2019-01-10)
