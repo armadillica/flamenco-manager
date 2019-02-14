@@ -474,15 +474,26 @@ func (s *TaskUpdatesTestSuite) TestBlacklisting(c *check.C) {
 	// The queued task updates should not include the last failed task (task[2]), as this failure
 	// was reverted by blacklisting and re-queueing.
 	queueColl := s.db.C(queueMgoCollection)
-	assertQueueSize := func(taskID bson.ObjectId, expectedCount int) {
-		count, err := queueColl.Find(M{"task_id": taskID}).Count()
-		assert.Nil(c, err)
-		assert.Equal(c, expectedCount, count, "for task "+taskID.Hex())
+	assertQueued := func(taskID bson.ObjectId, expectedStatus ...string) {
+		query := queueColl.Find(M{"task_id": taskID}).Select(M{"task_status": true})
+		iter := query.Iter()
+		foundStatuses := []string{}
+		taskUpdate := TaskUpdate{}
+		for iter.Next(&taskUpdate) {
+			foundStatuses = append(foundStatuses, taskUpdate.TaskStatus)
+		}
+		assert.Nil(c, iter.Err())
+
+		if expectedStatus == nil {
+			expectedStatus = []string{}
+		}
+		assert.EqualValues(c, expectedStatus, foundStatuses)
 	}
-	assertQueueSize(tasks[0].ID, 3) // activation + failure + re-queue
-	assertQueueSize(tasks[1].ID, 3) // activation + failure + re-queue
-	assertQueueSize(tasks[2].ID, 2) // activation + re-queue
-	assertQueueSize(tasks[3].ID, 0) // untouched
+
+	assertQueued(tasks[0].ID, statusActive, statusFailed, statusClaimedByManager)
+	assertQueued(tasks[1].ID, statusActive, statusFailed, statusClaimedByManager)
+	assertQueued(tasks[2].ID, statusActive, statusClaimedByManager)
+	assertQueued(tasks[3].ID)
 
 	// There shouldn't be any failure updates queued for the task that triggered the blacklisting.
 	count, err := queueColl.Find(M{"task_id": tasks[2].ID, "task_status": statusFailed}).Count()
@@ -519,8 +530,8 @@ func (s *TaskUpdatesTestSuite) TestBlacklisting(c *check.C) {
 		}
 	}
 
-	assertQueueSize(tasks[0].ID, 5) // activation + failure + re-queue + activation + failure
-	assertQueueSize(tasks[1].ID, 5) // activation + failure + re-queue + activation + failure
-	assertQueueSize(tasks[2].ID, 4) // activation + re-queue + activation + failure
-	assertQueueSize(tasks[3].ID, 0) // untouched
+	assertQueued(tasks[0].ID, statusActive, statusFailed, statusClaimedByManager, statusActive, statusFailed)
+	assertQueued(tasks[1].ID, statusActive, statusFailed, statusClaimedByManager, statusActive, statusFailed)
+	assertQueued(tasks[2].ID, statusActive, statusClaimedByManager, statusActive, statusFailed)
+	assertQueued(tasks[3].ID)
 }
