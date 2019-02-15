@@ -18,18 +18,20 @@ const timeoutInitialSleep = 5 * time.Minute
 // TimeoutChecker periodically times out tasks and workers if the worker hasn't sent any update recently.
 type TimeoutChecker struct {
 	closable
-	config  *Conf
-	session *mgo.Session
-	queue   *TaskUpdateQueue
+	config    *Conf
+	session   *mgo.Session
+	queue     *TaskUpdateQueue
+	scheduler *TaskScheduler
 }
 
 // CreateTimeoutChecker creates a new TimeoutChecker.
-func CreateTimeoutChecker(config *Conf, session *mgo.Session, queue *TaskUpdateQueue) *TimeoutChecker {
+func CreateTimeoutChecker(config *Conf, session *mgo.Session, queue *TaskUpdateQueue, scheduler *TaskScheduler) *TimeoutChecker {
 	return &TimeoutChecker{
 		makeClosable(),
 		config,
 		session,
 		queue,
+		scheduler,
 	}
 }
 
@@ -102,7 +104,7 @@ func (ttc *TimeoutChecker) timeoutTask(task *Task, db *mgo.Database) {
 			ident = err.Error()
 		} else {
 			ident = worker.Identifier()
-			worker.TimeoutOnTask(task, db)
+			worker.TimeoutOnTask(task, db, ttc.scheduler)
 		}
 	} else if task.Worker != "" {
 		ident = task.Worker
@@ -147,6 +149,6 @@ func (ttc *TimeoutChecker) checkWorkers(db *mgo.Database) {
 	}
 
 	for _, worker := range timedoutWorkers {
-		worker.Timeout(db)
+		worker.Timeout(db, ttc.scheduler)
 	}
 }

@@ -363,7 +363,7 @@ func (s *WorkerTestSuite) TestAckStatusChangeHTTP(t *check.C) {
 
 func (s *WorkerTestSuite) TestTimeout(t *check.C) {
 	s.workerLnx.SetStatus(workerStatusAsleep, s.db)
-	s.workerLnx.Timeout(s.db)
+	s.workerLnx.Timeout(s.db, s.sched)
 
 	assert.Equal(t, workerStatusAsleep, s.workerLnx.StatusRequested)
 	assert.Equal(t, workerStatusTimeout, s.workerLnx.Status)
@@ -373,6 +373,33 @@ func (s *WorkerTestSuite) TestTimeout(t *check.C) {
 	assert.Nil(t, err, "Unable to find workerLnx")
 	assert.Equal(t, workerStatusAsleep, found.StatusRequested)
 	assert.Equal(t, workerStatusTimeout, found.Status)
+}
+
+func (s *WorkerTestSuite) TestTimeoutRequeueTask(t *check.C) {
+	// Create & assign a task to the worker.
+	task := ConstructTestTask("aaaaaaaaaaaaaaaaaaaaaaaa", "sleeping")
+	task.Worker = s.workerLnx.Identifier()
+	task.WorkerID = &s.workerLnx.ID
+	task.Status = statusActive
+
+	err := s.db.C("flamenco_tasks").Insert(task)
+	assert.Nil(t, err)
+
+	s.workerLnx.SetStatus(workerStatusAsleep, s.db)
+	s.workerLnx.Timeout(s.db, s.sched)
+
+	assert.Equal(t, workerStatusAsleep, s.workerLnx.StatusRequested)
+	assert.Equal(t, workerStatusTimeout, s.workerLnx.Status)
+
+	found := Worker{}
+	err = s.db.C("flamenco_workers").FindId(s.workerLnx.ID).One(&found)
+	assert.Nil(t, err, "Unable to find workerLnx")
+	assert.Equal(t, workerStatusAsleep, found.StatusRequested)
+	assert.Equal(t, workerStatusTimeout, found.Status)
+
+	err = s.db.C("flamenco_tasks").FindId(task.ID).One(&task)
+	assert.Nil(t, err, "unable to find task")
+	assert.Equal(t, statusClaimedByManager, task.Status, "task should have been re-queued")
 }
 
 func (s *WorkerTestSuite) TestStatusChangeNotRequestable(t *check.C) {

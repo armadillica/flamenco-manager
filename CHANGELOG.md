@@ -12,6 +12,9 @@ Changelog for Flamenco Manager
 - When a worker fails a task, it's marked as `soft-failed` before sending it to the Server.
   If the worker is blacklisted, its `soft-failed` tasks either transition to
   `claimed-by-manager` if there is another worker to execute it or to `failed` otherwise.
+- When a worker times out, its task (if any) will be re-queued for another worker to
+  pick up. For this to work, the `active_task_timeout_interval` setting must be bigger
+  than the `active_worker_timeout_interval` setting.
 
 
 ## Version 2.3 (2019-01-10)

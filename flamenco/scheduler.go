@@ -384,8 +384,8 @@ func (ts *TaskScheduler) ReturnTaskFromWorker(w http.ResponseWriter, r *auth.Aut
 // ReturnTask lets a Worker return its tasks to the queue, for execution by another worker.
 func (ts *TaskScheduler) ReturnTask(worker *Worker, logFields log.Fields,
 	db *mgo.Database, task *Task, reasonForReturn string) error {
-	logger := log.WithFields(logFields)
-	logger.Debug("ReturnTask: worker is returning task to the queue")
+	logger := log.WithFields(logFields).WithField("reason", reasonForReturn)
+	logger.Info("worker returns task to the queue")
 
 	// Lock the task scheduler so that tasks don't get reassigned while we perform our checks.
 	ts.mutex.Lock()

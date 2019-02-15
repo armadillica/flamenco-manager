@@ -146,23 +146,26 @@ func (worker *Worker) AckTimeout(db *mgo.Database) error {
 }
 
 // Timeout marks the worker as timed out.
-func (worker *Worker) Timeout(db *mgo.Database) {
-	worker.setTimeoutStatus(log.Fields{}, db)
+func (worker *Worker) Timeout(db *mgo.Database, scheduler *TaskScheduler) {
+	worker.setTimeoutStatus(log.Fields{}, db, scheduler)
 }
 
 // TimeoutOnTask marks the worker as timed out on a given task.
 // The task is just used for logging.
-func (worker *Worker) TimeoutOnTask(task *Task, db *mgo.Database) {
+func (worker *Worker) TimeoutOnTask(task *Task, db *mgo.Database, scheduler *TaskScheduler) {
 	logFields := log.Fields{
 		"task_id": task.ID.Hex(),
 	}
-	worker.setTimeoutStatus(logFields, db)
+	worker.setTimeoutStatus(logFields, db, scheduler)
 }
 
 // setTimeoutStatus sets the requested status to the current status, and
 // sets the current status to "timeout". This way the worker is requested
 // to go back to its current state when it comes back online.
-func (worker *Worker) setTimeoutStatus(logFields log.Fields, db *mgo.Database) {
+func (worker *Worker) setTimeoutStatus(logFields log.Fields, db *mgo.Database, scheduler *TaskScheduler) {
+
+	// TODO(Sybren): return the worker's task to the queue, if it is currently active.
+
 	moreFields := log.Fields{
 		"old_status": worker.Status,
 		"new_status": workerStatusTimeout,
@@ -183,6 +186,30 @@ func (worker *Worker) setTimeoutStatus(logFields log.Fields, db *mgo.Database) {
 	if err != nil {
 		logger.WithError(err).Error("Unable to set worker status")
 	}
+
+	worker.returnAllTasks(logFields, db, scheduler, fmt.Sprintf("worker %s timed out", worker.Identifier()))
+}
+
+// ReturnAllTasks re-queues all tasks assigned to this worker.
+func (worker *Worker) returnAllTasks(logFields log.Fields, db *mgo.Database, scheduler *TaskScheduler, reason string) error {
+	var tasks []Task
+	query := bson.M{
+		"worker_id": worker.ID,
+		"status":    statusActive,
+	}
+	if err := db.C("flamenco_tasks").Find(query).All(&tasks); err != nil {
+		return err
+	}
+
+	var errToReturn error
+	for _, task := range tasks {
+		if err := scheduler.ReturnTask(worker, logFields, db, &task, reason); err != nil {
+			log.WithFields(logFields).WithField("task_id", task.ID.Hex()).WithError(err).Error("unable to update task for worker")
+			errToReturn = err
+		}
+	}
+
+	return errToReturn
 }
 
 // Seen registers that we have seen this worker at a certain address and with certain software.
@@ -415,27 +442,11 @@ func WorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest, db *mgo.
 	log.WithFields(logFields).Warning("Worker signing off")
 
 	// Update the tasks assigned to the worker.
-	var tasks []Task
-	query := bson.M{
-		"worker_id": worker.ID,
-		"status":    statusActive,
-	}
 	sentHeader := false
-	if err := db.C("flamenco_tasks").Find(query).All(&tasks); err != nil {
-		log.WithFields(logFields).WithError(err).Warning("WorkerSignOff: unable to find active tasks of worker")
+	if err := worker.returnAllTasks(logFields, db, scheduler, "worker signed off"); err != nil {
+		log.WithFields(logFields).WithError(err).Warning("WorkerSignOff: unable to re-queue worker's active tasks")
 		w.WriteHeader(http.StatusInternalServerError)
 		sentHeader = true
-	} else {
-		for _, task := range tasks {
-			if err = scheduler.ReturnTask(worker, logFields, db, &task, "worker signed off"); err != nil {
-				if !sentHeader {
-					w.WriteHeader(http.StatusInternalServerError)
-					sentHeader = true
-				}
-				fmt.Fprintf(w, "Error updating task %s: %s\n", task.ID.Hex(), err)
-				log.WithFields(logFields).WithError(err).Error("WorkerSignOff: unable to update task for worker")
-			}
-		}
 	}
 
 	// Update the worker itself, to show it's down in the DB too.
