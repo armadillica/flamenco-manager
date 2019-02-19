@@ -162,37 +162,22 @@ func (tuq *TaskUpdateQueue) QueueTaskUpdateWithExtra(task *Task, tupdate *TaskUp
 	// This prevents a task being reported active on the worker from overwriting the
 	// cancel-requested state we received from the Server.
 	taskColl := db.C("flamenco_tasks")
-	updates := extraUpdates
-	updates["last_updated"] = tupdate.ReceivedOnManager
 
 	logFields := log.Fields{
 		"task_status": tupdate.TaskStatus,
 		"task_id":     tupdate.TaskID.Hex(),
 	}
 
-	if tupdate.TaskStatus != "" {
-		// Before blindly applying the task status, first check if the transition is valid.
-		if taskStatusTransitionValid(task.Status, tupdate.TaskStatus) {
-			updates["status"] = tupdate.TaskStatus
-		} else {
-			log.WithFields(logFields).Warning("QueueTaskUpdate: not locally applying task status")
-		}
-	}
-	if tupdate.Activity != "" {
-		updates["activity"] = tupdate.Activity
-	}
-	if tupdate.Log != "" {
-		updates["log"] = tupdate.Log
-	}
+	updatesOnTask := tuq.constructUpdatesOnTask(task.Status, tupdate, extraUpdates, logFields)
 
 	// Now that we have called tuq.onTaskStatusChanged() we know the logs were properly rotated.
 	if err := tuq.writeTaskLog(task, logToWrite); err != nil {
 		return err
 	}
 
-	if len(updates) > 0 {
-		log.WithFields(logFields).WithField("updates", updates).Debug("QueueTaskUpdate: updating task")
-		if err := taskColl.UpdateId(tupdate.TaskID, bson.M{"$set": updates}); err != nil {
+	if len(updatesOnTask) > 0 {
+		log.WithFields(logFields).WithField("updates", updatesOnTask).Debug("QueueTaskUpdate: updating task")
+		if err := taskColl.UpdateId(tupdate.TaskID, updatesOnTask); err != nil {
 			if err != mgo.ErrNotFound {
 				return fmt.Errorf("QueueTaskUpdate: error updating local task cache: %s", err)
 			}
@@ -208,6 +193,37 @@ func (tuq *TaskUpdateQueue) QueueTaskUpdateWithExtra(task *Task, tupdate *TaskUp
 	}
 
 	return nil
+}
+
+// constructUpdatesOnTask returns all the updates we want to do locally on a task.
+// It combines the updates from 'tupdate' with the 'extraUpdates' dict.
+func (tuq *TaskUpdateQueue) constructUpdatesOnTask(
+	currentTaskStatus string, tupdate *TaskUpdate,
+	extraUpdates bson.M, logFields log.Fields,
+) bson.M {
+	updates := extraUpdates
+
+	updatesSet := GetOrCreateMap(updates, "$set")
+	updatesSet["last_updated"] = tupdate.ReceivedOnManager
+
+	if tupdate.TaskStatus != "" {
+		// Before blindly applying the task status, first check if the transition is valid.
+		if taskStatusTransitionValid(currentTaskStatus, tupdate.TaskStatus) {
+			updatesSet["status"] = tupdate.TaskStatus
+		} else {
+			log.WithFields(logFields).Warning("QueueTaskUpdate: not locally applying task status")
+		}
+	}
+
+	if tupdate.Activity != "" {
+		updatesSet["activity"] = tupdate.Activity
+	}
+	if tupdate.Log != "" {
+		updatesSet["log"] = tupdate.Log
+	}
+
+	// Something like M{"$set": M{"activitiy": "babla", "log": "blabla"}}
+	return updates
 }
 
 // LogTaskActivity creates and queues a TaskUpdate to store activity and a log line.

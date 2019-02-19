@@ -167,3 +167,17 @@ func PurgeOutgoingQueue(db *mgo.Database) {
 	}
 	log.WithField("removed", info.Removed).Warning("Purged queued updates")
 }
+
+// GetOrCreateMap returns document[key] as bson.M, creating it if necessary.
+func GetOrCreateMap(document bson.M, key string) bson.M {
+	var subdocument bson.M
+	var ok bool
+
+	subdocument, ok = document[key].(bson.M)
+	if subdocument == nil || !ok {
+		subdocument = bson.M{}
+		document[key] = subdocument
+	}
+
+	return subdocument
+}

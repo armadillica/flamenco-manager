@@ -182,9 +182,11 @@ func (ts *TaskScheduler) assignTaskToWorker(task *Task, worker *Worker, db *mgo.
 		isManagerLocal: task.isManagerLocalTask(),
 	}
 	localUpdates := bson.M{
-		"worker":           worker.Nickname,
-		"worker_id":        worker.ID,
-		"last_worker_ping": UtcNow(),
+		"$set": bson.M{
+			"worker":           worker.Nickname,
+			"worker_id":        worker.ID,
+			"last_worker_ping": UtcNow(),
+		},
 	}
 	if err := ts.queue.QueueTaskUpdateWithExtra(task, &tupdate, db, localUpdates); err != nil {
 		logger.WithError(err).Error("Unable to queue task update while assigning task")
