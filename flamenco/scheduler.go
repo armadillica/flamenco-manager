@@ -310,7 +310,7 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 		M{"$match": M{
 			"parents_completed": true,
 		}},
-		// just keep the task info, the "parents_runnable" is no longer needed.
+		// Just keep the task info, the "parents_runnable" is no longer needed.
 		M{"$project": M{"task": 1}},
 		// Sort by priority, with highest prio first. If prio is equal, use oldest task.
 		M{"$sort": bson.D{
