@@ -74,6 +74,12 @@ task_cleanup_max_age: 336h
 # from that task type on that job. Defaults to 3.
 blacklist_threshold: 3
 
+# When a worker fails a task, it'll be soft-failed and retried by another worker.
+# If this many workers have failed the same task, it won't be retried.
+# (even when there are workers left that could technically retry the task).
+task_fail_after_softfail_count: 3
+
+
 # If set, Flamenco Manager will recursively monitor this path, and show the latest
 # image placed there on the status dashboard.
 # watch_for_latest_image: /path/to/render/outputs

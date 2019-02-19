@@ -143,6 +143,21 @@ func (tuq *TaskUpdateQueue) onTaskFailed(task *Task, tupdate *TaskUpdate, db *mg
 		"job_id":  task.Job.Hex(),
 	})
 
+	hardfail := func() {
+		task.Status = statusFailed
+		tupdate.TaskStatus = statusFailed
+	}
+	softfail := func() {
+		task.Status = statusSoftFailed
+		tupdate.TaskStatus = statusSoftFailed
+	}
+
+	if len(task.FailedByWorkers) >= tuq.config.TaskFailAfterSoftFailCount {
+		logger.WithField("failed_by_worker_count", len(task.FailedByWorkers)).Info("too many workers failed this task, hard-failing it")
+		hardfail()
+		return
+	}
+
 	// Remove all the workers that failed this task (even when they weren't blacklisted).
 	if log.IsLevelEnabled(log.DebugLevel) {
 		notBlacklisted := []string{}
@@ -159,14 +174,12 @@ func (tuq *TaskUpdateQueue) onTaskFailed(task *Task, tupdate *TaskUpdate, db *mg
 
 	// If there are still workers left that can execute this task, it's all fine.
 	if len(workersLeft) > 0 {
-		task.Status = statusSoftFailed
-		tupdate.TaskStatus = statusSoftFailed
+		softfail()
 		return
 	}
 
 	logger.Info("no more workers available to run this task, failing it")
-	task.Status = statusFailed
-	tupdate.TaskStatus = statusFailed
+	hardfail()
 }
 
 // QueueTaskUpdate queues the task update, without any extra updates.

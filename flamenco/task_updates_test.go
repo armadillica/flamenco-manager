@@ -629,4 +629,82 @@ func (s *TaskUpdatesTestSuite) TestSoftToHardFail(c *check.C) {
 	)
 }
 
-// TODO: design + test what happens when re-queueing task with FailedByWorkers list.
+func (s *TaskUpdatesTestSuite) TestMaxSoftFailCount(c *check.C) {
+	if s.config.BlacklistThreshold < 3 {
+		assert.FailNow(c, "config.BlacklistThreshold should be >= 3, is %v", s.config.BlacklistThreshold)
+	}
+	if s.config.TaskFailAfterSoftFailCount != 3 {
+		assert.FailNow(c, "config.TaskFailAfterSoftFailCount should be 3, is %v", s.config.TaskFailAfterSoftFailCount)
+	}
+	tasksColl := s.db.C("flamenco_tasks")
+
+	task := ConstructTestTask("1aaaaaaaaaaaaaaaaaaaaaaa", "testing")
+	assert.Nil(c, tasksColl.Insert(task))
+
+	// Create four workers to check the soft- to hard-failure limit.
+	createWorker := func(nickname string) *Worker {
+		worker := Worker{
+			Platform:           "linux",
+			Nickname:           nickname,
+			SupportedTaskTypes: []string{"testing"},
+		}
+		assert.Nil(c, StoreNewWorker(&worker, s.db))
+		return &worker
+	}
+
+	worker1 := createWorker("worker1")
+	worker2 := createWorker("worker2")
+	worker3 := createWorker("worker3")
+	worker4 := createWorker("worker4")
+
+	assertFailedBy := func(taskID bson.ObjectId, workerID bson.ObjectId, expectWorkerFailed bool) {
+		dbTask := Task{}
+		err := tasksColl.Find(M{
+			"_id":                  taskID,
+			"failed_by_workers.id": workerID,
+		}).One(&dbTask)
+		if expectWorkerFailed {
+			assert.Nil(c, err)
+		} else {
+			assert.Equal(c, mgo.ErrNotFound, err)
+		}
+	}
+
+	runAndFail := func(worker *Worker) {
+		// Run (and fail) the task by the worker. This should soft-fail the task.
+		s.sched.assignTaskToWorker(&task, worker, s.db, log.WithField("unittest", "TestMaxSoftFailCount"))
+		s.sendTaskUpdate(c, task.ID, worker.ID, statusFailed, "failing task", "")
+	}
+
+	runAndFail(worker1)
+	assertFailedBy(task.ID, worker1.ID, true)
+	assertFailedBy(task.ID, worker2.ID, false)
+	assertFailedBy(task.ID, worker3.ID, false)
+	assertFailedBy(task.ID, worker4.ID, false)
+	assertTaskStatus(c, s.db, task.ID, statusSoftFailed)
+	assertTaskStatusesQueued(c, s.db, task.ID,
+		statusActive, statusSoftFailed)
+
+	runAndFail(worker2)
+	assertFailedBy(task.ID, worker1.ID, true)
+	assertFailedBy(task.ID, worker2.ID, true)
+	assertFailedBy(task.ID, worker3.ID, false)
+	assertFailedBy(task.ID, worker4.ID, false)
+	assertTaskStatus(c, s.db, task.ID, statusSoftFailed)
+	assertTaskStatusesQueued(c, s.db, task.ID,
+		statusActive, statusSoftFailed,
+		statusActive, statusSoftFailed)
+
+	log.SetLevel(log.DebugLevel)
+
+	runAndFail(worker3)
+	assertFailedBy(task.ID, worker1.ID, true)
+	assertFailedBy(task.ID, worker2.ID, true)
+	assertFailedBy(task.ID, worker3.ID, true)
+	assertFailedBy(task.ID, worker4.ID, false)
+	assertTaskStatus(c, s.db, task.ID, statusFailed)
+	assertTaskStatusesQueued(c, s.db, task.ID,
+		statusActive, statusSoftFailed,
+		statusActive, statusSoftFailed,
+		statusActive, statusFailed)
+}

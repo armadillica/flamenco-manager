@@ -89,6 +89,10 @@ type Conf struct {
 	 * from that task type on that job. */
 	BlacklistThreshold int `yaml:"blacklist_threshold"`
 
+	// When this many workers have tried the task and failed, it will be hard-failed
+	// (even when there are workers left that could technically retry the task).
+	TaskFailAfterSoftFailCount int `yaml:"task_fail_after_softfail_count"`
+
 	WatchForLatestImage string `yaml:"watch_for_latest_image"`
 
 	SSDPDiscovery  bool   `yaml:"ssdp_discovery"`
@@ -122,10 +126,12 @@ func LoadConf(filename string) (Conf, error) {
 		FlamencoStr:                 defaultServerURL,
 		// Days are assumed to be 24 hours long. This is not exactly accurate, but should
 		// be accurate enough for this type of cleanup.
-		TaskCleanupMaxAge:  14 * 24 * time.Hour,
-		SSDPDiscovery:      true,
-		SSDPDeviceUUID:     "7401c189-ef69-434b-b4d8-56d00075faf5",
-		BlacklistThreshold: 3,
+		TaskCleanupMaxAge: 14 * 24 * time.Hour,
+		SSDPDiscovery:     true,
+		SSDPDeviceUUID:    "7401c189-ef69-434b-b4d8-56d00075faf5",
+
+		BlacklistThreshold:         3,
+		TaskFailAfterSoftFailCount: 3,
 
 		VariablesByVarname: map[string]map[string]string{
 			"blender": map[string]string{
