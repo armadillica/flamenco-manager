@@ -126,23 +126,23 @@ func (s *BlacklistTestSuite) TestWorkersLeft(c *check.C) {
 		c.Fatal("Unable to insert test idler", err)
 	}
 
-	assert.Equal(c, 2, s.wbl.WorkersLeft(s.job1, "blender-render"))
+	assert.Equal(c, 2, len(s.wbl.WorkersLeft(s.job1, "blender-render")))
 
 	assert.Nil(c, s.wbl.Add(s.workerLnx.ID, s.task1br))
-	assert.Equal(c, 1, s.wbl.WorkersLeft(s.job1, "blender-render"))
+	assert.Equal(c, 1, len(s.wbl.WorkersLeft(s.job1, "blender-render")))
 
 	assert.Nil(c, s.wbl.Add(s.workerWin.ID, s.task1br))
-	assert.Equal(c, 0, s.wbl.WorkersLeft(s.job1, "blender-render"))
+	assert.Equal(c, 0, len(s.wbl.WorkersLeft(s.job1, "blender-render")))
 
 	// Job2 should not be influenced by blacklist of job 1.
-	assert.Equal(c, 2, s.wbl.WorkersLeft(s.job2, "blender-render"))
+	assert.Equal(c, 2, len(s.wbl.WorkersLeft(s.job2, "blender-render")))
 
 	// Different task type on same job should also not be influenced.
-	assert.Equal(c, 2, s.wbl.WorkersLeft(s.job1, "file-management"))
+	assert.Equal(c, 2, len(s.wbl.WorkersLeft(s.job1, "file-management")))
 
 	// Non-existing job should also work.
-	assert.Equal(c, 2, s.wbl.WorkersLeft(bson.NewObjectId(), "file-management"))
+	assert.Equal(c, 2, len(s.wbl.WorkersLeft(bson.NewObjectId(), "file-management")))
 
 	// Non-existing task type should also work, but return no workers.
-	assert.Equal(c, 0, s.wbl.WorkersLeft(s.job1, "je-moeder"))
+	assert.Equal(c, 0, len(s.wbl.WorkersLeft(s.job1, "je-moeder")))
 }

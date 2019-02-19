@@ -57,10 +57,20 @@ type Task struct {
 	Parents     []bson.ObjectId `bson:"parents,omitempty" json:"parents,omitempty"`
 	Worker      string          `bson:"worker,omitempty" json:"worker,omitempty"`
 
+	FailedByWorkers []WorkerRef `bson:"failed_by_workers,omitempty" json:"failed_by_workers,omitempty"` // Workers who tried this task and failed.
+
 	// Internal bookkeeping
 	WorkerID       *bson.ObjectId `bson:"worker_id,omitempty" json:"-"`        // The worker assigned to this task.
 	LastWorkerPing *time.Time     `bson:"last_worker_ping,omitempty" json:"-"` // When a worker last said it was working on this. Might not have been a task update.
 	LastUpdated    *time.Time     `bson:"last_updated,omitempty" json:"-"`     // when we have last seen an update.
+}
+
+// WorkerRef is a reference to a worker.
+type WorkerRef struct {
+	// ID is the worker's ID, and is the actual reference. It is not guaranteed to exist because workers can be deleted.
+	ID bson.ObjectId `bson:"id" json:"id"`
+	// Identifier is the human-readable identification of the worker (IP address + nickname).
+	Identifier string `bson:"identifier" json:"identifier"`
 }
 
 type aggregationPipelineResult struct {
@@ -86,6 +96,8 @@ type TaskUpdate struct {
 	Log                       string        `bson:"log,omitempty" json:"log,omitempty"`           // for appending to Server-side log
 	LogTail                   string        `bson:"log_tail,omitempty" json:"log_tail,omitempty"` // for overwriting on Server-side task
 	Worker                    string        `bson:"worker" json:"worker"`
+
+	FailedByWorkers []WorkerRef `bson:"failed_by_workers,omitempty" json:"failed_by_workers,omitempty"` // Workers who tried this task and failed.
 
 	isManagerLocal bool // when true, this update should only be applied locally and not be sent upstream.
 }

@@ -14,6 +14,9 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+// Tasks with a status in this list will be allowed to be assigned to a worker by the scheduler.
+var schedulableTaskStatuses = []string{statusQueued, statusClaimedByManager, statusSoftFailed}
+
 // TaskScheduler offers tasks to Workers when they ask for them.
 type TaskScheduler struct {
 	config    *Conf
@@ -150,7 +153,7 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 		return
 	}
 
-	logger.Info("ScheduleTask: assigned task to worker")
+	logger.WithField("previously_failed_by_num_workers", len(task.FailedByWorkers)).Info("ScheduleTask: assigned task to worker")
 
 	// Push a task log line stating we've assigned this task to the given worker.
 	// This is done here, instead of by the worker, so that it's logged even if the worker fails.
@@ -265,10 +268,10 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 
 	// Perform the monster MongoDB aggregation query to schedule a task.
 	result := aggregationPipelineResult{}
-	pipe := tasksColl.Pipe([]M{
+	query := []M{
 		// Select only tasks that have a runnable status & acceptable task type.
 		M{"$match": M{
-			"status":    M{"$in": []string{statusQueued, statusClaimedByManager}},
+			"status":    M{"$in": schedulableTaskStatuses},
 			"task_type": M{"$in": worker.SupportedTaskTypes},
 		}},
 		// Filter out any task type that's blacklisted.
@@ -314,6 +317,10 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 		}},
 		// Just keep the task info, the "parents_runnable" is no longer needed.
 		M{"$project": M{"task": 1}},
+		// Skip any task this worker failed in the past.
+		M{"$match": M{
+			"task.failed_by_workers.id": M{"$ne": worker.ID},
+		}},
 		// Sort by priority, with highest prio first. If prio is equal, use oldest task.
 		M{"$sort": bson.D{
 			{Name: "task.job_priority", Value: -1},
@@ -322,7 +329,17 @@ func (ts *TaskScheduler) fetchTaskFromQueueOrManager(
 		}},
 		// Only return one task.
 		M{"$limit": 1},
-	})
+	}
+
+	// Just for debugging during development.
+	// queryAsJSON, jsonErr := json.MarshalIndent(query, "", "    ")
+	// if jsonErr != nil {
+	// 	panic(jsonErr)
+	// } else {
+	// 	fmt.Printf("JSON-encoded query:\n%s\n", string(queryAsJSON))
+	// }
+
+	pipe := tasksColl.Pipe(query)
 
 	err := pipe.One(&result)
 	if err == mgo.ErrNotFound {

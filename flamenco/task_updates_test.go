@@ -409,8 +409,8 @@ func (s *TaskUpdatesTestSuite) TestLogRotation(c *check.C) {
 	assert.Equal(c, logEntry1+logEntry2+logEntry3, read(logFilename+".1"))
 }
 
-func (s *TaskUpdatesTestSuite) TestBlacklisting(c *check.C) {
-	log.SetLevel(log.InfoLevel)
+// TODO: split this function into multiple tests, it's getting rather large.
+func (s *TaskUpdatesTestSuite) TestFailureAndBlacklisting(c *check.C) {
 	// This test really assumes that after 3 failures the worker is blacklisted.
 	if s.config.BlacklistThreshold != 3 {
 		assert.FailNow(c, "config.BlacklistThreshold should be 3, is %v", s.config.BlacklistThreshold)
@@ -419,19 +419,7 @@ func (s *TaskUpdatesTestSuite) TestBlacklisting(c *check.C) {
 
 	queueColl := s.db.C(queueMgoCollection)
 	assertQueued := func(taskID bson.ObjectId, expectedStatus ...string) {
-		query := queueColl.Find(M{"task_id": taskID}).Select(M{"task_status": true})
-		iter := query.Iter()
-		foundStatuses := []string{}
-		taskUpdate := TaskUpdate{}
-		for iter.Next(&taskUpdate) {
-			foundStatuses = append(foundStatuses, taskUpdate.TaskStatus)
-		}
-		assert.Nil(c, iter.Err())
-
-		if expectedStatus == nil {
-			expectedStatus = []string{}
-		}
-		assert.EqualValues(c, expectedStatus, foundStatuses)
+		assertTaskStatusesQueued(c, s.db, taskID, expectedStatus...)
 	}
 
 	construct := func(taskID string) Task {
@@ -492,6 +480,18 @@ func (s *TaskUpdatesTestSuite) TestBlacklisting(c *check.C) {
 		}
 		assert.EqualValues(c, expectedWorkers, foundWorkers)
 	}
+	assertFailedBy := func(taskID bson.ObjectId, workerID bson.ObjectId, expectWorkerFailed bool) {
+		dbTask := Task{}
+		err := tasksColl.Find(M{
+			"_id":                  taskID,
+			"failed_by_workers.id": workerID,
+		}).One(&dbTask)
+		if expectWorkerFailed {
+			assert.Nil(c, err)
+		} else {
+			assert.Equal(c, mgo.ErrNotFound, err)
+		}
+	}
 
 	// Run (and fail) task 0 and 1.
 	for idx := 0; idx < 2; idx++ {
@@ -504,18 +504,23 @@ func (s *TaskUpdatesTestSuite) TestBlacklisting(c *check.C) {
 	assertQueued(tasks[2].ID)
 	assertQueued(tasks[3].ID)
 
+	assertFailedBy(tasks[0].ID, worker.ID, true)
+	assertFailedBy(tasks[1].ID, worker.ID, true)
+	assertFailedBy(tasks[0].ID, worker2.ID, false)
+	assertFailedBy(tasks[1].ID, worker2.ID, false)
+
 	assertTaskStatuses(statusSoftFailed, statusSoftFailed, statusQueued, statusQueued)
 	assertAssignedToWorker(&worker, &worker, nil, nil)
 
 	// Run (and fail) task 2; this should trigger blacklisting and re-queueing.
 	s.sched.assignTaskToWorker(&tasks[2], &worker, s.db, log.WithField("unittest", "TestBlacklisting"))
 	s.sendTaskUpdate(c, tasks[2].ID, worker.ID, statusFailed, "failing task #2", "")
-	assertQueued(tasks[0].ID, statusActive, statusSoftFailed, statusClaimedByManager)
-	assertQueued(tasks[1].ID, statusActive, statusSoftFailed, statusClaimedByManager)
-	assertQueued(tasks[2].ID, statusActive, statusClaimedByManager)
+	assertQueued(tasks[0].ID, statusActive, statusSoftFailed)
+	assertQueued(tasks[1].ID, statusActive, statusSoftFailed)
+	assertQueued(tasks[2].ID, statusActive, statusSoftFailed)
 	assertQueued(tasks[3].ID)
 
-	assertTaskStatuses(statusClaimedByManager, statusClaimedByManager, statusClaimedByManager, statusQueued)
+	assertTaskStatuses(statusSoftFailed, statusSoftFailed, statusSoftFailed, statusQueued)
 	assertAssignedToWorker(&worker, &worker, &worker, nil)
 
 	// Verify that a blacklist entry has been made.
@@ -550,11 +555,78 @@ func (s *TaskUpdatesTestSuite) TestBlacklisting(c *check.C) {
 	}}, blacklist)
 
 	// By now the pool for workers has been exhausted and failures are real failures.
-	assertQueued(tasks[0].ID, statusActive, statusSoftFailed, statusClaimedByManager, statusActive, statusSoftFailed, statusFailed)
-	assertQueued(tasks[1].ID, statusActive, statusSoftFailed, statusClaimedByManager, statusActive, statusSoftFailed, statusFailed)
-	assertQueued(tasks[2].ID, statusActive, statusClaimedByManager, statusActive, statusFailed)
+	assertQueued(tasks[0].ID, statusActive, statusSoftFailed, statusActive, statusFailed)
+	assertQueued(tasks[1].ID, statusActive, statusSoftFailed, statusActive, statusFailed)
+	assertQueued(tasks[2].ID, statusActive, statusSoftFailed, statusActive, statusFailed)
 	assertQueued(tasks[3].ID)
 
 	assertTaskStatuses(statusFailed, statusFailed, statusFailed, statusQueued)
 	assertAssignedToWorker(&worker2, &worker2, &worker2, nil)
+
+	assertFailedBy(tasks[0].ID, worker.ID, true)
+	assertFailedBy(tasks[1].ID, worker.ID, true)
+	assertFailedBy(tasks[0].ID, worker2.ID, true)
+	assertFailedBy(tasks[1].ID, worker2.ID, true)
 }
+
+// Soft-failing with all the workers should hard-fail the task, even when none of the workers get blacklisted yet.
+func (s *TaskUpdatesTestSuite) TestSoftToHardFail(c *check.C) {
+	if s.config.BlacklistThreshold < 3 {
+		assert.FailNow(c, "config.BlacklistThreshold should be >= 3, is %v", s.config.BlacklistThreshold)
+	}
+	tasksColl := s.db.C("flamenco_tasks")
+
+	task := ConstructTestTask("1aaaaaaaaaaaaaaaaaaaaaaa", "testing")
+	assert.Nil(c, tasksColl.Insert(task))
+
+	// Create two workers, so that when one fails the other can pick up the task.
+	worker1 := Worker{
+		Platform:           "linux",
+		Nickname:           "worker",
+		SupportedTaskTypes: []string{"testing"},
+	}
+	assert.Nil(c, StoreNewWorker(&worker1, s.db))
+
+	worker2 := Worker{
+		Platform:           "linux",
+		Nickname:           "worker2",
+		SupportedTaskTypes: []string{"testing"},
+	}
+	assert.Nil(c, StoreNewWorker(&worker2, s.db))
+
+	assertFailedBy := func(taskID bson.ObjectId, workerID bson.ObjectId, expectWorkerFailed bool) {
+		dbTask := Task{}
+		err := tasksColl.Find(M{
+			"_id":                  taskID,
+			"failed_by_workers.id": workerID,
+		}).One(&dbTask)
+		if expectWorkerFailed {
+			assert.Nil(c, err)
+		} else {
+			assert.Equal(c, mgo.ErrNotFound, err)
+		}
+	}
+
+	// Run (and fail) the task by Worker1. This should soft-fail the task.
+	s.sched.assignTaskToWorker(&task, &worker1, s.db, log.WithField("unittest", "TestBlacklisting"))
+	s.sendTaskUpdate(c, task.ID, worker1.ID, statusFailed, "failing task", "")
+	assertFailedBy(task.ID, worker1.ID, true)
+	assertFailedBy(task.ID, worker2.ID, false)
+	assertTaskStatus(c, s.db, task.ID, statusSoftFailed)
+	assertTaskStatusesQueued(c, s.db, task.ID, statusActive, statusSoftFailed)
+
+	// Run (and fail) the task by Worker2. This should hard-fail the task.
+	s.sched.assignTaskToWorker(&task, &worker2, s.db, log.WithField("unittest", "TestBlacklisting"))
+	s.sendTaskUpdate(c, task.ID, worker2.ID, statusFailed, "failing task", "")
+	assertFailedBy(task.ID, worker1.ID, true)
+	assertFailedBy(task.ID, worker2.ID, true)
+	assertTaskStatus(c, s.db, task.ID, statusFailed)
+	assertTaskStatusesQueued(c, s.db, task.ID,
+		// from worker1:
+		statusActive, statusSoftFailed,
+		// from worker2:
+		statusActive, statusFailed,
+	)
+}
+
+// TODO: design + test what happens when re-queueing task with FailedByWorkers list.

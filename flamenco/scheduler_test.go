@@ -642,3 +642,87 @@ func (s *SchedulerTestSuite) TestBlacklist(c *check.C) {
 	parseJSON(c, respRec, 200, &jsonTask)
 	assert.Equal(c, task1fm.ID.Hex(), jsonTask.ID.Hex())
 }
+
+func (s *SchedulerTestSuite) TestFailedByWorkerList(t *check.C) {
+	// Store tasks in DB.
+	task1 := ConstructTestTaskWithPrio("1aaaaaaaaaaaaaaaaaaaaaaa", "sleeping", 50)
+	task1.JobPriority = 10
+	task1.FailedByWorkers = []WorkerRef{
+		WorkerRef{s.workerWin.ID, s.workerWin.Identifier()},
+		WorkerRef{s.workerLnx.ID, s.workerLnx.Identifier()},
+	}
+	if err := s.db.C("flamenco_tasks").Insert(task1); err != nil {
+		t.Fatal("Unable to insert test task1", err)
+	}
+	task2 := ConstructTestTaskWithPrio("2aaaaaaaaaaaaaaaaaaaaaaa", "sleeping", 100)
+	task2.JobPriority = 5
+	task2.FailedByWorkers = []WorkerRef{
+		WorkerRef{s.workerWin.ID, s.workerWin.Identifier()},
+	}
+	if err := s.db.C("flamenco_tasks").Insert(task2); err != nil {
+		t.Fatal("Unable to insert test task 2", err)
+	}
+
+	// Perform HTTP request to the scheduler.
+	respRec := httptest.NewRecorder()
+	request, _ := http.NewRequest("GET", "/task", nil)
+	ar := &auth.AuthenticatedRequest{Request: *request, Username: s.workerLnx.ID.Hex()}
+	s.sched.ScheduleTask(respRec, ar)
+
+	// We would have gotten task 1, because its job has the highest priority, but that
+	// task was already failed by the worker, so we ought to get task 2 instead.
+	jsonTask := Task{}
+	parseJSON(t, respRec, 200, &jsonTask)
+	assert.Equal(t, task2.FailedByWorkers, jsonTask.FailedByWorkers)
+	assert.Equal(t, task2.ID.Hex(), jsonTask.ID.Hex())
+}
+
+func (s *SchedulerTestSuite) TestSoftFailedTask(t *check.C) {
+	log.SetLevel(log.InfoLevel)
+	// Create a task that was soft-failed by workerLnx.
+	task1 := ConstructTestTaskWithPrio("1aaaaaaaaaaaaaaaaaaaaaaa", "blender-render", 50)
+	task1.JobPriority = 10
+	task1.Name = "task1"
+	task1.Status = statusSoftFailed
+	task1.FailedByWorkers = []WorkerRef{
+		WorkerRef{s.workerLnx.ID, s.workerLnx.Identifier()},
+	}
+	if err := s.db.C("flamenco_tasks").Insert(task1); err != nil {
+		t.Fatal("Unable to insert test task1", err)
+	}
+	task2 := ConstructTestTaskWithPrio("2aaaaaaaaaaaaaaaaaaaaaaa", "blender-render", 100)
+	task2.Name = "task2"
+	task2.JobPriority = 5
+	if err := s.db.C("flamenco_tasks").Insert(task2); err != nil {
+		t.Fatal("Unable to insert test task 2", err)
+	}
+
+	assertTaskAssignment := func(workerID, expectedTaskID bson.ObjectId) Task {
+		respRec := httptest.NewRecorder()
+		request, _ := http.NewRequest("GET", "/task", nil)
+		ar := &auth.AuthenticatedRequest{Request: *request, Username: workerID.Hex()}
+		s.sched.ScheduleTask(respRec, ar)
+
+		jsonTask := Task{}
+		parseJSON(t, respRec, 200, &jsonTask)
+		assert.Equal(t, expectedTaskID.Hex(), jsonTask.ID.Hex())
+		return jsonTask
+	}
+
+	// workerLnx should now get task2 because it already soft-failed task1.
+	assertTaskAssignment(s.workerLnx.ID, task2.ID)
+
+	// workerWin should get task1 even if it is still marked as soft-failed.
+	jsonTask := assertTaskAssignment(s.workerWin.ID, task1.ID)
+	assert.Equal(t, statusActive, jsonTask.Status)
+	assert.Equal(t, task1.FailedByWorkers, jsonTask.FailedByWorkers)
+
+	// Right after obtaining the task, workerWin should be allowed to keep running it.
+	respRec, ar := WorkerTestRequest(s.workerWin.ID, "GET", "/may-i-run/%s", task1.ID.Hex())
+	s.sched.WorkerMayRunTask(respRec, ar, s.db, task1.ID)
+
+	resp := MayKeepRunningResponse{}
+	parseJSON(t, respRec, 200, &resp)
+	assert.Equal(t, "", resp.Reason)
+	assert.Equal(t, true, resp.MayKeepRunning)
+}

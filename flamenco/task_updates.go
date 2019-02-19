@@ -115,12 +115,14 @@ func (tuq *TaskUpdateQueue) QueueTaskUpdateFromWorker(w http.ResponseWriter, r *
 	}
 
 	// Handle blacklisting and soft-failing before actually queueing this task update.
-	if tupdate.TaskStatus == statusFailed {
-		tuq.maybeBlacklistWorker(&task, &tupdate, db)
+	extraUpdates := bson.M{}
+	switch tupdate.TaskStatus {
+	case statusFailed:
+		tuq.onTaskFailed(&task, &tupdate, db, extraUpdates)
 	}
 
 	tupdate.isManagerLocal = task.isManagerLocalTask()
-	if err := tuq.QueueTaskUpdate(&task, &tupdate, db); err != nil {
+	if err := tuq.QueueTaskUpdateWithExtra(&task, &tupdate, db, extraUpdates); err != nil {
 		log.WithFields(logFields).WithError(err).Warning("QueueTaskUpdateFromWorker: unable to update task")
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Unable to store update: %s\n", err)
@@ -128,6 +130,43 @@ func (tuq *TaskUpdateQueue) QueueTaskUpdateFromWorker(w http.ResponseWriter, r *
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// Handle task failure on the worker.
+// This function decides whether a task is soft- or hard-failed, and deals with blacklisting.
+func (tuq *TaskUpdateQueue) onTaskFailed(task *Task, tupdate *TaskUpdate, db *mgo.Database, extraUpdates bson.M) {
+	workersLeft := tuq.maybeBlacklistWorker(task, tupdate, db)
+	tuq.addWorkerToFailedList(task, tupdate, db, extraUpdates)
+
+	logger := log.WithFields(log.Fields{
+		"task_id": task.ID.Hex(),
+		"job_id":  task.Job.Hex(),
+	})
+
+	// Remove all the workers that failed this task (even when they weren't blacklisted).
+	if log.IsLevelEnabled(log.DebugLevel) {
+		notBlacklisted := []string{}
+		for workerID := range workersLeft {
+			notBlacklisted = append(notBlacklisted, workerID.Hex())
+		}
+		logger.WithField("not_blacklisted", notBlacklisted).Debug("determined inverse of blacklist")
+	}
+	for idx := range task.FailedByWorkers {
+		workerID := task.FailedByWorkers[idx].ID
+		logger.WithField("worker_id", workerID.Hex()).Debug("removing failed worker because it previously failed this task")
+		delete(workersLeft, workerID)
+	}
+
+	// If there are still workers left that can execute this task, it's all fine.
+	if len(workersLeft) > 0 {
+		task.Status = statusSoftFailed
+		tupdate.TaskStatus = statusSoftFailed
+		return
+	}
+
+	logger.Info("no more workers available to run this task, failing it")
+	task.Status = statusFailed
+	tupdate.TaskStatus = statusFailed
 }
 
 // QueueTaskUpdate queues the task update, without any extra updates.
@@ -280,6 +319,28 @@ func trimLogForTaskUpdate(logText string) string {
 	return strings.Join(lines[fromLine:], "\n") + "\n"
 }
 
+func (tuq *TaskUpdateQueue) addWorkerToFailedList(task *Task, tupdate *TaskUpdate, db *mgo.Database, extraUpdates bson.M) {
+	logger := log.WithFields(log.Fields{
+		"task_id":    task.ID.Hex(),
+		"new_status": tupdate.TaskStatus,
+		"worker":     tupdate.Worker,
+	})
+	logger.Info("task failed, adding worker to failed list")
+
+	workerRef := WorkerRef{
+		ID:         *task.WorkerID,
+		Identifier: tupdate.Worker,
+	}
+
+	// Add to the in-memory objects.
+	task.FailedByWorkers = append(task.FailedByWorkers, workerRef)
+	tupdate.FailedByWorkers = task.FailedByWorkers
+
+	// Add to the Task in the database.
+	push := GetOrCreateMap(extraUpdates, "$push")
+	push["failed_by_workers"] = workerRef
+}
+
 func (tuq *TaskUpdateQueue) writeTaskLog(task *Task, logText string) error {
 	// Shortcut to avoid creating an empty log file. It also solves an
 	// index out of bounds error further down when we check the last character.
@@ -357,7 +418,10 @@ func (tuq *TaskUpdateQueue) taskLogPath(jobID, taskID bson.ObjectId) (string, st
  * to avoid sending the failure status to the Server (but logs are still sent). Preventing the failure
  * status from reaching the server is important because the server should not cancel the entire job because
  * of this. */
-func (tuq *TaskUpdateQueue) maybeBlacklistWorker(task *Task, tupdate *TaskUpdate, db *mgo.Database) {
+func (tuq *TaskUpdateQueue) maybeBlacklistWorker(task *Task, tupdate *TaskUpdate, db *mgo.Database) (workersLeft map[bson.ObjectId]bool) {
+	workersLeft = tuq.blacklist.WorkersLeft(task.Job, task.TaskType)
+	delete(workersLeft, *task.WorkerID)
+
 	coll := db.C("flamenco_tasks")
 
 	queryFields := M{
@@ -389,11 +453,6 @@ func (tuq *TaskUpdateQueue) maybeBlacklistWorker(task *Task, tupdate *TaskUpdate
 
 	if failedCount < tuq.config.BlacklistThreshold {
 		logger.Debug("not enough failed tasks to blacklist worker")
-
-		// Not enough failure to blacklist the worker means this is a soft failure.
-		task.Status = statusSoftFailed
-		tupdate.TaskStatus = statusSoftFailed
-
 		return
 	}
 
@@ -407,19 +466,16 @@ func (tuq *TaskUpdateQueue) maybeBlacklistWorker(task *Task, tupdate *TaskUpdate
 	}
 
 	var verb, newTaskStatus string
-	if tuq.blacklist.WorkersLeft(task.Job, task.TaskType) > 0 {
-		// There are still workers left to perform this task, so re-queue this task.
-		task.Status = statusClaimedByManager
-		tupdate.TaskStatus = statusClaimedByManager
-		verb = "re-queued"
-		newTaskStatus = statusClaimedByManager
-	} else {
-		// No more workers left, so hard-fail all previously soft-failed tasks.
-		logger.WithField("task_id", task.ID.Hex()).Warning("no more workers can execute this task, hard-failing")
-		logger.Debug("hard-failing all soft-failed tasks of this worker")
-		verb = "hard-failed"
-		newTaskStatus = statusFailed
+	if len(workersLeft) > 0 {
+		// There are still workers left to perform this task so there is nothing else to do here.
+		return
 	}
+
+	// No more workers left, so hard-fail all previously soft-failed tasks.
+	logger.WithField("task_id", task.ID.Hex()).Warning("no more workers can execute this task, hard-failing")
+	logger.Debug("hard-failing all soft-failed tasks of this worker")
+	verb = "hard-failed"
+	newTaskStatus = statusFailed
 
 	updateMessage := fmt.Sprintf("Manager %s task after blacklisting worker %s", verb, task.Worker)
 	found := Task{}
@@ -449,6 +505,8 @@ func (tuq *TaskUpdateQueue) maybeBlacklistWorker(task *Task, tupdate *TaskUpdate
 			"new_task_status": newTaskStatus,
 		}).Error("maybeBlacklistWorker: error querying MongoDB, task update could be partial")
 	}
+
+	return
 }
 
 // taskLogPath returns the directory and the filename suitable to write a log file.

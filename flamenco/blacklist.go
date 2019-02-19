@@ -122,8 +122,8 @@ func (wbl *WorkerBlacklist) BlacklistForWorker(workerID bson.ObjectId) M {
 	return M{"$nor": blacklist}
 }
 
-// WorkersLeft returns the number of workers NOT blacklisted for this task type on this job.
-func (wbl *WorkerBlacklist) WorkersLeft(jobID bson.ObjectId, taskType string) int {
+// WorkersLeft returns the IDs of workers NOT blacklisted for this task type on this job.
+func (wbl *WorkerBlacklist) WorkersLeft(jobID bson.ObjectId, taskType string) map[bson.ObjectId]bool {
 	logger := log.WithFields(log.Fields{
 		"job_id":    jobID.Hex(),
 		"task_type": taskType,
@@ -144,17 +144,22 @@ func (wbl *WorkerBlacklist) WorkersLeft(jobID bson.ObjectId, taskType string) in
 
 	// Count how many workers were not blacklisted
 	workersColl := wbl.session.DB("").C("flamenco_workers")
-	count, err := workersColl.Find(M{
+	iter = workersColl.Find(M{
 		"_id":                  M{"$nin": blacklisted},
 		"supported_task_types": taskType,
-	}).Count()
-	if err != nil {
-		logger.WithError(err).Error("WorkersLeft: unable to count non-blacklisted workers")
+	}).Select(M{"_id": true}).Iter()
+	workerIDs := map[bson.ObjectId]bool{}
+	worker := Worker{}
+	for iter.Next(&worker) {
+		workerIDs[worker.ID] = true
+	}
+	if err := iter.Close(); err != nil {
+		logger.WithError(err).Error("WorkersLeft: unable to fetch non-blacklisted workers")
 	}
 	logger.WithFields(log.Fields{
-		"workers_left":        count,
+		"workers_left":        len(workerIDs),
 		"workers_blacklisted": len(blacklisted),
 	}).Debug("WorkersLeft: counted non-blacklisted workers")
 
-	return count
+	return workerIDs
 }
