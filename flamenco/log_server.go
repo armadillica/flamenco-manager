@@ -19,6 +19,25 @@ const (
 	logBytesTail = 10 * 1024
 )
 
+var byteSizeSuffixes = []string{"B", "KiB", "MiB", "GiB", "TiB"}
+
+func humanizeByteSize(size int64) string {
+	roundedDown := float64(size)
+	lastIndex := len(byteSizeSuffixes) - 1
+
+	for index, suffix := range byteSizeSuffixes {
+		if roundedDown > 1024.0 && index < lastIndex {
+			roundedDown /= 1024.0
+			continue
+		}
+		return fmt.Sprintf("%.1f %s", roundedDown, suffix)
+	}
+
+	// This line should never be reached, but at least in that
+	// case we should at least return something correct.
+	return fmt.Sprintf("%d B", size)
+}
+
 // ServeTaskLog serves the latest task log file for the given job+task.
 // Depending on the User-Agent header it servers head+tail or the entire file.
 func ServeTaskLog(w http.ResponseWriter, r *http.Request,
@@ -95,8 +114,9 @@ func ServeTaskLog(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	msg := "...\n\n... Skipped %d bytes, use WGet or Curl to download the entire log ... \n\n"
-	if _, err := fmt.Fprintf(w, msg, offset-logBytesHead); err != nil {
+	msg := "...\n\n... Skipped %s, use WGet or Curl to download the entire log ... \n\n"
+	skipped := humanizeByteSize(offset - logBytesHead)
+	if _, err := fmt.Fprintf(w, msg, skipped); err != nil {
 		logger.WithError(err).Info("unable to copy log file 'skipped' bit to HTTP client")
 		return
 	}
