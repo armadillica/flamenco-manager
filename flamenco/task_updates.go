@@ -273,6 +273,9 @@ func (tuq *TaskUpdateQueue) constructUpdatesOnTask(
 	if tupdate.Log != "" {
 		updatesSet["log"] = tupdate.Log
 	}
+	if tupdate.Metrics != nil && len(tupdate.Metrics.Timing) > 0 {
+		updatesSet["metrics.timing"] = tupdate.Metrics.Timing
+	}
 
 	// Something like M{"$set": M{"activitiy": "babla", "log": "blabla"}}
 	return updates

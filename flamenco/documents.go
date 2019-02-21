@@ -57,7 +57,8 @@ type Task struct {
 	Parents     []bson.ObjectId `bson:"parents,omitempty" json:"parents,omitempty"`
 	Worker      string          `bson:"worker,omitempty" json:"worker,omitempty"`
 
-	FailedByWorkers []WorkerRef `bson:"failed_by_workers,omitempty" json:"failed_by_workers,omitempty"` // Workers who tried this task and failed.
+	FailedByWorkers []WorkerRef  `bson:"failed_by_workers,omitempty" json:"failed_by_workers,omitempty"` // Workers who tried this task and failed.
+	Metrics         *TaskMetrics `bson:"metrics,omitempty" json:"metrics,omitempty"`
 
 	// Internal bookkeeping
 	WorkerID       *bson.ObjectId `bson:"worker_id,omitempty" json:"-"`        // The worker assigned to this task.
@@ -97,7 +98,8 @@ type TaskUpdate struct {
 	LogTail                   string        `bson:"log_tail,omitempty" json:"log_tail,omitempty"` // for overwriting on Server-side task
 	Worker                    string        `bson:"worker" json:"worker"`
 
-	FailedByWorkers []WorkerRef `bson:"failed_by_workers,omitempty" json:"failed_by_workers,omitempty"` // Workers who tried this task and failed.
+	FailedByWorkers []WorkerRef  `bson:"failed_by_workers,omitempty" json:"failed_by_workers,omitempty"` // Workers who tried this task and failed.
+	Metrics         *TaskMetrics `bson:"metrics,omitempty" json:"metrics,omitempty"`
 
 	isManagerLocal bool // when true, this update should only be applied locally and not be sent upstream.
 }
@@ -239,4 +241,9 @@ type WorkerBlacklistEntry struct {
 	WorkerID bson.ObjectId `bson:"worker_id" json:"worker_id,omitempty"`
 	JobID    bson.ObjectId `bson:"job_id" json:"job_id"`
 	TaskType string        `bson:"task_type" json:"task_type"`
+}
+
+// TaskMetrics contains metrics on a specific task, such as timing information.
+type TaskMetrics struct {
+	Timing map[string]float64 `bson:"timing,omitempty" json:"timing,omitempty"`
 }
