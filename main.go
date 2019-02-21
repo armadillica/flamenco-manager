@@ -366,7 +366,7 @@ func normalMode() (*mux.Router, error) {
 	taskCleaner = flamenco.CreateTaskCleaner(&config, session)
 	dashboard := flamenco.CreateDashboard(&config, session, sleeper, flamencoVersion)
 	latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
-	workerRemover = flamenco.CreateWorkerRemover(&config, session)
+	workerRemover = flamenco.CreateWorkerRemover(&config, session, taskScheduler)
 
 	// Set up our own HTTP server
 	workerAuthenticator := auth.NewBasicAuthenticator("Flamenco Manager", workerSecret)

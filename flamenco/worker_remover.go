@@ -11,6 +11,8 @@ const (
 	// Initial delay to allow workers to come back online after the Manager was down.
 	workerRemoverInitialSleep  = 5 * time.Minute
 	workerRemoverCheckInterval = 30 * time.Second
+
+	workerCleanupTaskRequeueReason = "worker is being auto-removed"
 )
 
 // WorkerRemover periodically removes offline workers.
@@ -18,11 +20,12 @@ type WorkerRemover struct {
 	closable
 	config    *Conf
 	session   *mgo.Session
+	scheduler *TaskScheduler
 	logFields log.Fields
 }
 
 // CreateWorkerRemover creates a WorkerRemover, or returns nil if the configuration disables automatic worker removal.
-func CreateWorkerRemover(config *Conf, session *mgo.Session) *WorkerRemover {
+func CreateWorkerRemover(config *Conf, session *mgo.Session, scheduler *TaskScheduler) *WorkerRemover {
 	logFields := log.Fields{
 		"worker_cleanup_max_age": config.WorkerCleanupMaxAge,
 		"worker_cleanup_status":  config.WorkerCleanupStatus,
@@ -37,6 +40,7 @@ func CreateWorkerRemover(config *Conf, session *mgo.Session) *WorkerRemover {
 		makeClosable(),
 		config,
 		session,
+		scheduler,
 		logFields,
 	}
 }
@@ -69,20 +73,34 @@ func (wr *WorkerRemover) Go() {
 }
 
 func (wr *WorkerRemover) cleanupWorkers(db *mgo.Database) {
-	logger := log.WithFields(wr.logFields)
+	// Any worker last seen before the threshold will be deleted.
+	threshold := time.Now().Add(-wr.config.WorkerCleanupMaxAge)
+	logger := log.WithFields(wr.logFields).WithFields(log.Fields{
+		"last_activity_threshold": threshold,
+	})
 	logger.Debug("WorkerRemover: cleaning up workers")
 
-	// Any worker last seen before the threshold will be deleted.
-	threshold := time.Now().UTC().Add(-wr.config.WorkerCleanupMaxAge)
-
-	info, err := db.C("flamenco_workers").RemoveAll(M{
+	worker := Worker{}
+	workersColl := db.C("flamenco_workers")
+	query := workersColl.Find(M{
 		"status":        M{"$in": wr.config.WorkerCleanupStatus},
 		"last_activity": M{"$lt": threshold},
 	})
-	if err != nil {
-		logger.WithError(err).Warning("WorkerRemover: unable to remove workers")
+	iter := query.Iter()
+	for iter.Next(&worker) {
+		workerLogger := logger.WithFields(log.Fields{
+			"worker_id":            worker.ID.Hex(),
+			"worker_status":        worker.Status,
+			"worker_last_activity": worker.LastActivity,
+		})
+		workerLogger.Warning("WorkerRemover: removing worker")
+		worker.returnAllTasks(wr.logFields, db, wr.scheduler, workerCleanupTaskRequeueReason)
+		if err := workersColl.RemoveId(worker.ID); err != nil {
+			workerLogger.WithError(err).Error("unable to auto-remove worker")
+		}
 	}
-	if info.Removed > 0 {
-		logger.WithField("workers_removed", info.Removed).Info("WorkerRemover: removed offline workers")
+	err := iter.Close()
+	if err != nil {
+		logger.WithError(err).Warning("WorkerRemover: unable to query for to-be-cleaned-up workers")
 	}
 }

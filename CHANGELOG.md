@@ -18,6 +18,9 @@ Changelog for Flamenco Manager
 - Added a setting `task_fail_after_softfail_count` that limits by how many workers a
   failing task can be re-tried. Before this limit is reached, the task will be set to
   `soft-failed` status, and at this limit the task will be at `failed` status.
+- Offline workers can now be automatically removed after not being seen in a confgurable
+  duration (see `worker_cleanup_max_age`). This can be extended to timed-out workers by
+  setting the `worker_cleanup_status` setting.
 
 
 ## Version 2.3 (2019-01-10)

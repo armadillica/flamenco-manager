@@ -16,6 +16,7 @@ type WorkerRemoverTestSuite struct {
 
 	session *mgo.Session
 	db      *mgo.Database
+	sched   *TaskScheduler
 	wr      *WorkerRemover
 }
 
@@ -29,7 +30,13 @@ func (s *WorkerRemoverTestSuite) SetUpTest(c *check.C) {
 
 	s.session = MongoSession(&config)
 	s.db = s.session.DB("")
-	s.wr = CreateWorkerRemover(&config, s.session)
+
+	upstream := ConnectUpstream(&config, s.session)
+	blacklist := CreateWorkerBlackList(&config, s.session)
+	queue := CreateTaskUpdateQueue(&config, blacklist)
+
+	s.sched = CreateTaskScheduler(&config, upstream, s.session, queue, blacklist)
+	s.wr = CreateWorkerRemover(&config, s.session, s.sched)
 
 	// Store workers in DB, on purpose in the opposite order as the tasks.
 	s.workerLnx = Worker{
@@ -60,7 +67,7 @@ func (s *WorkerRemoverTestSuite) TearDownTest(c *check.C) {
 func (s *WorkerRemoverTestSuite) TestZeroMaxAge(t *check.C) {
 	config := GetTestConfig()
 	assert.Equal(t, 0*time.Second, config.WorkerCleanupMaxAge)
-	wr := CreateWorkerRemover(&config, s.session)
+	wr := CreateWorkerRemover(&config, s.session, nil)
 	assert.Nil(t, wr)
 }
 
@@ -109,4 +116,36 @@ func (s *WorkerRemoverTestSuite) TestRemoveTimeoutWorker(t *check.C) {
 	s.wr.cleanupWorkers(s.db)
 	AssertWorkerNotExists(t, s.workerLnx.ID, s.db)
 	AssertWorkerExists(t, s.workerWin.ID, s.db)
+}
+
+func (s *WorkerRemoverTestSuite) TestRequeueTasks(t *check.C) {
+	beforeThreshold := time.Now().UTC().Add(-24 * time.Hour)
+	workersColl := s.db.C("flamenco_workers")
+	tasksColl := s.db.C("flamenco_tasks")
+
+	// Create a task and assign it to the worker.
+	task1 := ConstructTestTask("1aaaaaaaaaaaaaaaaaaaaaaa", "testing")
+	assert.Nil(t, tasksColl.Insert(&task1))
+	assert.Nil(t, s.sched.assignTaskToWorker(&task1, &s.workerLnx, s.db, log.WithField("testing", "testing")))
+
+	// Fake a non-responsive worker.
+	err := workersColl.UpdateId(s.workerLnx.ID, M{
+		"$set": M{
+			"last_activity": beforeThreshold,
+			"status":        workerStatusTimeout,
+		},
+	})
+	assert.Nil(t, err)
+
+	// The task should have been requeued.
+	s.wr.config.WorkerCleanupStatus = []string{workerStatusOffline, workerStatusTimeout}
+	s.wr.cleanupWorkers(s.db)
+	AssertWorkerNotExists(t, s.workerLnx.ID, s.db)
+
+	found := Task{}
+	err = tasksColl.FindId(task1.ID).One(&found)
+	assert.Nil(t, err)
+	assert.Equal(t, statusClaimedByManager, found.Status)
+	assert.Equal(t, s.workerLnx.ID, *found.WorkerID)
+	assert.Contains(t, found.Activity, workerCleanupTaskRequeueReason)
 }
