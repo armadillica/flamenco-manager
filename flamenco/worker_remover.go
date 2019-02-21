@@ -16,22 +16,28 @@ const (
 // WorkerRemover periodically removes offline workers.
 type WorkerRemover struct {
 	closable
-	config  *Conf
-	session *mgo.Session
+	config    *Conf
+	session   *mgo.Session
+	logFields log.Fields
 }
 
 // CreateWorkerRemover creates a WorkerRemover, or returns nil if the configuration disables automatic worker removal.
 func CreateWorkerRemover(config *Conf, session *mgo.Session) *WorkerRemover {
-	logger := log.WithField("worker_cleanup_max_age", config.WorkerCleanupMaxAge)
-	if config.WorkerCleanupMaxAge == 0*time.Second {
-		logger.Info("offline workers will not be removed")
+	logFields := log.Fields{
+		"worker_cleanup_max_age": config.WorkerCleanupMaxAge,
+		"worker_cleanup_status":  config.WorkerCleanupStatus,
+	}
+	logger := log.WithFields(logFields)
+	if config.WorkerCleanupMaxAge == 0*time.Second || len(config.WorkerCleanupStatus) == 0 {
+		logger.Info("workers will not be auto-removed")
 		return nil
 	}
-	logger.Info("offline workers will be auto-removed")
+	logger.Info("workers will be auto-removed")
 	return &WorkerRemover{
 		makeClosable(),
 		config,
 		session,
+		logFields,
 	}
 }
 
@@ -63,19 +69,20 @@ func (wr *WorkerRemover) Go() {
 }
 
 func (wr *WorkerRemover) cleanupWorkers(db *mgo.Database) {
-	log.Debug("WorkerRemover: cleaning up workers")
+	logger := log.WithFields(wr.logFields)
+	logger.Debug("WorkerRemover: cleaning up workers")
 
 	// Any worker last seen before the threshold will be deleted.
 	threshold := time.Now().UTC().Add(-wr.config.WorkerCleanupMaxAge)
 
 	info, err := db.C("flamenco_workers").RemoveAll(M{
-		"status":        workerStatusOffline,
+		"status":        M{"$in": wr.config.WorkerCleanupStatus},
 		"last_activity": M{"$lt": threshold},
 	})
 	if err != nil {
-		log.WithError(err).Warning("WorkerRemover: unable to remove workers")
+		logger.WithError(err).Warning("WorkerRemover: unable to remove workers")
 	}
 	if info.Removed > 0 {
-		log.WithField("workers_removed", info.Removed).Info("WorkerRemover: removed offline workers")
+		logger.WithField("workers_removed", info.Removed).Info("WorkerRemover: removed offline workers")
 	}
 }

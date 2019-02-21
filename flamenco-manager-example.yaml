@@ -73,6 +73,12 @@ task_cleanup_max_age: 336h
 # Set to 0s (the default) to disable this behaviour.
 worker_cleanup_max_age: 0s
 
+# Workers are only cleaned up if they have a status from this list. By default
+# only 'offline' is included, but you can also add 'timeout' if you want to
+# auto-remove timed-out workers as well.
+worker_cleanup_status:
+    - offline
+
 # This many failures (on a given job+task type combination) will ban a worker
 # from that task type on that job. Defaults to 3.
 blacklist_threshold: 3

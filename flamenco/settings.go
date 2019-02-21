@@ -85,6 +85,7 @@ type Conf struct {
 
 	TaskCleanupMaxAge   time.Duration `yaml:"task_cleanup_max_age"`
 	WorkerCleanupMaxAge time.Duration `yaml:"worker_cleanup_max_age"`
+	WorkerCleanupStatus []string      `yaml:"worker_cleanup_status"`
 
 	/* This many failures (on a given job+task type combination) will ban a worker
 	 * from that task type on that job. */
@@ -133,6 +134,8 @@ func LoadConf(filename string) (Conf, error) {
 
 		BlacklistThreshold:         3,
 		TaskFailAfterSoftFailCount: 3,
+
+		WorkerCleanupStatus: []string{workerStatusOffline},
 
 		VariablesByVarname: map[string]map[string]string{
 			"blender": map[string]string{

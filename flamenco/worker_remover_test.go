@@ -89,3 +89,24 @@ func (s *WorkerRemoverTestSuite) TestRemoveWorker(t *check.C) {
 	AssertWorkerNotExists(t, s.workerLnx.ID, s.db)
 	AssertWorkerExists(t, s.workerWin.ID, s.db)
 }
+
+func (s *WorkerRemoverTestSuite) TestRemoveTimeoutWorker(t *check.C) {
+	beforeThreshold := time.Now().UTC().Add(-24 * time.Hour)
+	coll := s.db.C("flamenco_workers")
+	err := coll.UpdateId(s.workerLnx.ID, M{
+		"$set": M{"last_activity": beforeThreshold},
+	})
+	assert.Nil(t, err)
+
+	// By default this status shouldn't be cleaned up.
+	s.workerLnx.SetStatus(workerStatusTimeout, s.db)
+	s.wr.cleanupWorkers(s.db)
+	AssertWorkerExists(t, s.workerLnx.ID, s.db)
+	AssertWorkerExists(t, s.workerWin.ID, s.db)
+
+	// Should be deleted now.
+	s.wr.config.WorkerCleanupStatus = []string{workerStatusOffline, workerStatusTimeout}
+	s.wr.cleanupWorkers(s.db)
+	AssertWorkerNotExists(t, s.workerLnx.ID, s.db)
+	AssertWorkerExists(t, s.workerWin.ID, s.db)
+}
