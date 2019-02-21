@@ -26,7 +26,7 @@ import (
 	"gitlab.com/blender-institute/gossdp"
 )
 
-const flamencoVersion = "2.4-dev3"
+const flamencoVersion = "2.4-dev4"
 const ssdpServiceType = "urn:flamenco:manager:0"
 
 var (
