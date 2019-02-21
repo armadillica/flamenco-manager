@@ -82,28 +82,34 @@ rsync ../static ../templates $PREFIX -a --delete-after
 cp ../flamenco-manager-example.yaml $PREFIX/
 cp ../{README.md,LICENSE.txt,CHANGELOG.md} $PREFIX/
 
-echo "Creating archive for Linux"
-cp flamenco-manager-linux $PREFIX/flamenco-manager
-cp ../flamenco-manager.service $PREFIX/
-cp -ua --link mongodb-linux-x86_64-* $PREFIX/mongodb-linux
-tar zcf $PREFIX-linux.tar.gz $PREFIX/
-rm -rf $PREFIX/flamenco-manager{,.service} $PREFIX/mongodb-linux
+if [ -z "$TARGET" -o "$TARGET" = "linux"   ]; then
+    echo "Creating archive for Linux"
+    cp flamenco-manager-linux $PREFIX/flamenco-manager
+    cp ../flamenco-manager.service $PREFIX/
+    cp -ua --link mongodb-linux-x86_64-* $PREFIX/mongodb-linux
+    tar zcf $PREFIX-linux.tar.gz $PREFIX/
+    rm -rf $PREFIX/flamenco-manager{,.service} $PREFIX/mongodb-linux
+fi
 
-echo "Creating archive for Windows"
-cp flamenco-manager-windows.exe $PREFIX/flamenco-manager.exe
-cp -ua --link mongodb-windows-* $PREFIX/mongodb-windows
-rm -f $PREFIX-windows.zip
-cd $PREFIX
-zip -9 -r -q ../$PREFIX-windows.zip *
-cd -
-rm -rf $PREFIX/flamenco-manager.exe $PREFIX/mongodb-windows
+if [ -z "$TARGET" -o "$TARGET" = "windows" ]; then
+    echo "Creating archive for Windows"
+    cp flamenco-manager-windows.exe $PREFIX/flamenco-manager.exe
+    cp -ua --link mongodb-windows-* $PREFIX/mongodb-windows
+    rm -f $PREFIX-windows.zip
+    cd $PREFIX
+    zip -9 -r -q ../$PREFIX-windows.zip *
+    cd -
+    rm -rf $PREFIX/flamenco-manager.exe $PREFIX/mongodb-windows
+fi
 
-echo "Creating archive for Darwin"
-cp flamenco-manager-darwin $PREFIX/flamenco-manager
-cp -ua --link mongodb-osx-x86_64-* $PREFIX/mongodb-darwin
-rm -f $PREFIX-darwin.zip
-zip -9 -r -q $PREFIX-darwin.zip $PREFIX/
-rm -rf $PREFIX/flamenco-manager $PREFIX/mongodb-darwin
+if [ -z "$TARGET" -o "$TARGET" = "darwin"  ]; then
+    echo "Creating archive for Darwin"
+    cp flamenco-manager-darwin $PREFIX/flamenco-manager
+    cp -ua --link mongodb-osx-x86_64-* $PREFIX/mongodb-darwin
+    rm -f $PREFIX-darwin.zip
+    zip -9 -r -q $PREFIX-darwin.zip $PREFIX/
+    rm -rf $PREFIX/flamenco-manager $PREFIX/mongodb-darwin
+fi
 
 # Clean up after ourselves
 echo "Cleaning up"
