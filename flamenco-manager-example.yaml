@@ -69,6 +69,9 @@ active_worker_timeout_interval: 15m
 # manager's database. If the Server updates them, they will be re-downloaded.
 task_cleanup_max_age: 336h
 
+# Workers that have been offline for this long will automatically be deleted.
+# Set to 0s (the default) to disable this behaviour.
+worker_cleanup_max_age: 0s
 
 # This many failures (on a given job+task type combination) will ban a worker
 # from that task type on that job. Defaults to 3.

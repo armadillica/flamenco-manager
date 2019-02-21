@@ -83,7 +83,8 @@ type Conf struct {
 	ActiveTaskTimeoutInterval   time.Duration `yaml:"active_task_timeout_interval"`
 	ActiveWorkerTimeoutInterval time.Duration `yaml:"active_worker_timeout_interval"`
 
-	TaskCleanupMaxAge time.Duration `yaml:"task_cleanup_max_age"`
+	TaskCleanupMaxAge   time.Duration `yaml:"task_cleanup_max_age"`
+	WorkerCleanupMaxAge time.Duration `yaml:"worker_cleanup_max_age"`
 
 	/* This many failures (on a given job+task type combination) will ban a worker
 	 * from that task type on that job. */

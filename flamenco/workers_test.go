@@ -71,6 +71,18 @@ func (s *WorkerTestSuite) TearDownTest(c *check.C) {
 	httpmock.DeactivateAndReset()
 }
 
+func AssertWorkerExists(t assert.TestingT, workerID bson.ObjectId, db *mgo.Database) {
+	worker, err := FindWorkerByID(workerID, db)
+	assert.Nil(t, err)
+	assert.NotNil(t, worker)
+}
+
+func AssertWorkerNotExists(t assert.TestingT, workerID bson.ObjectId, db *mgo.Database) {
+	worker, err := FindWorkerByID(workerID, db)
+	assert.Equal(t, mgo.ErrNotFound, err)
+	assert.Equal(t, Worker{}, *worker)
+}
+
 func WorkerTestRequest(workerID bson.ObjectId, method, url string, vargs ...interface{}) (*httptest.ResponseRecorder, *auth.AuthenticatedRequest) {
 	return WorkerTestRequestWithBody(workerID, nil, method, url, vargs...)
 }

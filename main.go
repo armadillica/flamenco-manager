@@ -46,6 +46,7 @@ var (
 	timeoutChecker    *flamenco.TimeoutChecker
 	upstream          *flamenco.UpstreamConnection
 	upstreamNotifier  *flamenco.UpstreamNotifier
+	workerRemover     *flamenco.WorkerRemover
 )
 
 var shutdownComplete chan struct{}
@@ -237,6 +238,9 @@ func shutdown(signum os.Signal) {
 		if upstream != nil {
 			upstream.Close()
 		}
+		if workerRemover != nil {
+			workerRemover.Close()
+		}
 		if mongoRunner != nil {
 			mongoRunner.Close(session)
 		}
@@ -362,6 +366,7 @@ func normalMode() (*mux.Router, error) {
 	taskCleaner = flamenco.CreateTaskCleaner(&config, session)
 	dashboard := flamenco.CreateDashboard(&config, session, sleeper, flamencoVersion)
 	latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
+	workerRemover = flamenco.CreateWorkerRemover(&config, session)
 
 	// Set up our own HTTP server
 	workerAuthenticator := auth.NewBasicAuthenticator("Flamenco Manager", workerSecret)
@@ -390,6 +395,9 @@ func normalMode() (*mux.Router, error) {
 	taskCleaner.Go()
 	latestImageSystem.Go()
 	taskLogUploader.Go()
+	if workerRemover != nil {
+		workerRemover.Go()
+	}
 
 	// Make ourselves discoverable through SSDP.
 	if config.SSDPDiscovery {
