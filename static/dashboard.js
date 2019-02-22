@@ -68,6 +68,11 @@ WORKER_ACTIONS = Object.freeze({
     },
 });
 
+Vue.component('page-header', {
+    props: ['serverinfo'],
+    template: '#template_header',
+});
+
 Vue.component('status', {
     props: ['serverinfo', 'errormsg', 'idle_workers'],
     template: '#template_status',
@@ -361,6 +366,8 @@ var vueApp = new Vue({
                 name: "unknown",
                 url: "#",
             },
+            manager_name: "Flamenco Manager",
+            manager_mode: "",
         },
         idle_workers: [],
         current_workers: [],
@@ -368,7 +375,7 @@ var vueApp = new Vue({
     },
     computed: {
         all_workers_selected: function() {
-            return this.current_workers.length && this.current_workers.length == this.selected_worker_ids.length;
+            return Boolean(this.current_workers.length && this.current_workers.length == this.selected_worker_ids.length);
         },
     },
     methods: {
@@ -385,6 +392,7 @@ var vueApp = new Vue({
                         if (!this.serverinfo.hasOwnProperty(key)) continue;
                         this.serverinfo[key] = info[key];
                     }
+                    document.title = this.serverinfo.manager_name + " " + this.serverinfo.version;
 
                     // Split workers into "current" and "idle for too long"
                     let too_long = 14 * 24 * 3600000; // in milliseconds

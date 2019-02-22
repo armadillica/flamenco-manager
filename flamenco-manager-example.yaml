@@ -125,3 +125,6 @@ test_tasks:
 
         # The location where the Worker will save the rendered frame.
         render_output: '{render}/_flamenco/tests/renders'
+
+# Name of this Manager shown on the dashboard.
+manager_name: "Flamenco Manager"

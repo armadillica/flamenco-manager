@@ -186,6 +186,8 @@ func (dash *Dashboard) sendStatusReport(w http.ResponseWriter, r *http.Request) 
 		UpstreamQueueSize: upstreamQueueSize,
 		Version:           dash.flamencoVersion,
 		Workers:           workers,
+		ManagerMode:       dash.config.Mode,
+		ManagerName:       dash.config.ManagerName,
 	}
 	statusreport.Server.Name = dash.serverName
 	statusreport.Server.URL = dash.serverURL

@@ -46,6 +46,7 @@ type TestTasks struct {
 // Conf represents the Manager's configuration file.
 type Conf struct {
 	Mode          string   `yaml:"mode"` // either "develop" or "production"
+	ManagerName   string   `yaml:"manager_name"`
 	DatabaseURL   string   `yaml:"database_url"`
 	DatabasePath  string   `yaml:"database_path"`
 	TaskLogsPath  string   `yaml:"task_logs_path"`
@@ -115,6 +116,7 @@ func LoadConf(filename string) (Conf, error) {
 	// Construct the struct with some more or less sensible defaults.
 	c := Conf{
 		Mode:                        "production",
+		ManagerName:                 "Flamenco Manager",
 		Listen:                      ":8083",
 		DatabasePath:                "./db",
 		TaskLogsPath:                "./task-logs",

@@ -1,5 +1,14 @@
 <!-- Templates for the Vue.js components -->
 
+<!-- template for the 'header' Vue.js component -->
+<script type='text/x-template' id='template_header'>
+    <header class='pageheader'><h1><img src='/static/flamenco.png' alt='Flamenco logo'> {{ serverinfo.manager_name }}
+        <span id='runmode' v-if="serverinfo.manager_mode != 'production'">({{ serverinfo.manager_mode }} mode)</span>
+        <span id='managerversion'>{{ serverinfo.version }}</span>
+    </h1></header>
+</script>
+
+
 <!-- template for the 'status' Vue.js component -->
 <script type='text/x-template' id='template_status'>
     <div id='status'>

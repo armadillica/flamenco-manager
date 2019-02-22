@@ -223,6 +223,8 @@ type StatusReport struct {
 	UpstreamQueueSize int      `json:"upstream_queue_size"`
 	Version           string   `json:"version"`
 	Workers           []Worker `json:"workers"`
+	ManagerName       string   `json:"manager_name"`
+	ManagerMode       string   `json:"manager_mode"` // either "develop" or "production", see settings.go Conf.Mode.
 	Server            struct {
 		Name string `json:"name"`
 		URL  string `json:"url"`
