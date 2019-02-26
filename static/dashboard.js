@@ -171,7 +171,7 @@ Vue.component('worker-tbody', {
         server: Object,
     },
     data: function() { return {
-        show_details: true,
+        show_details: false,
     }; },
     template: '#template_worker_tbody',
 });
