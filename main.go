@@ -364,7 +364,7 @@ func normalMode() (*mux.Router, error) {
 	taskUpdatePusher = flamenco.CreateTaskUpdatePusher(&config, upstream, session, taskUpdateQueue, taskLogUploader)
 	timeoutChecker = flamenco.CreateTimeoutChecker(&config, session, taskUpdateQueue, taskScheduler)
 	taskCleaner = flamenco.CreateTaskCleaner(&config, session)
-	dashboard := flamenco.CreateDashboard(&config, session, sleeper, flamencoVersion)
+	dashboard := flamenco.CreateDashboard(&config, session, sleeper, blacklist, flamencoVersion)
 	latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
 	workerRemover = flamenco.CreateWorkerRemover(&config, session, taskScheduler)
 

@@ -146,3 +146,22 @@ func (s *BlacklistTestSuite) TestWorkersLeft(c *check.C) {
 	// Non-existing task type should also work, but return no workers.
 	assert.Equal(c, 0, len(s.wbl.WorkersLeft(s.job1, "je-moeder")))
 }
+
+func (s *BlacklistTestSuite) TestRemoveLine(c *check.C) {
+	assert.Nil(c, s.wbl.Add(s.workerLnx.ID, s.task1fm))
+	assert.Nil(c, s.wbl.Add(s.workerLnx.ID, s.task1br))
+
+	blacklist := s.wbl.BlacklistForWorker(s.workerLnx.ID)
+	expect := M{"$nor": []M{
+		M{"job": s.job1, "task_type": M{"$in": []string{"file-management", "blender-render"}}},
+	}}
+	assert.Equal(c, expect, blacklist)
+
+	s.wbl.RemoveLine(s.workerLnx.ID, s.job1, "file-management")
+
+	blacklist = s.wbl.BlacklistForWorker(s.workerLnx.ID)
+	expect = M{"$nor": []M{
+		M{"job": s.job1, "task_type": M{"$in": []string{"blender-render"}}},
+	}}
+	assert.Equal(c, expect, blacklist)
+}

@@ -122,12 +122,16 @@ button#downloadkick {
         0 0 3px fuchsia;
 }
 
-.worker-action.forget-worker {
+.worker-action.forget-worker, .worker-action.forget-blacklist-entry {
     font-size: 85%;
     vertical-align: super;
     color: #f66;
     padding: 3px;
     margin-right: 5px;
+}
+
+.worker-action.forget-blacklist-entry {
+    float: right;
 }
 
 .worker .btn-link {

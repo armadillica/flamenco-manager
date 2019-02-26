@@ -163,3 +163,26 @@ func (wbl *WorkerBlacklist) WorkersLeft(jobID bson.ObjectId, taskType string) ma
 
 	return workerIDs
 }
+
+// RemoveLine removes a single blacklist entry.
+// This is a no-op if the entry doesn't exist.
+func (wbl *WorkerBlacklist) RemoveLine(workerID bson.ObjectId, jobID bson.ObjectId, taskType string) error {
+	logger := log.WithFields(log.Fields{
+		"worker_id": workerID.Hex(),
+		"job_id":    jobID.Hex(),
+		"task_type": taskType,
+	})
+	logger.Info("un-blacklisting worker")
+
+	err := wbl.collection().Remove(M{
+		"worker_id": workerID,
+		"job_id":    jobID,
+		"task_type": taskType,
+	})
+	if err != nil && err != mgo.ErrNotFound {
+		logger.Warning("unable to un-blacklist worker")
+		return err
+	}
+
+	return nil
+}

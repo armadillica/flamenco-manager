@@ -239,7 +239,13 @@
         <td colspan='4'></td>
         <td><a :href="job_id_url" :title="'Open on ' + server.name" target='_blank'>{{ job_id_text }}</a></td>
         <td>{{ listitem.task_type }}</td>
-        <td colspan='2'>{{ created() }}</td>
+        <td colspan='2'>
+            <span
+                @click="forget_blacklist_entry()"
+                class="forget-blacklist-entry worker-action"
+                title="click to forget this blacklist entry">x</span>
+            {{ created() }}
+        </td>
     </tr>
 </script>
 

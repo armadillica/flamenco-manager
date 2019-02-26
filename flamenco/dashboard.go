@@ -2,6 +2,7 @@ package flamenco
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -20,6 +21,7 @@ type Dashboard struct {
 	session         *mgo.Session
 	config          *Conf
 	sleeper         *SleepScheduler
+	blacklist       *WorkerBlacklist
 	flamencoVersion string
 	serverName      string
 	serverURL       string
@@ -27,7 +29,12 @@ type Dashboard struct {
 }
 
 // CreateDashboard creates a new Dashboard object.
-func CreateDashboard(config *Conf, session *mgo.Session, sleeper *SleepScheduler, flamencoVersion string) *Dashboard {
+func CreateDashboard(config *Conf,
+	session *mgo.Session,
+	sleeper *SleepScheduler,
+	blacklist *WorkerBlacklist,
+	flamencoVersion string,
+) *Dashboard {
 	serverURL, err := url.Parse(config.FlamencoStr)
 	if err != nil {
 		log.WithError(err).Fatal("CreateReporter: unable to parse server URL")
@@ -38,6 +45,7 @@ func CreateDashboard(config *Conf, session *mgo.Session, sleeper *SleepScheduler
 		session,
 		config,
 		sleeper,
+		blacklist,
 		flamencoVersion,
 		serverURL.Host,
 		serverURL.String(),
@@ -266,6 +274,16 @@ func (dash *Dashboard) workerAction(w http.ResponseWriter, r *http.Request) {
 		},
 		"forget-worker": func() {
 			actionErr = forgetWorker(worker, db)
+		},
+		"forget-blacklist-line": func() {
+			jobIDstr := r.FormValue("job_id")
+			taskType := r.FormValue("task_type")
+
+			if !bson.IsObjectIdHex(jobIDstr) {
+				actionErr = errors.New("Job ID is not a valid ObjectID")
+				return
+			}
+			actionErr = dash.blacklist.RemoveLine(worker.ID, bson.ObjectIdHex(jobIDstr), taskType)
 		},
 	}
 
