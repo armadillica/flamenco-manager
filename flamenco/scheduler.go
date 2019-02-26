@@ -24,6 +24,7 @@ type TaskScheduler struct {
 	session   *mgo.Session
 	queue     *TaskUpdateQueue
 	blacklist *WorkerBlacklist
+	pusher    *TaskUpdatePusher
 
 	/* Timestamp of the last time we kicked the task downloader because there weren't any
 	 * tasks left for workers. */
@@ -38,6 +39,7 @@ func CreateTaskScheduler(config *Conf,
 	session *mgo.Session,
 	queue *TaskUpdateQueue,
 	blacklist *WorkerBlacklist,
+	pusher *TaskUpdatePusher,
 ) *TaskScheduler {
 	return &TaskScheduler{
 		config,
@@ -45,6 +47,7 @@ func CreateTaskScheduler(config *Conf,
 		session,
 		queue,
 		blacklist,
+		pusher,
 		time.Time{},
 		new(sync.Mutex),
 	}
@@ -108,7 +111,7 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 
 	var task *Task
 	var wasChanged bool
-	for attempt := 0; attempt < 1000; attempt++ {
+	for attempt := 0; attempt < 3; attempt++ {
 		// Fetch the first available task of a supported task type.
 		task = ts.fetchTaskFromQueueOrManager(w, db, worker)
 		if task == nil {
@@ -130,8 +133,14 @@ func (ts *TaskScheduler) ScheduleTask(w http.ResponseWriter, r *auth.Authenticat
 		logger.WithField("task", task.ID.Hex()).Debug("Task was changed, reexamining queue.")
 	}
 	if wasChanged {
-		logger.Error("Infinite loop detected, tried 1000 tasks and they all changed...")
-		w.WriteHeader(http.StatusInternalServerError)
+		// If too many tasks were changed upstream, we should just mass-update our tasks.
+		logger.Info("Too many tasks changed, kicking task downloader")
+		// Just tell this worker to idle one more cycle now.
+		w.WriteHeader(http.StatusNoContent)
+
+		ts.pusher.Kick()                 // Fetch cancel-requested tasks.
+		ts.upstream.KickDownloader(true) // Fetch updates to runnable tasks.
+
 		return
 	}
 

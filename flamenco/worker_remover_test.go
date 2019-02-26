@@ -35,7 +35,8 @@ func (s *WorkerRemoverTestSuite) SetUpTest(c *check.C) {
 	blacklist := CreateWorkerBlackList(&config, s.session)
 	queue := CreateTaskUpdateQueue(&config, blacklist)
 
-	s.sched = CreateTaskScheduler(&config, upstream, s.session, queue, blacklist)
+	pusher := CreateTaskUpdatePusher(&config, upstream, s.session, queue, nil)
+	s.sched = CreateTaskScheduler(&config, upstream, s.session, queue, blacklist, pusher)
 	s.wr = CreateWorkerRemover(&config, s.session, s.sched)
 
 	// Store workers in DB, on purpose in the opposite order as the tasks.

@@ -51,7 +51,8 @@ func (s *SchedulerTestSuite) SetUpTest(c *check.C) {
 	s.upstream = ConnectUpstream(&config, session)
 	s.blacklist = CreateWorkerBlackList(&config, session)
 	s.queue = CreateTaskUpdateQueue(&config, s.blacklist)
-	s.sched = CreateTaskScheduler(&config, s.upstream, session, s.queue, s.blacklist)
+	pusher := CreateTaskUpdatePusher(&config, s.upstream, session, s.queue, nil)
+	s.sched = CreateTaskScheduler(&config, s.upstream, session, s.queue, s.blacklist, pusher)
 
 	// Store workers in DB, on purpose in the opposite order as the tasks.
 	s.workerLnx = Worker{

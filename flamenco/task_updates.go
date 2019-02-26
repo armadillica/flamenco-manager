@@ -36,6 +36,9 @@ type TaskUpdatePusher struct {
 	session         *mgo.Session
 	queue           *TaskUpdateQueue
 	taskLogUploader *TaskLogUploader
+
+	// Send any boolean here to force the update pusher to push.
+	kickChan chan bool
 }
 
 // TaskUpdateQueue queues task updates for later pushing, and writes log files to disk.
@@ -562,8 +565,11 @@ func validForCancelRequested(newStatus string) bool {
 
 // CreateTaskUpdatePusher creates a new task update pusher that runs in a separate goroutine.
 func CreateTaskUpdatePusher(
-	config *Conf, upstream *UpstreamConnection, session *mgo.Session,
-	queue *TaskUpdateQueue, taskLogUploader *TaskLogUploader,
+	config *Conf,
+	upstream *UpstreamConnection,
+	session *mgo.Session,
+	queue *TaskUpdateQueue,
+	taskLogUploader *TaskLogUploader,
 ) *TaskUpdatePusher {
 	return &TaskUpdatePusher{
 		makeClosable(),
@@ -572,6 +578,7 @@ func CreateTaskUpdatePusher(
 		session,
 		queue,
 		taskLogUploader,
+		make(chan bool, 1),
 	}
 }
 
@@ -580,6 +587,17 @@ func (pusher *TaskUpdatePusher) Close() {
 	log.Info("TaskUpdatePusher: shutting down, waiting for shutdown to complete.")
 	pusher.closableCloseAndWait()
 	log.Info("TaskUpdatePusher: shutdown complete.")
+}
+
+// Kick forces a task update push.
+func (pusher *TaskUpdatePusher) Kick() {
+	log.Info("TaskUpdatePusher: forcing a push")
+
+	select {
+	case pusher.kickChan <- true:
+	default:
+		log.Debug("TaskUpdatePusher: push already queued, ignoring this call")
+	}
 }
 
 // Go starts the goroutine.
@@ -600,8 +618,20 @@ func (pusher *TaskUpdatePusher) Go() {
 		timerChan := Timer("TaskUpdatePusherTimer",
 			taskQueueInspectPeriod, 0, &pusher.closable)
 
-		for range timerChan {
-			// log.Info("TaskUpdatePusher: checking task update queue")
+		var isForcedPush bool
+		for {
+			isForcedPush = false
+			select {
+			case _, ok := <-timerChan:
+				if !ok {
+					log.Debug("TaskUpdatePusher: stopping loop")
+					return
+				}
+			case <-pusher.kickChan:
+				isForcedPush = true
+			}
+
+			// log.Debug("TaskUpdatePusher: checking task update queue")
 			updateCount, err := Count(queue)
 			if err != nil {
 				log.WithError(err).Warning("TaskUpdatePusher: error checking queue")
@@ -613,7 +643,7 @@ func (pusher *TaskUpdatePusher) Go() {
 				(updateCount >= pusher.config.TaskUpdatePushMaxCount ||
 					timeSinceLastPush >= pusher.config.TaskUpdatePushMaxInterval)
 			mayEmptyPush := timeSinceLastPush >= pusher.config.CancelTaskFetchInterval
-			if !mayRegularPush && !mayEmptyPush {
+			if !isForcedPush && !mayRegularPush && !mayEmptyPush {
 				continue
 			}
 
@@ -621,7 +651,7 @@ func (pusher *TaskUpdatePusher) Go() {
 			if updateCount > 0 {
 				log.WithField("update_count", updateCount).Debug("TaskUpdatePusher: updates are queued")
 			}
-			if err := pusher.push(db); err != nil {
+			if err := pusher.push(db, updateCount); err != nil {
 				log.WithError(err).Warning("TaskUpdatePusher: unable to push to upstream Flamenco Server")
 				continue
 			}
@@ -638,7 +668,7 @@ func (pusher *TaskUpdatePusher) Go() {
  *
  * NOTE: this function assumes there is only one thread/process doing the pushing,
  * and that we can safely leave documents in the queue until they have been pushed. */
-func (pusher *TaskUpdatePusher) push(db *mgo.Database) error {
+func (pusher *TaskUpdatePusher) push(db *mgo.Database, totalQueueSize int) error {
 	var result []TaskUpdate
 
 	queue := db.C(queueMgoCollection)
@@ -651,6 +681,7 @@ func (pusher *TaskUpdatePusher) push(db *mgo.Database) error {
 
 	logFields := log.Fields{
 		"updates_to_push": len(result),
+		"updates_queued":  totalQueueSize,
 	}
 	// Perform the sending.
 	if len(result) > 0 {
@@ -677,7 +708,10 @@ func (pusher *TaskUpdatePusher) push(db *mgo.Database) error {
 	}
 	errCancel := pusher.handleIncomingCancelRequests(response.CancelTasksIds, db)
 
-	go pusher.taskLogUploader.QueueAll(response.UploadTaskFileQueue)
+	// This makes it possible to test without the Task Log Uploader.
+	if pusher.taskLogUploader != nil {
+		go pusher.taskLogUploader.QueueAll(response.UploadTaskFileQueue)
+	}
 
 	if errUnqueue != nil {
 		log.WithFields(logFields).WithError(errUnqueue).Warning(

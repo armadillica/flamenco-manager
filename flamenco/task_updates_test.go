@@ -47,7 +47,8 @@ func (s *TaskUpdatesTestSuite) SetUpTest(c *check.C) {
 	s.taskLogUploader = CreateTaskLogUploader(&s.config, s.upstream)
 	s.blacklist = CreateWorkerBlackList(&s.config, s.session)
 	s.queue = CreateTaskUpdateQueue(&s.config, s.blacklist)
-	s.sched = CreateTaskScheduler(&s.config, s.upstream, s.session, s.queue, s.blacklist)
+	pusher := CreateTaskUpdatePusher(&s.config, s.upstream, s.session, s.queue, nil)
+	s.sched = CreateTaskScheduler(&s.config, s.upstream, s.session, s.queue, s.blacklist, pusher)
 }
 
 func (s *TaskUpdatesTestSuite) TearDownTest(c *check.C) {
@@ -229,7 +230,8 @@ func (s *TaskUpdatesTestSuite) TestTaskRescheduling(c *check.C) {
 	assert.Nil(c, StoreNewWorker(&worker1, s.db))
 	assert.Nil(c, StoreNewWorker(&worker2, s.db))
 
-	taskSched := CreateTaskScheduler(&s.config, s.upstream, s.session, s.queue, s.blacklist)
+	pusher := CreateTaskUpdatePusher(&s.config, s.upstream, s.session, s.queue, nil)
+	taskSched := CreateTaskScheduler(&s.config, s.upstream, s.session, s.queue, s.blacklist, pusher)
 	taskSched.assignTaskToWorker(&task1, &worker1, s.db, log.WithField("unittest", "TestTaskRescheduling"))
 
 	// Because of this update, the task should be assigned to worker 1.
