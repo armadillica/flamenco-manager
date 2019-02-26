@@ -1,6 +1,6 @@
 {{define "vartable"}}
 <!-- Source: https://codepen.io/ashblue/pen/mCtuA -->
-<span class='table-add glyphicon glyphicon-plus' title='Add another variable'></span>
+<span class='table-add' title='Add another variable'>+</span>
 <table class='table'>
     <tr>
         <th data-key='name'>Name</th>
@@ -16,18 +16,18 @@
         <td contenteditable='true'>{{$var.windows}}</td>
         <td contenteditable='true'>{{$var.darwin}}</td>
         <td>
-            <span class='table-remove glyphicon glyphicon-remove' title='Remove this variable'></span>
+            <span class='table-remove' title='Remove this variable'>×</span>
         </td>
     </tr>
     {{end}}
     <!-- This is our clonable table line -->
-    <tr class='hide'>
+    <tr class='d-none'>
         <td contenteditable='true'>variable-name</td>
         <td contenteditable='true'>value-on-linux</td>
         <td contenteditable='true'>value-on-windows</td>
         <td contenteditable='true'>value-on-macos</td>
         <td>
-            <span class='table-remove glyphicon glyphicon-remove' title='Remove this variable'></span>
+            <span class='table-remove' title='Remove this variable'>×</span>
         </td>
     </tr>
 </table>

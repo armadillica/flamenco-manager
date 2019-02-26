@@ -66,6 +66,15 @@ function saveDataTables() {
     var variables = $('#variables-table').dataTable();
     var path_variables = $('#path-variables-table').dataTable();
 
+    // When adding a new variable its name is set to "variable-name".
+    // If this is still there, the user probably clicked the '+' by accident
+    // and didn't remove the example variable.
+    let removeDefault = function(someVarInfo) {
+        return someVarInfo.name != "variable-name";
+    }
+    variables = variables.filter(removeDefault);
+    path_variables = path_variables.filter(removeDefault);
+
     $('#variables-field').val(JSON.stringify(variables));
     $('#path-variables-field').val(JSON.stringify(path_variables));
 
@@ -80,7 +89,7 @@ $(document).ready(function() {
     // Source: https://codepen.io/ashblue/pen/mCtuA
     $('.table-add').click(function() {
         var $parent = $(this).closest('.table-editable');
-        var $clone = $parent.find('tr.hide').clone(true).removeClass('hide table-line');
+        var $clone = $parent.find('tr.d-none').clone(true).removeClass('d-none table-line');
         $parent.find('table').append($clone);
     });
 

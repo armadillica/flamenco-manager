@@ -97,22 +97,24 @@ h3 {
     color: #700;
     cursor: pointer;
     position: absolute;
-    top: 8px;
+    top: 0;
     right: 0;
+    font-size: xx-large;
 }
 .table-remove:hover {
     color: #f00;
 }
 
 .table-add {
-    color: #070;
+    color: #03ff03;
     cursor: pointer;
     position: absolute;
-    top: 8px;
+    top: 0;
     right: 0;
+    font-size: xx-large;
 }
 .table-add:hover {
-    color: #0b0;
+    color: #68ff68;
 }
 
 .table-editable td:focus {
