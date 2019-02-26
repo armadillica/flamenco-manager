@@ -7,10 +7,10 @@ source _version.sh
 echo "Building into $(pwd)"
 
 # Empty -> build & package for all operating systems.
-# Non-empty -> build only for this OS, don't package.
+# Non-empty -> build & package only for this OS.
 TARGET="$1"
 if [ ! -z "$TARGET" ]; then
-    echo "Only building for $TARGET, not packaging."
+    echo "Only building for $TARGET"
 fi
 
 if [ -z "$GOPATH" ]; then
@@ -63,11 +63,6 @@ if [ -z "$TARGET" -o "$TARGET" = "linux"   ]; then build linux  amd64       ; fi
 if [ -z "$TARGET" -o "$TARGET" = "windows" ]; then build windows amd64 .exe ; fi
 if [ -z "$TARGET" -o "$TARGET" = "darwin"  ]; then build darwin  amd64      ; fi
 EOT
-
-if [ ! -z "$TARGET" ]; then
-    echo "Done building Flamenco Manager for $TARGET"
-    exit 0
-fi
 
 # Package together with the static files
 PREFIX="flamenco-manager-$FLAMENCO_VERSION"
