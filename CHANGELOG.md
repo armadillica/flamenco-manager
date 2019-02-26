@@ -21,6 +21,9 @@ Changelog for Flamenco Manager
 - Offline workers can now be automatically removed after not being seen in a confgurable
   duration (see `worker_cleanup_max_age`). This can be extended to timed-out workers by
   setting the `worker_cleanup_status` setting.
+- The Manager's name can now be set using the `manager_name` setting. This is purely
+  cosmetic, and is shown in the dashboard. This makes it easier to tell multiple
+  Managers apart.
 
 
 ## Version 2.3 (2019-01-10)
