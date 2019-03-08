@@ -109,6 +109,61 @@ that should be shown as 'latest image' in the dashboard.
 - `422 Unprocessable Entity`: The request did not contain any image paths.
 
 
+## Shaman endpoints
+
+These endpoints are exposed by the Shaman server, integrated in Flamenco Manager.
+Checksums are always SHA256 sums.
+
+### `/files/{checksum}/{filesize}`
+
+Expects a JWT-authenticated `POST` or `OPTIONS`.
+
+The `POST` request allows a client to upload a new file to the file store.
+The following headers can be included:
+
+- `X-Shaman-Original-Filename`: purely used for logging the original filename
+  in the server logs. Can be used to trace who uploaded which file with which
+  checksum.
+- `X-Shaman-Can-Defer-Upload`: when set to `true` the Shaman will send a
+  `208 Already Reported` response and close the connection, without waiting for
+  the request body to be uploaded completely, when someone else is currently
+  uploading a file with the same checksum and the same filesize.
+
+When someone else finishes uploading a file with the same checksum and the same
+filesize, the Shaman will send a `208 Already Reported` response and close the
+connection, without waiting for the request body to be uploaded completely.
+
+The `OPTIONS` request will return one of the following statuses:
+
+- `420 Enhance Your Calm`: someone is currently uploading this file.
+- `200 OK`: this file is stored.
+- `404 Not Found`: this file is unknown.
+
+Use of the `OPTIONS` request is discouraged in favour of sending a Checkout
+Definition File to mass-check multiple files in one request.
+
+### `/checkout/requirements` and `/checkout/create/{checkoutID}`
+
+Expect a JWT-authenticated `POST` request with `Content-Type: text/plain` and a
+Checkout Definition File in the body. This file consists of a line for each file
+desired in the checkout, as follows:
+
+    {SHA256-sum} {filesize in bytes} {path of the file in the checkout}
+
+The `/checkout/requirements` endpoint will respond by repeating those lines of
+the Checkout Definition File that require action by the client, prefixed with
+the current status:
+
+- `file-unknown`: the file is unknown to the server and should be uploaded.
+- `already-uploading`: the file is currently being uploaded by another client.
+  This client can thus defer uploading this file and start with another file.
+
+The `/checkout/create/{checkoutID}` requires that all files are known to the
+Shaman, and actually creates a checkout with the given ID by symlinking the
+requested files to the requested paths. The response contains the subdirectory
+of the configured checkout directory that containing the requested checkout.
+
+
 ## Used on Flamenco Server
 
 To be documented.
