@@ -268,6 +268,7 @@ func shutdown(signum os.Signal) {
 
 var cliArgs struct {
 	verbose    bool
+	quiet      bool
 	debug      bool
 	jsonLog    bool
 	cleanSlate bool
@@ -281,7 +282,8 @@ var cliArgs struct {
 }
 
 func parseCliArgs() {
-	flag.BoolVar(&cliArgs.verbose, "verbose", false, "Enable info-level logging")
+	flag.BoolVar(&cliArgs.verbose, "verbose", false, "Ignored as this is now the default")
+	flag.BoolVar(&cliArgs.quiet, "quiet", false, "Disable info-level logging")
 	flag.BoolVar(&cliArgs.debug, "debug", false, "Enable debug-level logging")
 	flag.BoolVar(&cliArgs.jsonLog, "json", false, "Log in JSON format")
 	flag.BoolVar(&cliArgs.cleanSlate, "cleanslate", false, "Start with a clean slate; erases all tasks from the local MongoDB")
@@ -305,11 +307,11 @@ func configLogging() {
 	}
 
 	// Only log the warning severity or above.
-	level := log.WarnLevel
+	level := log.InfoLevel
 	if cliArgs.debug {
 		level = log.DebugLevel
-	} else if cliArgs.verbose {
-		level = log.InfoLevel
+	} else if cliArgs.quiet {
+		level = log.WarnLevel
 	}
 	log.SetLevel(level)
 }
@@ -429,6 +431,11 @@ func showStartup() {
 	defer log.SetLevel(oldLevel)
 	log.SetLevel(log.InfoLevel)
 	log.WithField("version", applicationVersion).Info("Starting Flamenco Manager")
+
+	if cliArgs.verbose {
+		log.Warning("The -verbose CLI argument is deprecated. INFO-level logging is " +
+			"enabled by default; use -quiet to only see warnings and errors.")
+	}
 }
 
 func showFlamencoServerURL() {
