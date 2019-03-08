@@ -1,0 +1,18 @@
+import urllib.parse
+import requests.adapters
+
+
+def session(token: str):
+    session = requests.session()
+    session.headers['Authorization'] = f'Bearer {token}'
+    session.headers['Content-Type'] = 'text/plain'
+
+    http_adapter = requests.adapters.HTTPAdapter(max_retries=5)
+    session.mount('https://', http_adapter)
+    session.mount('http://', http_adapter)
+
+    return session
+
+
+def normalise_url(url: str) -> str:
+    return urllib.parse.urlunparse(urllib.parse.urlparse(url))

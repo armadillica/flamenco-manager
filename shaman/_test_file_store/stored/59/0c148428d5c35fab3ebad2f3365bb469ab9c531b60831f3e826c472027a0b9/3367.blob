@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+
+import argparse
+import functools
+import logging
+from pathlib import Path
+import multiprocessing as mp
+import signal
+
+import filesystemstuff
+
+logging.basicConfig(
+    format='%(asctime)-15s %(levelname)8s %(name)s %(message)s',
+    level=logging.INFO)
+
+interrupt_value = mp.Value('b')
+interrupt_value.value = 0
+
+
+def replace_from_path(filestore: Path, root: Path):
+    if interrupt_value.value:
+        log.error('Processing was aborted, not even starting %s', root)
+        return
+
+    log = logging.getLogger('replacer')
+    log.info('Feeding & replacing files in %s', root)
+
+    for filepath in filesystemstuff.find_files(root):
+        content_path, checksum = filesystemstuff.compute_cached_checksum(filepath)
+        filesize = content_path.stat().st_size
+
+        # Check to see if it's on the Shaman store
+        store_path = Path(checksum[:2], checksum[2:], '%d.blob' % filesize)
+        store_abspath = filestore / store_path
+
+        if store_abspath.exists():
+            log.info('Exists in STORE: %s', filepath)
+            log.debug('   unlink: %s', filepath)
+            filepath.unlink()
+        else:
+            log.info('INSERT         : %s', filepath)
+            store_abspath.parent.mkdir(parents=True, exist_ok=True)
+            log.debug('   move %s -> %s', content_path, store_abspath)
+            content_path.rename(store_abspath)
+            if content_path != filepath and filepath.exists():
+                # Otherwise we can't replace filepath with a symlink.
+                filepath.unlink()
+        log.debug('   symlink %s -> %s', store_abspath, filepath)
+        filepath.symlink_to(store_abspath)
+
+        if content_path != filepath and content_path.exists():
+            log.debug('   unlink: %s', content_path)
+            content_path.unlink()
+
+        if interrupt_value.value:
+            log.error('Processing was aborted, not finishing %s', root)
+            return
+
+
+def main():
+    log = logging.getLogger('main')
+    log.info('starting')
+
+    def interrupt_handler(signal, frame):
+        with interrupt_value.get_lock():
+            if interrupt_value.value == 0:
+                print('CTRL+C received, will shut down soon')
+            interrupt_value.value += 1
+
+    signal.signal(signal.SIGINT, interrupt_handler)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filestore', type=Path)
+    parser.add_argument('replacement_target', type=Path, nargs='+')
+    cli_args = parser.parse_args()
+
+    filestore = cli_args.filestore / 'stored'
+    assert filestore.exists(), ('%s must exist' % filestore)
+
+    futures = []
+    with mp.Pool() as pool:
+        for path in cli_args.replacement_target:
+            if interrupt_value.value:
+                break
+
+            log.info('queueing %s', path)
+            futures.append(pool.apply_async(
+                replace_from_path, (filestore, path.resolve())
+            ))
+        pool.close()
+
+        for path, future in zip(cli_args.replacement_target, futures):
+            try:
+                future.get()
+            except:
+                log.exception('task for path %s was not successful, aborting', path)
+                interrupt_value.value += 1
+
+    if interrupt_value.value:
+        log.error('stopped after abort/error')
+        raise SystemExit(47)
+
+    log.info('done')
+
+if __name__ == '__main__':
+    main()

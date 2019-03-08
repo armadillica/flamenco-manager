@@ -21,6 +21,7 @@ import (
 
 	"github.com/armadillica/flamenco-manager/flamenco"
 	"github.com/armadillica/flamenco-manager/flamenco/bundledmongo"
+	"github.com/armadillica/flamenco-manager/shaman"
 	"github.com/armadillica/flamenco-manager/websetup"
 	"github.com/gorilla/mux"
 	"gitlab.com/blender-institute/gossdp"
@@ -48,6 +49,8 @@ var (
 	upstream          *flamenco.UpstreamConnection
 	upstreamNotifier  *flamenco.UpstreamNotifier
 	workerRemover     *flamenco.WorkerRemover
+
+	shamanServer *shaman.Server
 )
 
 var shutdownComplete chan struct{}
@@ -227,6 +230,9 @@ func shutdown(signum os.Signal) {
 			log.Warning("HTTP server was not even started yet")
 		}
 
+		if shamanServer != nil {
+			shamanServer.Close()
+		}
 		if timeoutChecker != nil {
 			timeoutChecker.Close()
 		}
@@ -370,12 +376,14 @@ func normalMode() (*mux.Router, error) {
 	dashboard := flamenco.CreateDashboard(&config, session, sleeper, blacklist, applicationVersion)
 	latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
 	workerRemover = flamenco.CreateWorkerRemover(&config, session, taskScheduler)
+	shamanServer = shaman.NewServer(config.Shaman)
 
 	// Set up our own HTTP server
 	workerAuthenticator := auth.NewBasicAuthenticator("Flamenco Manager", workerSecret)
 	router := mux.NewRouter().StrictSlash(true)
 	dashboard.AddRoutes(router)
 	latestImageSystem.AddRoutes(router, workerAuthenticator)
+	shamanServer.AddRoutes(router)
 	router.HandleFunc("/register-worker", httpRegisterWorker).Methods("POST")
 	router.HandleFunc("/task", workerAuthenticator.Wrap(httpScheduleTask)).Methods("POST")
 	router.HandleFunc("/tasks/{task-id}/update", workerAuthenticator.Wrap(httpTaskUpdate)).Methods("POST")
@@ -401,6 +409,7 @@ func normalMode() (*mux.Router, error) {
 	if workerRemover != nil {
 		workerRemover.Go()
 	}
+	shamanServer.Go()
 
 	// Make ourselves discoverable through SSDP.
 	if config.SSDPDiscovery {

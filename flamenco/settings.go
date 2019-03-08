@@ -13,6 +13,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	shamanconfig "github.com/armadillica/flamenco-manager/shaman/config"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -102,6 +103,9 @@ type Conf struct {
 	SSDPDeviceUUID string `yaml:"ssdp_device_uuid"`
 
 	TestTasks TestTasks `yaml:"test_tasks"`
+
+	// Shaman configuration settings.
+	Shaman shamanconfig.Config `yaml:"shaman"`
 }
 
 // GetConf parses flamenco-manager.yaml and returns its contents as a Conf object.
@@ -169,6 +173,17 @@ func LoadConf(filename string) (Conf, error) {
 			BlenderRender: BlenderRenderConfig{
 				JobStorage:   "{job_storage}/test-jobs",
 				RenderOutput: "{render}/test-renders",
+			},
+		},
+
+		Shaman: shamanconfig.Config{
+			FileStorePath: "../shaman-file-store",
+			CheckoutPath:  "../shaman-checkout",
+
+			GarbageCollect: shamanconfig.GarbageCollect{
+				Period:            0,
+				MaxAge:            31 * 24 * time.Hour,
+				ExtraCheckoutDirs: []string{},
 			},
 		},
 	}

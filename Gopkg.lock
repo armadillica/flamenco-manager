@@ -18,6 +18,14 @@
   version = "v1.1.1"
 
 [[projects]]
+  digest = "1:6098222470fe0172157ce9bbef5d2200df4edde17ee649c5d6e48330e4afa4c6"
+  name = "github.com/dgrijalva/jwt-go"
+  packages = ["."]
+  pruneopts = ""
+  revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
+  version = "v3.2.0"
+
+[[projects]]
   digest = "1:eb53021a8aa3f599d29c7102e65026242bdedce998a54837dc67f14b6a97c5fd"
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
@@ -26,20 +34,12 @@
   version = "v1.4.7"
 
 [[projects]]
-  digest = "1:dbbeb8ddb0be949954c8157ee8439c2adfd8dc1c9510eb44a6e58cb68c3dce28"
-  name = "github.com/gorilla/context"
-  packages = ["."]
-  pruneopts = ""
-  revision = "08b5f424b9271eedf6f9f0ce86cb9396ed337a42"
-  version = "v1.1.1"
-
-[[projects]]
-  digest = "1:c2c8666b4836c81a1d247bdf21c6a6fc1ab586538ab56f74437c2e0df5c375e1"
+  digest = "1:a3c01bbe8766cbce019cdb900aa51460a6f7bd4266a18d80722dc92297302bc3"
   name = "github.com/gorilla/mux"
   packages = ["."]
   pruneopts = ""
-  revision = "e3702bed27f0d39777b0b37b664b6280e8ef8fbf"
-  version = "v1.6.2"
+  revision = "a7962380ca08b5a188038c69871b8d3fbdf31e89"
+  version = "v1.7.0"
 
 [[projects]]
   branch = "master"
@@ -82,12 +82,12 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:9d57e200ef5ccc4217fe0a34287308bac652435e7c6513f6263e0493d2245c56"
+  digest = "1:9a3c631555e0351fdc4e696577bb63afd90c399d782a8462dba9d100d7021db3"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   pruneopts = ""
-  revision = "bcd833dfe83d3cebad139e4a29ed79cb2318bf95"
-  version = "v1.2.0"
+  revision = "e1e72e9de974bd926e5c56f83753fba2df402ce5"
+  version = "v1.3.0"
 
 [[projects]]
   digest = "1:c587772fb8ad29ad4db67575dad25ba17a51f072ff18a22b4f0257a4d9c24f75"
@@ -104,6 +104,23 @@
   packages = ["."]
   pruneopts = ""
   revision = "0fce4178969b53dec04e8927c31c36e9a6d9738d"
+
+[[projects]]
+  branch = "master"
+  digest = "1:1ad293073dcb87c9f4fc2df8bf0ad53bfa5d6d85e4e7a092cf0f3bd99e28a65d"
+  name = "gitlab.com/blender-institute/shaman"
+  packages = [
+    "auth",
+    "checkout",
+    "config",
+    "fileserver",
+    "filestore",
+    "hasher",
+    "httpserver",
+    "libshaman",
+  ]
+  pruneopts = ""
+  revision = "195ee4b02c715b9ec1936aa226f2cb10ea7fe32a"
 
 [[projects]]
   branch = "master"
@@ -185,12 +202,15 @@
   analyzer-version = 1
   input-imports = [
     "github.com/abbot/go-http-auth",
+    "github.com/dgrijalva/jwt-go",
     "github.com/fsnotify/fsnotify",
     "github.com/gorilla/mux",
     "github.com/kardianos/osext",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
     "gitlab.com/blender-institute/gossdp",
+    "gitlab.com/blender-institute/shaman/config",
+    "gitlab.com/blender-institute/shaman/libshaman",
     "golang.org/x/crypto/bcrypt",
     "gopkg.in/check.v1",
     "gopkg.in/jarcoal/httpmock.v1",
