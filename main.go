@@ -26,8 +26,9 @@ import (
 	"gitlab.com/blender-institute/gossdp"
 )
 
-const flamencoVersion = "2.4-dev6"
 const ssdpServiceType = "urn:flamenco:manager:0"
+
+var applicationVersion = "set-during-build"
 
 var (
 	blacklist         *flamenco.WorkerBlacklist
@@ -364,7 +365,7 @@ func normalMode() (*mux.Router, error) {
 	taskScheduler = flamenco.CreateTaskScheduler(&config, upstream, session, taskUpdateQueue, blacklist, taskUpdatePusher)
 	timeoutChecker = flamenco.CreateTimeoutChecker(&config, session, taskUpdateQueue, taskScheduler)
 	taskCleaner = flamenco.CreateTaskCleaner(&config, session)
-	dashboard := flamenco.CreateDashboard(&config, session, sleeper, blacklist, flamencoVersion)
+	dashboard := flamenco.CreateDashboard(&config, session, sleeper, blacklist, applicationVersion)
 	latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
 	workerRemover = flamenco.CreateWorkerRemover(&config, session, taskScheduler)
 
@@ -417,7 +418,7 @@ func setupMode() (*websetup.Routes, *mux.Router, error) {
 	configLogging()
 
 	router := mux.NewRouter().StrictSlash(true)
-	web, err := websetup.EnterSetupMode(&config, flamencoVersion, router)
+	web, err := websetup.EnterSetupMode(&config, applicationVersion, router)
 
 	return web, router, err
 }
@@ -427,7 +428,7 @@ func showStartup() {
 	oldLevel := log.GetLevel()
 	defer log.SetLevel(oldLevel)
 	log.SetLevel(log.InfoLevel)
-	log.WithField("version", flamencoVersion).Info("Starting Flamenco Manager")
+	log.WithField("version", applicationVersion).Info("Starting Flamenco Manager")
 }
 
 func showFlamencoServerURL() {
@@ -446,7 +447,7 @@ func showFlamencoServerURL() {
 func main() {
 	parseCliArgs()
 	if cliArgs.version {
-		fmt.Println(flamencoVersion)
+		fmt.Println(applicationVersion)
 		return
 	}
 
