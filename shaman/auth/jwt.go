@@ -53,7 +53,11 @@ func NewJWT(friendly bool) *JWT {
 }
 
 func (j *JWT) validate(tokenString string, logger *logrus.Entry) (*jwt.Token, error) {
-	// TODO(Sybren): support multiple signing algorithms.
+	keyStore := GetKeyStore()
+	return j.validateWithKeystore(tokenString, keyStore, logger)
+}
+
+func (j *JWT) validateWithKeystore(tokenString string, keyStore *KeyStore, logger *logrus.Entry) (*jwt.Token, error) {
 	signingMethod := jwt.SigningMethodES256
 
 	// Validate the token signature by checking against all our keys.
@@ -64,18 +68,23 @@ func (j *JWT) validate(tokenString string, logger *logrus.Entry) (*jwt.Token, er
 		}
 		headerAndPayload := strings.Join(parts[0:2], ".")
 		signature := parts[2]
-		keyStore := GetKeyStore()
+
+		if len(keyStore.TrustedPublicKeys) == 0 {
+			logger.Warning("no JWT public keys loaded, all tokens will be considered invalid")
+		}
 
 		var err error
 		for index, key := range keyStore.TrustedPublicKeys {
-			if err = signingMethod.Verify(headerAndPayload, signature, key); err == nil {
-				// We found a key for which the signature is valid.
-				return nil
-			}
-			logger.WithFields(logrus.Fields{
+			indexLogger := logger.WithFields(logrus.Fields{
 				"keyIndex":      index,
 				logrus.ErrorKey: err,
-			}).Debug("token signature invalid for this key")
+			})
+			if err = signingMethod.Verify(headerAndPayload, signature, key); err == nil {
+				// We found a key for which the signature is valid.
+				indexLogger.Debug("token signature valid for this key")
+				return nil
+			}
+			indexLogger.Debug("token signature invalid for this key")
 		}
 
 		logger.Info("token signature invalid")
@@ -171,6 +180,10 @@ func (j *JWT) WrapFunc(handlerFunc func(w http.ResponseWriter, r *http.Request))
 // GenerateToken generates a new JWT token.
 func (j *JWT) GenerateToken() (string, error) {
 	keyStore := GetKeyStore()
+	return j.generateToken(keyStore)
+}
+
+func (j *JWT) generateToken(keyStore *KeyStore) (string, error) {
 	if keyStore.MyPrivateKey == nil {
 		return "", errNoPrivateKeyLoaded
 	}

@@ -43,6 +43,8 @@ func CreateTestConfig() (conf Config, cleanup func()) {
 		FileStorePath: path.Join(tempDir, "file-store"),
 		CheckoutPath:  path.Join(tempDir, "checkout"),
 
+		JWTPublicKeysURL: "http://localhost:51234/api/flamenco/jwt/public-keys",
+
 		GarbageCollect: GarbageCollect{
 			Period:            8 * time.Hour,
 			MaxAge:            31 * 24 * time.Hour,

@@ -28,13 +28,23 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"path"
+	"runtime"
 	"testing"
 	"time"
 
+	shamanconfig "github.com/armadillica/flamenco-manager/shaman/config"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
+
+var testKeyPath string
+
+func init() {
+	_, myFilename, _, _ := runtime.Caller(0)
+	testKeyPath = path.Join(path.Dir(myFilename), "test-keys")
+}
 
 func TestNewJWT(t *testing.T) {
 	auther := NewJWT(false)
@@ -92,7 +102,7 @@ func TestGenerateKey(t *testing.T) {
 	assert.Empty(t, tokenString)
 
 	// After loading it should be fine, even without recreating the auther.
-	loadKeyStore("./test-keys", true)
+	loadKeyStore(shamanconfig.Config{}, testKeyPath, true)
 	tokenString, err = auther.GenerateToken()
 	assert.Nil(t, err)
 	assert.NotEmpty(t, tokenString)
@@ -110,7 +120,7 @@ func TestGenerateKey(t *testing.T) {
 
 func TestRequest(t *testing.T) {
 	auther := NewJWT(true)
-	loadKeyStore("./test-keys", true)
+	loadKeyStore(shamanconfig.Config{}, testKeyPath, true)
 
 	httpFuncCalled := false
 	expectedTokenString := ""
@@ -184,7 +194,7 @@ func TestRequest(t *testing.T) {
 func TestWrongTokens(t *testing.T) {
 	auther := NewJWT(true)
 	wrapped := auther.WrapFunc(httpPanic)
-	loadKeyStore("./test-keys", true)
+	loadKeyStore(shamanconfig.Config{}, "./test-keys", true)
 
 	// Generate a token with the wrong signing method.
 	tokenString := generateHMACToken()

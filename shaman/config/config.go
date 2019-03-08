@@ -25,12 +25,7 @@ package config
  */
 
 import (
-	"fmt"
-	"io/ioutil"
-	"os"
 	"time"
-
-	yaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -46,6 +41,9 @@ type Config struct {
 	FileStorePath string `yaml:"fileStorePath"`
 	CheckoutPath  string `yaml:"checkoutPath"`
 
+	JWTPublicKeysURL     string        `yaml:"jwtPublicKeysURL"`
+	DownloadKeysInterval time.Duration `yaml:"jwtPublicKeysDownloadInterval"`
+
 	GarbageCollect GarbageCollect `yaml:"garbageCollect"`
 }
 
@@ -57,39 +55,4 @@ type GarbageCollect struct {
 	MaxAge time.Duration `yaml:"maxAge"`
 	// Paths to check for symlinks before GC'ing files.
 	ExtraCheckoutDirs []string `yaml:"extraCheckoutPaths"`
-}
-
-// Load loads a config YAML file and returns its parsed content.
-func Load(filename string) (Config, error) {
-	if filename == "" {
-		filename = configFilename
-	}
-	logger := packageLogger.WithField("filename", filename)
-
-	config := Config{
-		FileStorePath: "../shaman-file-store",
-		CheckoutPath:  "../shaman-checkout",
-
-		GarbageCollect: GarbageCollect{
-			Period:            0,
-			MaxAge:            31 * 24 * time.Hour,
-			ExtraCheckoutDirs: []string{},
-		},
-	}
-
-	yamlFile, err := ioutil.ReadFile(filename)
-	if err != nil {
-		if os.IsNotExist(err) {
-			logger.Warning("config file not found, using defaults")
-			return config, nil
-		}
-		return config, err
-	}
-	logger.Info("loading config file")
-
-	if err := yaml.Unmarshal(yamlFile, &config); err != nil {
-		return config, fmt.Errorf("unmarshal: %v", err)
-	}
-
-	return config, nil
 }

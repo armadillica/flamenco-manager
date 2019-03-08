@@ -53,18 +53,18 @@ type Server struct {
 }
 
 // Load JWT authentication keys from ./jwtkeys
-func loadAuther() auth.Authenticator {
+func loadAuther(conf config.Config) auth.Authenticator {
 	wd, err := os.Getwd()
 	if err != nil {
 		logrus.WithError(err).Fatal("unable to get current working directory")
 	}
-	auth.LoadKeyStore(path.Join(wd, "jwtkeys"))
+	auth.LoadKeyStore(conf, path.Join(wd, "jwtkeys"))
 	return auth.NewJWT(true)
 }
 
 // NewServer creates a new Shaman server.
 func NewServer(conf config.Config) *Server {
-	auther := loadAuther()
+	auther := loadAuther(conf)
 	fileStore := filestore.New(conf)
 	checkoutMan := checkout.NewManager(conf, fileStore)
 	fileServer := fileserver.New(fileStore)
@@ -116,5 +116,6 @@ func (s *Server) Close() {
 	close(s.shutdownChan)
 	s.fileServer.Close()
 	s.checkoutMan.Close()
+	auth.CloseKeyStore()
 	s.wg.Wait()
 }

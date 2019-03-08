@@ -29,9 +29,12 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 
 	jwt "github.com/dgrijalva/jwt-go"
 )
@@ -42,7 +45,11 @@ func ReadPrivateKey(filePath string) *ecdsa.PrivateKey {
 
 	keyBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		logger.WithError(err).Info("unable to read private key")
+		level := logrus.WarnLevel
+		if os.IsNotExist(err) {
+			level = logrus.DebugLevel
+		}
+		logger.WithError(err).Log(level, "unable to read private key")
 		return nil
 	}
 
@@ -51,6 +58,7 @@ func ReadPrivateKey(filePath string) *ecdsa.PrivateKey {
 		logger.WithError(err).Error("unable to parse private key")
 		return nil
 	}
+	logger.Info("loaded JWT private key")
 
 	return key
 }
@@ -91,7 +99,7 @@ func ReadAllPublicKeys(keyDirectory string, mayLoadTestKeys bool) []*ecdsa.Publi
 		return keys
 	}
 	if len(keyPaths) == 0 {
-		logger.Warning("no public keys found")
+		logger.Debug("no public keys found")
 		return keys
 	}
 
@@ -107,7 +115,7 @@ func ReadAllPublicKeys(keyDirectory string, mayLoadTestKeys bool) []*ecdsa.Publi
 		keys = append(keys, keysInFile...)
 	}
 
-	logger.WithField("keyCount", len(keys)).Debug("loaded public keys")
+	logger.WithField("keyCount", len(keys)).Info("loaded JWT public keys")
 	return keys
 }
 

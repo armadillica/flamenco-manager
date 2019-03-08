@@ -1,4 +1,5 @@
 *.pem
+*.last-modified
 /db/
 /mongodb-logs/
 /vendor/

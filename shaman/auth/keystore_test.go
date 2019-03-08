@@ -25,13 +25,25 @@ package auth
  */
 
 import (
+	"io/ioutil"
+	"net/http"
+	"os"
+	"path"
 	"testing"
+	"time"
 
+	shamanconfig "github.com/armadillica/flamenco-manager/shaman/config"
 	"github.com/stretchr/testify/assert"
+	httpmock "gopkg.in/jarcoal/httpmock.v1"
 )
 
 func TestLoadKeyStoreNonExistant(t *testing.T) {
-	loadKeyStore("./non-existant-dir", true)
+	config, cleanup := shamanconfig.CreateTestConfig()
+	defer cleanup()
+
+	loadKeyStore(config, "./non-existant-dir", true)
+	defer CloseKeyStore()
+
 	assert.NotNil(t, globalKeyStore)
 	assert.Nil(t, globalKeyStore.MyPrivateKey)
 	assert.NotNil(t, globalKeyStore.TrustedPublicKeys)
@@ -39,8 +51,13 @@ func TestLoadKeyStoreNonExistant(t *testing.T) {
 }
 
 func TestLoadKeyStore(t *testing.T) {
+	config, cleanup := shamanconfig.CreateTestConfig()
+	defer cleanup()
+
 	// Test keys should be loaded.
-	loadKeyStore("./test-keys", true)
+	loadKeyStore(config, testKeyPath, true)
+	defer CloseKeyStore()
+
 	assert.NotNil(t, globalKeyStore)
 	assert.NotNil(t, globalKeyStore.MyPrivateKey)
 	assert.NotNil(t, globalKeyStore.TrustedPublicKeys)
@@ -49,7 +66,9 @@ func TestLoadKeyStore(t *testing.T) {
 	assert.Equal(t, 3, len(globalKeyStore.TrustedPublicKeys))
 
 	// Test keys should not be loaded.
-	LoadKeyStore("./test-keys")
+	LoadKeyStore(config, testKeyPath)
+	defer CloseKeyStore()
+
 	assert.NotNil(t, globalKeyStore)
 	assert.Nil(t, globalKeyStore.MyPrivateKey)
 	assert.NotNil(t, globalKeyStore.TrustedPublicKeys)
@@ -57,8 +76,12 @@ func TestLoadKeyStore(t *testing.T) {
 }
 
 func TestGetKeyStore(t *testing.T) {
+	config, cleanup := shamanconfig.CreateTestConfig()
+	defer cleanup()
+
 	// Test keys should be loaded.
-	loadKeyStore("./test-keys", true)
+	loadKeyStore(config, testKeyPath, true)
+	defer CloseKeyStore()
 
 	store := GetKeyStore()
 	assert.Equal(t, store.MyPrivateKey, globalKeyStore.MyPrivateKey)
@@ -70,4 +93,51 @@ func TestGetKeyStore(t *testing.T) {
 
 	assert.NotNil(t, store.MyPrivateKey)
 	assert.NotNil(t, store.TrustedPublicKeys)
+}
+
+func TestDownloadKeys(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	config, cleanup := shamanconfig.CreateTestConfig()
+	defer cleanup()
+
+	keyPath := path.Join(config.TestTempDir, "downloaded-public.pem")
+	lastModPath := path.Join(config.TestTempDir, "downloaded-public.last-modified")
+	defer os.Remove(keyPath)
+	defer os.Remove(lastModPath)
+
+	getRequestPerformed := make(chan struct{})
+	httpmock.RegisterResponder("GET", config.JWTPublicKeysURL,
+		func(req *http.Request) (*http.Response, error) {
+			defer close(getRequestPerformed)
+
+			resp := httpmock.NewStringResponse(200, "public-keys")
+			resp.Header.Set("Last-Modified", "je moeder")
+			return resp, nil
+		},
+	)
+
+	downloadKeysInitialWait = 10 * time.Millisecond
+	loadKeyStore(config, config.TestTempDir, true)
+	globalKeyStore.Go()
+
+	select {
+	case <-getRequestPerformed:
+	case <-time.After(250 * time.Millisecond):
+		assert.Fail(t, "GET request to public keys URL not performed within timeout")
+	}
+	CloseKeyStore()
+	assert.Nil(t, globalKeyStore)
+
+	// Check that the public keys have been saved successfully.
+	assert.FileExists(t, keyPath)
+	assert.FileExists(t, lastModPath)
+	keys, err := ioutil.ReadFile(keyPath)
+	assert.Nil(t, err)
+	assert.Equal(t, "public-keys", string(keys))
+
+	lastMod, err := ioutil.ReadFile(lastModPath)
+	assert.Nil(t, err)
+	assert.Equal(t, "je moeder", string(lastMod))
 }

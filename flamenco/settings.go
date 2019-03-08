@@ -44,6 +44,9 @@ import (
 const (
 	configFilename   = "flamenco-manager.yaml"
 	defaultServerURL = "https://cloud.blender.org/"
+
+	// relative to the Flamenco Server base URL:
+	jwtPublicKeysRelativeURL = "api/flamenco/jwt/public-keys"
 )
 
 var (
@@ -201,8 +204,9 @@ func LoadConf(filename string) (Conf, error) {
 		},
 
 		Shaman: shamanconfig.Config{
-			FileStorePath: "../shaman-file-store",
-			CheckoutPath:  "../shaman-checkout",
+			FileStorePath:        "../shaman-file-store",
+			CheckoutPath:         "../shaman-checkout",
+			DownloadKeysInterval: 1 * time.Hour,
 
 			GarbageCollect: shamanconfig.GarbageCollect{
 				Period:            0,
@@ -222,18 +226,7 @@ func LoadConf(filename string) (Conf, error) {
 		return c, fmt.Errorf("unmarshal: %v", err)
 	}
 
-	// Parse URL
-	if c.FlamencoStr == "" {
-		c.FlamencoStr = defaultServerURL
-	}
-	c.Flamenco, err = url.Parse(c.FlamencoStr)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"url":        c.FlamencoStr,
-			log.ErrorKey: err,
-		}).Error("bad Flamenco URL configured")
-	}
-
+	c.parseURLs()
 	c.checkMode(c.Mode)
 	c.checkDatabase()
 
@@ -386,6 +379,31 @@ func (c *Conf) checkMode(mode string) {
 			"valid_values":  keys,
 			"current_value": mode,
 		}).Fatal("bad value for 'mode' configuration parameter")
+	}
+}
+
+func (c *Conf) parseURLs() {
+	var err error
+
+	if c.FlamencoStr == "" {
+		c.FlamencoStr = defaultServerURL
+	}
+	c.Flamenco, err = url.Parse(c.FlamencoStr)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"url":        c.FlamencoStr,
+			log.ErrorKey: err,
+		}).Error("bad Flamenco URL configured")
+		return
+	}
+
+	if jwtURL, err := c.Flamenco.Parse(jwtPublicKeysRelativeURL); err != nil {
+		log.WithFields(log.Fields{
+			"url":        c.Flamenco.String(),
+			log.ErrorKey: err,
+		}).Error("unable to construct URL to get JWT public keys")
+	} else {
+		c.Shaman.JWTPublicKeysURL = jwtURL.String()
 	}
 }
 
