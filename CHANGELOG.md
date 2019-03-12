@@ -24,6 +24,7 @@ Changelog for Flamenco Manager
 - The Manager's name can now be set using the `manager_name` setting. This is purely
   cosmetic, and is shown in the dashboard. This makes it easier to tell multiple
   Managers apart.
+- Embedded Shaman file storage manager. See `shaman/README.md` for more information.
 
 
 ## Version 2.3 (2019-01-10)
