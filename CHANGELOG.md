@@ -3,6 +3,7 @@ Changelog for Flamenco Manager
 
 ## Version 2.4 (in development)
 
+- Relicensed from GPLv3 to MIT license.
 - When the Server asks for a log file that does not exist, just create a log file that
   states it does not exist, and send that. This makes the Server stop asking us for that
   file over and over again.
