@@ -1,6 +1,6 @@
 OUT := flamenco-manager
 PKG := github.com/armadillica/flamenco-manager
-VERSION := $(shell git describe --always --long --dirty)
+VERSION := $(shell git describe --always --dirty)
 PKG_LIST := $(shell go list ${PKG}/... | grep -v /vendor/)
 STATIC_OUT := ${OUT}-static-${VERSION}
 PACKAGE_PATH := dist/${OUT}-${VERSION}
