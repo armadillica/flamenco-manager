@@ -106,7 +106,8 @@ deploy: static
 	@echo "======== Deploying onto ${DEPLOYHOST}"
 	${SSH} ${DEPLOYHOST} -t "sudo systemctl stop ${SERVICENAME}"
 	rsync -e "${SSH}" -va ${STATIC_OUT} ${DEPLOYHOST}:${DEPLOYPATH}/${OUT} --delete-after
-	rsync -e "${SSH}" -va *.md templates static ${DEPLOYHOST}:${DEPLOYPATH}/ --delete-after
+	rsync -e "${SSH}" -va *.md templates static --exclude static/latest-image.jpg ${DEPLOYHOST}:${DEPLOYPATH}/ --delete-after
+	rsync -e "${SSH}" -va static/latest-image.jpg ${DEPLOYHOST}:${DEPLOYPATH}/static --ignore-existing --delete-after
 	${SSH} ${DEPLOYHOST} -t "sudo systemctl start ${SERVICENAME}"
 
 publish_online: package
