@@ -29,8 +29,8 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/sirupsen/logrus"
 	"github.com/armadillica/flamenco-manager/shaman/config"
+	"github.com/sirupsen/logrus"
 )
 
 // Store represents the default Shaman file store.

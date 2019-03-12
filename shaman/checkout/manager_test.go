@@ -31,9 +31,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/armadillica/flamenco-manager/shaman/config"
 	"github.com/armadillica/flamenco-manager/shaman/filestore"
+	"github.com/stretchr/testify/assert"
 )
 
 func createTestManager() (*Manager, func()) {

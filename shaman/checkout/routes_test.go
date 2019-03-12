@@ -33,11 +33,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/armadillica/flamenco-manager/shaman/filestore"
+	"github.com/armadillica/flamenco-manager/shaman/httpserver"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/armadillica/flamenco-manager/shaman/filestore"
-	"github.com/armadillica/flamenco-manager/shaman/httpserver"
 )
 
 func TestReportRequirements(t *testing.T) {

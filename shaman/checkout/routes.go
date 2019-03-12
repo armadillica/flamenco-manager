@@ -32,9 +32,9 @@ import (
 	"github.com/armadillica/flamenco-manager/shaman/filestore"
 	"github.com/armadillica/flamenco-manager/shaman/httpserver"
 
+	"github.com/armadillica/flamenco-manager/shaman/auth"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
-	"github.com/armadillica/flamenco-manager/shaman/auth"
 )
 
 // Responses for each line of a checkout definition file.

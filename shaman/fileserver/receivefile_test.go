@@ -34,9 +34,9 @@ import (
 	"github.com/armadillica/flamenco-manager/shaman/hasher"
 	"github.com/armadillica/flamenco-manager/shaman/httpserver"
 
+	"github.com/armadillica/flamenco-manager/shaman/filestore"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
-	"github.com/armadillica/flamenco-manager/shaman/filestore"
 )
 
 func TestStoreFile(t *testing.T) {

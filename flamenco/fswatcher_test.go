@@ -34,7 +34,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	check "gopkg.in/check.v1"
-	"gopkg.in/jarcoal/httpmock.v1"
+	httpmock "gopkg.in/jarcoal/httpmock.v1"
 )
 
 type LISQueueingTestSuite struct {

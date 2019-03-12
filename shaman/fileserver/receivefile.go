@@ -30,11 +30,11 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/sirupsen/logrus"
 	"github.com/armadillica/flamenco-manager/shaman/auth"
 	"github.com/armadillica/flamenco-manager/shaman/filestore"
 	"github.com/armadillica/flamenco-manager/shaman/hasher"
 	"github.com/armadillica/flamenco-manager/shaman/httpserver"
+	"github.com/sirupsen/logrus"
 )
 
 // receiveFile streams a file from a HTTP request to disk.

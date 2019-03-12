@@ -30,10 +30,10 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/gorilla/mux"
-	"github.com/stretchr/testify/assert"
 	"github.com/armadillica/flamenco-manager/shaman/config"
 	"github.com/armadillica/flamenco-manager/shaman/filestore"
+	"github.com/gorilla/mux"
+	"github.com/stretchr/testify/assert"
 )
 
 func createTestServer() (server *FileServer, cleanup func()) {
