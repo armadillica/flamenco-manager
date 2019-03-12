@@ -203,8 +203,8 @@ func (wbl *WorkerBlacklist) RemoveLine(workerID bson.ObjectId, jobID bson.Object
 		"job_id":    jobID,
 		"task_type": taskType,
 	})
-	if err != nil && err != mgo.ErrNotFound {
-		logger.Warning("unable to un-blacklist worker")
+	if err != nil {
+		logger.WithError(err).Warning("unable to un-blacklist worker")
 		return err
 	}
 

@@ -304,7 +304,7 @@ Vue.component('blacklist-row', {
         },
         forget_blacklist_entry() {
             console.log("FORGET ", this.worker._id, this.listitem.job_id, this.listitem.task_type);
-            workerAction(worker._id, {
+            workerAction(this.worker._id, {
                 action: 'forget-blacklist-line',
                 job_id: this.listitem.job_id,
                 task_type: this.listitem.task_type,
