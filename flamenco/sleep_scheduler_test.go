@@ -36,18 +36,23 @@ import (
 )
 
 type SleepSchedulerTestSuite struct {
-	ss     *SleepScheduler
-	db     *mgo.Database
-	worker Worker
+	ss      *SleepScheduler
+	config  Conf
+	session *mgo.Session
+	db      *mgo.Database
+	worker  Worker
 }
 
 var _ = check.Suite(&SleepSchedulerTestSuite{})
 
+func (s *SleepSchedulerTestSuite) SetUpSuite(c *check.C) {
+	s.config = GetTestConfig()
+	s.session = MongoSession(&s.config)
+	s.db = s.session.DB("")
+}
+
 func (s *SleepSchedulerTestSuite) SetUpTest(c *check.C) {
-	config := GetTestConfig()
-	session := MongoSession(&config)
-	s.db = session.DB("")
-	s.ss = CreateSleepScheduler(session)
+	s.ss = CreateSleepScheduler(s.session)
 	s.worker = Worker{
 		Platform:           "linux",
 		SupportedTaskTypes: []string{"sleeping"},

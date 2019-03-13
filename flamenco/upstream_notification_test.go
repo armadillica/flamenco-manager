@@ -48,13 +48,14 @@ type UpstreamNotificationTestSuite struct {
 
 var _ = check.Suite(&UpstreamNotificationTestSuite{})
 
-func (s *UpstreamNotificationTestSuite) SetUpTest(c *check.C) {
-	httpmock.Activate()
-
+func (s *UpstreamNotificationTestSuite) SetUpSuite(c *check.C) {
 	s.config = GetTestConfig()
 	s.session = MongoSession(&s.config)
 	s.db = s.session.DB("")
-	s.db.DropDatabase()
+}
+
+func (s *UpstreamNotificationTestSuite) SetUpTest(c *check.C) {
+	httpmock.Activate()
 
 	s.upstream = ConnectUpstream(&s.config, s.session)
 

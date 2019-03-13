@@ -45,6 +45,8 @@ type SchedulerTestSuite struct {
 	workerLnx Worker
 	workerWin Worker
 
+	config    Conf
+	session   *mgo.Session
 	db        *mgo.Database
 	upstream  *UpstreamConnection
 	sched     *TaskScheduler
@@ -65,18 +67,20 @@ func parseJSON(c *check.C, respRec *httptest.ResponseRecorder, expectedStatus in
 	}
 }
 
+func (s *SchedulerTestSuite) SetUpSuite(c *check.C) {
+	s.config = GetTestConfig()
+	s.session = MongoSession(&s.config)
+	s.db = s.session.DB("")
+}
+
 func (s *SchedulerTestSuite) SetUpTest(c *check.C) {
 	httpmock.Activate()
 
-	config := GetTestConfig()
-	session := MongoSession(&config)
-	s.db = session.DB("")
-
-	s.upstream = ConnectUpstream(&config, session)
-	s.blacklist = CreateWorkerBlackList(&config, session)
-	s.queue = CreateTaskUpdateQueue(&config, s.blacklist)
-	pusher := CreateTaskUpdatePusher(&config, s.upstream, session, s.queue, nil)
-	s.sched = CreateTaskScheduler(&config, s.upstream, session, s.queue, s.blacklist, pusher)
+	s.upstream = ConnectUpstream(&s.config, s.session)
+	s.blacklist = CreateWorkerBlackList(&s.config, s.session)
+	s.queue = CreateTaskUpdateQueue(&s.config, s.blacklist)
+	pusher := CreateTaskUpdatePusher(&s.config, s.upstream, s.session, s.queue, nil)
+	s.sched = CreateTaskScheduler(&s.config, s.upstream, s.session, s.queue, s.blacklist, pusher)
 
 	// Store workers in DB, on purpose in the opposite order as the tasks.
 	s.workerLnx = Worker{

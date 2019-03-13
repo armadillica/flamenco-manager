@@ -44,7 +44,7 @@ import (
 )
 
 // Gives the system some time to start up (and open listening HTTP port)
-const startupNotificationInitialDelay = 500 * time.Millisecond
+const startupNotificationInitialDelay = 100 * time.Millisecond
 
 // Duration between consecutive retries of sending the startup notification.
 const startupNotificationRetry = 30 * time.Second

@@ -53,16 +53,18 @@ type TaskLogUploaderTestSuite struct {
 
 var _ = check.Suite(&TaskLogUploaderTestSuite{})
 
+func (s *TaskLogUploaderTestSuite) SetUpSuite(c *check.C) {
+	s.config = GetTestConfig()
+	s.session = MongoSession(&s.config)
+}
+
 func (s *TaskLogUploaderTestSuite) SetUpTest(c *check.C) {
 	httpmock.Activate()
-
-	s.config = GetTestConfig()
 
 	taskLogsPath, err := ioutil.TempDir("", "testlogs")
 	assert.Nil(c, err)
 	s.config.TaskLogsPath = taskLogsPath
 
-	s.session = MongoSession(&s.config)
 	s.upstream = ConnectUpstream(&s.config, s.session)
 	s.taskLogUploader = CreateTaskLogUploader(&s.config, s.upstream)
 }

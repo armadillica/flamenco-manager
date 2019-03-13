@@ -34,7 +34,7 @@ import (
 )
 
 type TaskCleanupTestSuite struct {
-	config  *Conf
+	config  Conf
 	session *mgo.Session
 	db      *mgo.Database
 	sched   *TaskScheduler
@@ -42,10 +42,9 @@ type TaskCleanupTestSuite struct {
 
 var _ = check.Suite(&TaskCleanupTestSuite{})
 
-func (s *TaskCleanupTestSuite) SetUpTest(c *check.C) {
-	config := GetTestConfig()
-	s.config = &config
-	s.session = MongoSession(s.config)
+func (s *TaskCleanupTestSuite) SetUpSuite(c *check.C) {
+	s.config = GetTestConfig()
+	s.session = MongoSession(&s.config)
 	s.db = s.session.DB("")
 }
 
@@ -91,7 +90,7 @@ func (s *TaskCleanupTestSuite) TestTaskCleanup(c *check.C) {
 		c.Fatal("Unable to insert recentTask", err)
 	}
 
-	notifier := createTaskCleanerEx(s.config, s.session, 0, 1*time.Hour)
+	notifier := createTaskCleanerEx(&s.config, s.session, 0, 1*time.Hour)
 
 	// Run one iteration.
 	notifier.Go()

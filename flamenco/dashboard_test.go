@@ -48,10 +48,13 @@ type DashboardTestSuite struct {
 
 var _ = check.Suite(&DashboardTestSuite{})
 
-func (s *DashboardTestSuite) SetUpTest(c *check.C) {
+func (s *DashboardTestSuite) SetUpSuite(c *check.C) {
 	s.config = GetTestConfig()
 	s.session = MongoSession(&s.config)
 	s.db = s.session.DB("")
+}
+
+func (s *DashboardTestSuite) SetUpTest(c *check.C) {
 	s.sleeper = CreateSleepScheduler(s.session)
 	blacklist := CreateWorkerBlackList(&s.config, s.session)
 	s.dashboard = CreateDashboard(&s.config, s.session, s.sleeper, blacklist, "unittest-1.0")

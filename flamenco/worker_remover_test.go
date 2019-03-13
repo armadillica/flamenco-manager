@@ -38,6 +38,7 @@ type WorkerRemoverTestSuite struct {
 	workerLnx Worker
 	workerWin Worker
 
+	config  Conf
 	session *mgo.Session
 	db      *mgo.Database
 	sched   *TaskScheduler
@@ -46,22 +47,24 @@ type WorkerRemoverTestSuite struct {
 
 var _ = check.Suite(&WorkerRemoverTestSuite{})
 
+func (s *WorkerRemoverTestSuite) SetUpSuite(c *check.C) {
+	s.config = GetTestConfig()
+	s.config.WorkerCleanupMaxAge = 30 * time.Second
+
+	s.session = MongoSession(&s.config)
+	s.db = s.session.DB("")
+}
+
 func (s *WorkerRemoverTestSuite) SetUpTest(c *check.C) {
 	httpmock.Activate()
 
-	config := GetTestConfig()
-	config.WorkerCleanupMaxAge = 30 * time.Second
+	upstream := ConnectUpstream(&s.config, s.session)
+	blacklist := CreateWorkerBlackList(&s.config, s.session)
+	queue := CreateTaskUpdateQueue(&s.config, blacklist)
 
-	s.session = MongoSession(&config)
-	s.db = s.session.DB("")
-
-	upstream := ConnectUpstream(&config, s.session)
-	blacklist := CreateWorkerBlackList(&config, s.session)
-	queue := CreateTaskUpdateQueue(&config, blacklist)
-
-	pusher := CreateTaskUpdatePusher(&config, upstream, s.session, queue, nil)
-	s.sched = CreateTaskScheduler(&config, upstream, s.session, queue, blacklist, pusher)
-	s.wr = CreateWorkerRemover(&config, s.session, s.sched)
+	pusher := CreateTaskUpdatePusher(&s.config, upstream, s.session, queue, nil)
+	s.sched = CreateTaskScheduler(&s.config, upstream, s.session, queue, blacklist, pusher)
+	s.wr = CreateWorkerRemover(&s.config, s.session, s.sched)
 
 	// Store workers in DB, on purpose in the opposite order as the tasks.
 	s.workerLnx = Worker{
