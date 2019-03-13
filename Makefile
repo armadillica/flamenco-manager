@@ -21,7 +21,7 @@ version:
 	@echo "Packaging to: ${PACKAGE_PATH}"
 
 test:
-	go test -short ${PKG_LIST}
+	go test ${PKG_LIST}
 
 vet:
 	@go vet ${PKG_LIST}
