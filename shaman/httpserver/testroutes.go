@@ -97,6 +97,16 @@ var addFeedbackHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Re
 	}
 })
 
+var userInfo = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	tokenSubject, ok := auth.SubjectFromContext(r.Context())
+	if !ok {
+		fmt.Fprintf(w, "You are unknown to me")
+		return
+	}
+
+	fmt.Fprintf(w, "You are subject %s", tokenSubject)
+})
+
 // RegisterTestRoutes registers some routes that should only be used for testing.
 func RegisterTestRoutes(r *mux.Router, auther auth.Authenticator) {
 	// On the default page we will simply serve our static index page.
@@ -110,6 +120,7 @@ func RegisterTestRoutes(r *mux.Router, auther auth.Authenticator) {
 	// /products - which will retrieve a list of products that the user can leave feedback on
 	// /products/{slug}/feedback - which will capture user feedback on products
 	r.Handle("/status", statusHandler).Methods("GET")
+	r.Handle("/my-info", auther.Wrap(userInfo)).Methods("GET")
 	r.Handle("/products", auther.Wrap(productsHandler)).Methods("GET")
 	r.Handle("/products/{slug}/feedback", auther.Wrap(addFeedbackHandler)).Methods("POST")
 
