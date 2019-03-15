@@ -35,6 +35,17 @@ import (
 // Mapping from absolute path to the file's mtime.
 type mtimeMap map[string]time.Time
 
+// GCStats contains statistics of a garbage collection run.
+type GCStats struct {
+	numSymlinksChecked   int
+	numOldFiles          int
+	numUnusedOldFiles    int
+	numStillUsedOldFiles int
+	numFilesDeleted      int
+	numFilesNotDeleted   int
+	bytesDeleted         int64
+}
+
 func (s *Server) periodicCleanup() {
 	defer packageLogger.Debug("shutting down period cleanup")
 	defer s.wg.Done()
@@ -65,7 +76,7 @@ func (s *Server) gcAgeThreshold() time.Time {
 // GCStorage performs garbage collection by deleting files from storage
 // that are not symlinked in a checkout and haven't been touched since
 // a threshold date.
-func (s *Server) GCStorage(doDryRun bool) {
+func (s *Server) GCStorage(doDryRun bool) (stats GCStats) {
 	ageThreshold := s.gcAgeThreshold()
 
 	logger := packageLogger.WithFields(
@@ -91,14 +102,15 @@ func (s *Server) GCStorage(doDryRun bool) {
 		return
 	}
 
-	numOldFiles := len(oldFiles)
-	logger.WithField("numOldFiles", numOldFiles).Info("found old files, going to check for links")
+	stats.numOldFiles = len(oldFiles)
+	stats.numFilesNotDeleted = stats.numOldFiles
+	logger.WithField("numOldFiles", stats.numOldFiles).Info("found old files, going to check for links")
 
 	// Scan the checkout area and extra checkout paths, and discard any old file that is linked.
 	dirsToCheck := []string{s.config.CheckoutPath}
 	dirsToCheck = append(dirsToCheck, s.config.GarbageCollect.ExtraCheckoutDirs...)
 	for _, checkDir := range dirsToCheck {
-		if err := s.gcFilterLinkedFiles(checkDir, oldFiles, logger); err != nil {
+		if err := s.gcFilterLinkedFiles(checkDir, oldFiles, logger, &stats); err != nil {
 			logger.WithFields(logrus.Fields{
 				"checkoutPath":  checkDir,
 				logrus.ErrorKey: err,
@@ -106,26 +118,32 @@ func (s *Server) GCStorage(doDryRun bool) {
 			return
 		}
 	}
+	stats.numStillUsedOldFiles = stats.numOldFiles - len(oldFiles)
+	stats.numUnusedOldFiles = len(oldFiles)
+	infoLogger := logger.WithFields(logrus.Fields{
+		"numUnusedOldFiles":    stats.numUnusedOldFiles,
+		"numStillUsedOldFiles": stats.numStillUsedOldFiles,
+		"numSymlinksChecked":   stats.numSymlinksChecked,
+	})
 
 	if len(oldFiles) == 0 {
-		logger.Debug("all old files are in use")
+		infoLogger.Info("all old files are in use")
 		return
 	}
 
-	infoLogger := logger.WithFields(logrus.Fields{
-		"numUnusedOldFiles":    len(oldFiles),
-		"numStillUsedOldFiles": numOldFiles - len(oldFiles),
-	})
 	infoLogger.Info("found unused old files, going to delete")
 
-	deletedFiles, deletedBytes := s.gcDeleteOldFiles(doDryRun, oldFiles, logger)
+	stats.numFilesDeleted, stats.bytesDeleted = s.gcDeleteOldFiles(doDryRun, oldFiles, logger)
+	stats.numFilesNotDeleted = stats.numOldFiles - stats.numFilesDeleted
 
 	infoLogger.WithFields(logrus.Fields{
-		"numDeleted":    deletedFiles,
-		"numNotDeleted": len(oldFiles) - deletedFiles,
-		"freedBytes":    deletedBytes,
-		"freedSize":     humanizeByteSize(deletedBytes),
+		"numFilesDeleted":    stats.numFilesDeleted,
+		"numFilesNotDeleted": stats.numFilesNotDeleted,
+		"freedBytes":         stats.bytesDeleted,
+		"freedSize":          humanizeByteSize(stats.bytesDeleted),
 	}).Info("removed unused old files")
+
+	return
 }
 
 func (s *Server) gcFindOldFiles(ageThreshold time.Time, logger *logrus.Entry) (mtimeMap, error) {
@@ -166,7 +184,7 @@ func (s *Server) gcFindOldFiles(ageThreshold time.Time, logger *logrus.Entry) (m
 }
 
 // gcFilterLinkedFiles removes all still-symlinked paths from 'oldFiles'.
-func (s *Server) gcFilterLinkedFiles(checkoutPath string, oldFiles mtimeMap, logger *logrus.Entry) error {
+func (s *Server) gcFilterLinkedFiles(checkoutPath string, oldFiles mtimeMap, logger *logrus.Entry, stats *GCStats) error {
 	logger = logger.WithField("checkoutPath", checkoutPath)
 
 	visit := func(path string, info os.FileInfo, err error) error {
@@ -184,6 +202,9 @@ func (s *Server) gcFilterLinkedFiles(checkoutPath string, oldFiles mtimeMap, log
 			return nil
 		}
 
+		if stats != nil {
+			stats.numSymlinksChecked++
+		}
 		linkTarget, err := filepath.EvalSymlinks(path)
 		if err != nil {
 			if os.IsNotExist(err) {

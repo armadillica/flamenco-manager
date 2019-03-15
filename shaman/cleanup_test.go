@@ -124,7 +124,7 @@ func TestGCComponents(t *testing.T) {
 
 	// No symlinks created yet, so this should report all the files in oldFiles.
 	oldFiles := copymap(expectOld)
-	err := server.gcFilterLinkedFiles(server.config.CheckoutPath, oldFiles, logrus.WithField("package", "shaman/test"))
+	err := server.gcFilterLinkedFiles(server.config.CheckoutPath, oldFiles, logrus.WithField("package", "shaman/test"), nil)
 	assert.Nil(t, err)
 	assert.EqualValues(t, expectOld, oldFiles)
 
@@ -144,10 +144,13 @@ func TestGCComponents(t *testing.T) {
 		absPaths["7488.blob"]: expectOld[absPaths["7488.blob"]],
 	}
 	oldFiles = copymap(expectOld)
-	err = server.gcFilterLinkedFiles(server.config.CheckoutPath, oldFiles, logrus.WithField("package", "shaman/test"))
+	stats := GCStats{}
+	err = server.gcFilterLinkedFiles(server.config.CheckoutPath, oldFiles, logrus.WithField("package", "shaman/test"), &stats)
+	assert.Equal(t, 1, stats.numSymlinksChecked) // 1 is in checkoutPath, the other in extraCheckoutDir
 	assert.Nil(t, err)
 	assert.Equal(t, len(expectRemovable)+1, len(oldFiles)) // one file is linked from the extra checkout dir
-	err = server.gcFilterLinkedFiles(extraCheckoutDir, oldFiles, logrus.WithField("package", "shaman/test"))
+	err = server.gcFilterLinkedFiles(extraCheckoutDir, oldFiles, logrus.WithField("package", "shaman/test"), &stats)
+	assert.Equal(t, 2, stats.numSymlinksChecked) // 1 is in checkoutPath, the other in extraCheckoutDir
 	assert.Nil(t, err)
 	assert.EqualValues(t, expectRemovable, oldFiles)
 
