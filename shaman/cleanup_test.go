@@ -86,7 +86,7 @@ func TestGCFindOldFiles(t *testing.T) {
 	makeOld(server, expectOld, "stored/80/b749c27b2fef7255e7e7b3c2029b03b31299c75ff1f1c72732081c70a713a3/7488.blob")
 	makeOld(server, expectOld, "stored/dc/89f15de821ad1df3e78f8ef455e653a2d1862f2eb3f5ee78aa4ca68eb6fb35/781.blob")
 
-	old, err = server.gcFindOldFiles(ageThreshold, logrus.WithField("package", "shaman/libshaman/test"))
+	old, err = server.gcFindOldFiles(ageThreshold, logrus.WithField("package", "shaman/test"))
 	assert.Nil(t, err)
 	assert.EqualValues(t, expectOld, old)
 }
@@ -124,7 +124,7 @@ func TestGCComponents(t *testing.T) {
 
 	// No symlinks created yet, so this should report all the files in oldFiles.
 	oldFiles := copymap(expectOld)
-	err := server.gcFilterLinkedFiles(server.config.CheckoutPath, oldFiles, logrus.WithField("package", "shaman/libshaman/test"))
+	err := server.gcFilterLinkedFiles(server.config.CheckoutPath, oldFiles, logrus.WithField("package", "shaman/test"))
 	assert.Nil(t, err)
 	assert.EqualValues(t, expectOld, oldFiles)
 
@@ -144,10 +144,10 @@ func TestGCComponents(t *testing.T) {
 		absPaths["7488.blob"]: expectOld[absPaths["7488.blob"]],
 	}
 	oldFiles = copymap(expectOld)
-	err = server.gcFilterLinkedFiles(server.config.CheckoutPath, oldFiles, logrus.WithField("package", "shaman/libshaman/test"))
+	err = server.gcFilterLinkedFiles(server.config.CheckoutPath, oldFiles, logrus.WithField("package", "shaman/test"))
 	assert.Nil(t, err)
 	assert.Equal(t, len(expectRemovable)+1, len(oldFiles)) // one file is linked from the extra checkout dir
-	err = server.gcFilterLinkedFiles(extraCheckoutDir, oldFiles, logrus.WithField("package", "shaman/libshaman/test"))
+	err = server.gcFilterLinkedFiles(extraCheckoutDir, oldFiles, logrus.WithField("package", "shaman/test"))
 	assert.Nil(t, err)
 	assert.EqualValues(t, expectRemovable, oldFiles)
 
@@ -159,11 +159,11 @@ func TestGCComponents(t *testing.T) {
 	// Running the garbage collector should only remove that one unused and untouched file.
 	assert.FileExists(t, absPaths["6001.blob"], "file should exist before GC")
 	assert.FileExists(t, absPaths["7488.blob"], "file should exist before GC")
-	server.gcDeleteOldFiles(true, oldFiles, logrus.WithField("package", "shaman/libshaman/test"))
+	server.gcDeleteOldFiles(true, oldFiles, logrus.WithField("package", "shaman/test"))
 	assert.FileExists(t, absPaths["6001.blob"], "file should exist after dry-run GC")
 	assert.FileExists(t, absPaths["7488.blob"], "file should exist after dry-run GC")
 
-	server.gcDeleteOldFiles(false, oldFiles, logrus.WithField("package", "shaman/libshaman/test"))
+	server.gcDeleteOldFiles(false, oldFiles, logrus.WithField("package", "shaman/test"))
 
 	assert.FileExists(t, absPaths["3367.blob"], "file should exist after GC")
 	assert.FileExists(t, absPaths["6001.blob"], "file should exist after GC")

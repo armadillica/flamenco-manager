@@ -28,4 +28,4 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var packageLogger = logrus.WithField("package", "shaman/libshaman")
+var packageLogger = logrus.WithField("package", "shaman")
