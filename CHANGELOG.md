@@ -1,6 +1,11 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.3.1 (2019-03-15)
+
+- Fix panic when storing log for test task.
+
+
 ## Version 2.3 (2019-01-10)
 
 - Fix an issue where a task could time out when its Worker goes to sleep or shuts down.

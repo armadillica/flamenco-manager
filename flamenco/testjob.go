@@ -24,6 +24,7 @@ var (
 
 	localTestBlendFile  = "static/testfiles/test.blend"
 	testTaskProjectID   = bson.ObjectIdHex("000000000000000000000000")
+	testTaskJobID       = bson.ObjectIdHex("000000000000000000000000")
 	managerLocalJobType = "manager-local"
 )
 
@@ -132,6 +133,7 @@ func sendTestBlenderRenderTask(worker *Worker, conf *Conf, db *mgo.Database, log
 		Name:        "Flamenco test job for " + worker.Identifier(),
 		Status:      "queued",
 		Priority:    100,
+		Job:         testTaskJobID,
 		JobPriority: 100,
 		JobType:     managerLocalJobType,
 		TaskType:    "test-blender-render",
