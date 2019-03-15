@@ -76,18 +76,6 @@ func newKeyStore(config shamanconfig.Config, keyDirectory string, mayLoadTestKey
 
 	ks.load()
 
-	if config.JWTPublicKeysURL != "" {
-		// No need to start a download loop when we cannot download.
-		go ks.Go()
-	} else {
-		logger := packageLogger.WithField("jwtKeyDirectory", keyDirectory)
-		if len(ks.TrustedPublicKeys) == 0 {
-			logger.Warning("No shaman.jwtPublicKeysURL setting configured and no JWT public keys found, Shaman will not work.")
-		} else {
-			logger = logger.WithField("publicKeyCount", len(ks.TrustedPublicKeys))
-			logger.Warning("No shaman.jwtPublicKeysURL setting configured, Shaman will not download fresh keys.")
-		}
-	}
 	return ks
 }
 
@@ -145,6 +133,25 @@ func swapGlobalKeyStore(ks *KeyStore) *KeyStore {
 
 	ks, globalKeyStore = globalKeyStore, ks
 	return ks
+}
+
+// GoDownloadLoop starts the background download loop for new keys.
+// Use CloseKeyStore() after calling this.
+func GoDownloadLoop() {
+	ks := globalKeyStore
+
+	if ks.jwtPublicKeysURL != "" {
+		// No need to start a download loop when we cannot download.
+		go ks.Go()
+	} else {
+		logger := packageLogger.WithField("jwtKeyDirectory", ks.keyDirectory)
+		if len(ks.TrustedPublicKeys) == 0 {
+			logger.Warning("No shaman.jwtPublicKeysURL setting configured and no JWT public keys found, Shaman will not work.")
+		} else {
+			logger = logger.WithField("publicKeyCount", len(ks.TrustedPublicKeys))
+			logger.Warning("No shaman.jwtPublicKeysURL setting configured, Shaman will not download fresh keys.")
+		}
+	}
 }
 
 // CloseKeyStore stops any background download process.

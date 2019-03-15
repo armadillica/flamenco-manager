@@ -87,6 +87,7 @@ func NewServer(conf config.Config) *Server {
 // After Go() has been called, use Close() to stop those goroutines.
 func (s *Server) Go() {
 	packageLogger.Info("Shaman server starting")
+	jwtauth.GoDownloadLoop()
 	s.fileServer.Go()
 
 	if s.config.GarbageCollect.Period == 0 {
