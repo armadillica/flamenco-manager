@@ -50,13 +50,6 @@ func (s *Server) periodicCleanup() {
 	defer packageLogger.Debug("shutting down period cleanup")
 	defer s.wg.Done()
 
-	// Give the server some time to start up before we do the first GC.
-	select {
-	case <-s.shutdownChan:
-		return
-	case <-time.After(3 * time.Second):
-	}
-
 	for {
 		s.GCStorage(false)
 
