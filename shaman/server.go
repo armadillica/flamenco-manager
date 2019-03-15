@@ -90,7 +90,9 @@ func (s *Server) Go() {
 	s.fileServer.Go()
 
 	if s.config.GarbageCollect.Period == 0 {
-		packageLogger.Warning("Garbage collection disabled, set garbageCollect.period > 0 in configuration")
+		packageLogger.Warning("garbage collection disabled, set garbageCollect.period > 0 in configuration")
+	} else if s.config.GarbageCollect.SilentlyDisable {
+		packageLogger.Debug("not starting garbage collection")
 	} else {
 		s.wg.Add(1)
 		go s.periodicCleanup()

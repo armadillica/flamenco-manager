@@ -55,4 +55,8 @@ type GarbageCollect struct {
 	MaxAge time.Duration `yaml:"maxAge"`
 	// Paths to check for symlinks before GC'ing files.
 	ExtraCheckoutDirs []string `yaml:"extraCheckoutPaths"`
+
+	// Used by the -gc CLI arg to silently disable the garbage collector
+	// while we're performing a manual sweep.
+	SilentlyDisable bool `yaml:"-"`
 }

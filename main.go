@@ -467,6 +467,7 @@ func setupMode() (*websetup.Routes, *mux.Router, error) {
 }
 
 func garbageCollectMode() {
+	config.Shaman.GarbageCollect.SilentlyDisable = true
 	shamanServer = shaman.NewServer(config.Shaman)
 	stats := shamanServer.GCStorage(!cliArgs.iKnowWhatIAmDoing)
 	log.Debugf("ran GC: %#v", stats)
