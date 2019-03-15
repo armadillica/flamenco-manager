@@ -29,7 +29,7 @@ import (
 	"path"
 	"sync"
 
-	"github.com/armadillica/flamenco-manager/shaman/auth"
+	"github.com/armadillica/flamenco-manager/jwtauth"
 	"github.com/armadillica/flamenco-manager/shaman/checkout"
 	"github.com/armadillica/flamenco-manager/shaman/config"
 	"github.com/armadillica/flamenco-manager/shaman/fileserver"
@@ -43,7 +43,7 @@ import (
 type Server struct {
 	config config.Config
 
-	auther      auth.Authenticator
+	auther      jwtauth.Authenticator
 	fileStore   filestore.Storage
 	fileServer  *fileserver.FileServer
 	checkoutMan *checkout.Manager
@@ -53,13 +53,13 @@ type Server struct {
 }
 
 // Load JWT authentication keys from ./jwtkeys
-func loadAuther(conf config.Config) auth.Authenticator {
+func loadAuther(conf config.Config) jwtauth.Authenticator {
 	wd, err := os.Getwd()
 	if err != nil {
 		logrus.WithError(err).Fatal("unable to get current working directory")
 	}
-	auth.LoadKeyStore(conf, path.Join(wd, "jwtkeys"))
-	return auth.NewJWT(true)
+	jwtauth.LoadKeyStore(conf, path.Join(wd, "jwtkeys"))
+	return jwtauth.NewJWT(true)
 }
 
 // NewServer creates a new Shaman server.
@@ -98,7 +98,7 @@ func (s *Server) Go() {
 }
 
 // Auther returns the JWT authentication manager.
-func (s *Server) Auther() auth.Authenticator {
+func (s *Server) Auther() jwtauth.Authenticator {
 	return s.auther
 }
 
@@ -116,6 +116,6 @@ func (s *Server) Close() {
 	close(s.shutdownChan)
 	s.fileServer.Close()
 	s.checkoutMan.Close()
-	auth.CloseKeyStore()
+	jwtauth.CloseKeyStore()
 	s.wg.Wait()
 }

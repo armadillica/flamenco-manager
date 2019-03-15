@@ -1,4 +1,4 @@
-package auth
+package jwtauth
 
 /* ***** BEGIN MIT LICENSE BLOCK *****
  * (c) 2019, Blender Foundation - Sybren A. Stüvel
@@ -24,40 +24,14 @@ package auth
  * ***** END MIT LICENCE BLOCK *****
  */
 
-import (
-	"context"
+import "net/http"
 
-	jwt "github.com/dgrijalva/jwt-go"
-)
+// StatusTokenExpired is the HTTP status code that's returned when an expired token is used.
+const StatusTokenExpired = 498
 
-type contextKey int
-
-var tokenContextKey contextKey
-
-// NewContext returns a copy of the context with a JWT token included.
-func NewContext(ctx context.Context, token *jwt.Token) context.Context {
-	return context.WithValue(ctx, tokenContextKey, token)
-}
-
-// FromContext returns the Token value stored in ctx, if any.
-func FromContext(ctx context.Context) (*jwt.Token, bool) {
-	token, ok := ctx.Value(tokenContextKey).(*jwt.Token)
-	return token, ok
-}
-
-// SubjectFromContext returns the UserID stored in the token's subject field, if any.
-func SubjectFromContext(ctx context.Context) (string, bool) {
-	token, ok := ctx.Value(tokenContextKey).(*jwt.Token)
-	if !ok {
-		return "", false
-	}
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return "", false
-	}
-	subject := claims["sub"].(string)
-	if subject == "" {
-		return "", false
-	}
-	return subject, true
+// Authenticator is an interface for authenting HTTP wrappers.
+type Authenticator interface {
+	Wrap(handler http.Handler) http.Handler
+	WrapFunc(handlerFunc func(w http.ResponseWriter, r *http.Request)) http.Handler
+	GenerateToken() (string, error)
 }

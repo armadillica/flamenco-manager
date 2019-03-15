@@ -1,4 +1,4 @@
-package auth
+package jwtauth
 
 /* ***** BEGIN MIT LICENSE BLOCK *****
  * (c) 2019, Blender Foundation - Sybren A. Stüvel
@@ -25,30 +25,39 @@ package auth
  */
 
 import (
-	"net/http"
+	"context"
 
-	"github.com/sirupsen/logrus"
+	jwt "github.com/dgrijalva/jwt-go"
 )
 
-var packageLogger = logrus.WithField("package", "shaman/auth")
+type contextKey int
 
-// RequestLogFields returns request-specific fields.
-func RequestLogFields(r *http.Request) logrus.Fields {
-	fields := logrus.Fields{
-		"remoteAddr":    r.RemoteAddr,
-		"requestURI":    r.RequestURI,
-		"requestMethod": r.Method,
-	}
+var tokenContextKey contextKey
 
-	subjectFromToken, ok := SubjectFromContext(r.Context())
-	if ok {
-		fields["userID"] = subjectFromToken
-	}
-
-	return fields
+// NewContext returns a copy of the context with a JWT token included.
+func NewContext(ctx context.Context, token *jwt.Token) context.Context {
+	return context.WithValue(ctx, tokenContextKey, token)
 }
 
-// RequestLogger returns a logger with request-specific fields.
-func RequestLogger(r *http.Request) *logrus.Entry {
-	return logrus.WithFields(RequestLogFields(r))
+// FromContext returns the Token value stored in ctx, if any.
+func FromContext(ctx context.Context) (*jwt.Token, bool) {
+	token, ok := ctx.Value(tokenContextKey).(*jwt.Token)
+	return token, ok
+}
+
+// SubjectFromContext returns the UserID stored in the token's subject field, if any.
+func SubjectFromContext(ctx context.Context) (string, bool) {
+	token, ok := ctx.Value(tokenContextKey).(*jwt.Token)
+	if !ok {
+		return "", false
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", false
+	}
+	subject := claims["sub"].(string)
+	if subject == "" {
+		return "", false
+	}
+	return subject, true
 }

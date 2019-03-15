@@ -32,7 +32,7 @@ import (
 	"github.com/armadillica/flamenco-manager/shaman/filestore"
 	"github.com/armadillica/flamenco-manager/shaman/httpserver"
 
-	"github.com/armadillica/flamenco-manager/shaman/auth"
+	"github.com/armadillica/flamenco-manager/jwtauth"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 )
@@ -45,13 +45,13 @@ const (
 )
 
 // AddRoutes adds HTTP routes to the muxer.
-func (m *Manager) AddRoutes(router *mux.Router, auther auth.Authenticator) {
+func (m *Manager) AddRoutes(router *mux.Router, auther jwtauth.Authenticator) {
 	router.Handle("/checkout/requirements", auther.WrapFunc(m.reportRequirements)).Methods("POST")
 	router.Handle("/checkout/create/{checkoutID}", auther.WrapFunc(m.createCheckout)).Methods("POST")
 }
 
 func (m *Manager) reportRequirements(w http.ResponseWriter, r *http.Request) {
-	logger := packageLogger.WithFields(auth.RequestLogFields(r))
+	logger := packageLogger.WithFields(jwtauth.RequestLogFields(r))
 	logger.Debug("user requested checkout requirements")
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -122,7 +122,7 @@ func (m *Manager) reportRequirements(w http.ResponseWriter, r *http.Request) {
 func (m *Manager) createCheckout(w http.ResponseWriter, r *http.Request) {
 	checkoutID := mux.Vars(r)["checkoutID"]
 
-	logger := packageLogger.WithFields(auth.RequestLogFields(r)).WithField("checkoutID", checkoutID)
+	logger := packageLogger.WithFields(jwtauth.RequestLogFields(r)).WithField("checkoutID", checkoutID)
 	logger.Debug("user requested checkout creation")
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")

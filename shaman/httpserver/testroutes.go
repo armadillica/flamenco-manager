@@ -28,12 +28,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/armadillica/flamenco-manager/shaman/auth"
+	"github.com/armadillica/flamenco-manager/jwtauth"
 	"github.com/gorilla/mux"
 )
 
 var userInfo = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	tokenSubject, ok := auth.SubjectFromContext(r.Context())
+	tokenSubject, ok := jwtauth.SubjectFromContext(r.Context())
 	if !ok {
 		fmt.Fprintf(w, "You are unknown to me")
 		return
@@ -43,7 +43,7 @@ var userInfo = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 })
 
 // RegisterTestRoutes registers some routes that should only be used for testing.
-func RegisterTestRoutes(r *mux.Router, auther auth.Authenticator) {
+func RegisterTestRoutes(r *mux.Router, auther jwtauth.Authenticator) {
 	// On the default page we will simply serve our static index page.
 	r.Handle("/", http.FileServer(http.Dir("./views/")))
 

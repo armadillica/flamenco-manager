@@ -1,4 +1,4 @@
-package auth
+package jwtauth
 
 /* ***** BEGIN MIT LICENSE BLOCK *****
  * (c) 2019, Blender Foundation - Sybren A. Stüvel
@@ -24,14 +24,31 @@ package auth
  * ***** END MIT LICENCE BLOCK *****
  */
 
-import "net/http"
+import (
+	"net/http"
 
-// StatusTokenExpired is the HTTP status code that's returned when an expired token is used.
-const StatusTokenExpired = 498
+	"github.com/sirupsen/logrus"
+)
 
-// Authenticator is an interface for authenting HTTP wrappers.
-type Authenticator interface {
-	Wrap(handler http.Handler) http.Handler
-	WrapFunc(handlerFunc func(w http.ResponseWriter, r *http.Request)) http.Handler
-	GenerateToken() (string, error)
+var packageLogger = logrus.WithField("package", "shaman/auth")
+
+// RequestLogFields returns request-specific fields.
+func RequestLogFields(r *http.Request) logrus.Fields {
+	fields := logrus.Fields{
+		"remoteAddr":    r.RemoteAddr,
+		"requestURI":    r.RequestURI,
+		"requestMethod": r.Method,
+	}
+
+	subjectFromToken, ok := SubjectFromContext(r.Context())
+	if ok {
+		fields["userID"] = subjectFromToken
+	}
+
+	return fields
+}
+
+// RequestLogger returns a logger with request-specific fields.
+func RequestLogger(r *http.Request) *logrus.Entry {
+	return logrus.WithFields(RequestLogFields(r))
 }

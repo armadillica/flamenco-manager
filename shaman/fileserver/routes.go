@@ -30,18 +30,18 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/armadillica/flamenco-manager/shaman/auth"
+	"github.com/armadillica/flamenco-manager/jwtauth"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 )
 
 // AddRoutes adds this package's routes to the Router.
-func (fs *FileServer) AddRoutes(router *mux.Router, auther auth.Authenticator) {
+func (fs *FileServer) AddRoutes(router *mux.Router, auther jwtauth.Authenticator) {
 	router.Handle("/files/{checksum}/{filesize}", auther.Wrap(fs)).Methods("GET", "POST", "OPTIONS")
 }
 
 func (fs *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	logger := packageLogger.WithFields(auth.RequestLogFields(r))
+	logger := packageLogger.WithFields(jwtauth.RequestLogFields(r))
 
 	checksum, filesize, err := parseRequestVars(w, r)
 	if err != nil {

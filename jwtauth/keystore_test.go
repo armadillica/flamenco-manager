@@ -1,4 +1,4 @@
-package auth
+package jwtauth
 
 /* ***** BEGIN MIT LICENSE BLOCK *****
  * (c) 2019, Blender Foundation - Sybren A. Stüvel

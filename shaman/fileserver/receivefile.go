@@ -30,7 +30,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/armadillica/flamenco-manager/shaman/auth"
+	"github.com/armadillica/flamenco-manager/jwtauth"
 	"github.com/armadillica/flamenco-manager/shaman/filestore"
 	"github.com/armadillica/flamenco-manager/shaman/hasher"
 	"github.com/armadillica/flamenco-manager/shaman/httpserver"
@@ -39,7 +39,7 @@ import (
 
 // receiveFile streams a file from a HTTP request to disk.
 func (fs *FileServer) receiveFile(ctx context.Context, w http.ResponseWriter, r *http.Request, checksum string, filesize int64) {
-	logger := packageLogger.WithFields(auth.RequestLogFields(r))
+	logger := packageLogger.WithFields(jwtauth.RequestLogFields(r))
 
 	bodyReader, err := httpserver.DecompressedReader(r)
 	if err != nil {
