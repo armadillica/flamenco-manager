@@ -307,6 +307,9 @@ var cliArgs struct {
 	setup      bool
 	killPID    int
 
+	garbageCollect    bool
+	iKnowWhatIAmDoing bool
+
 	// Run mode, see validModes in flamenco/settings.go
 	mode string
 }
@@ -320,6 +323,11 @@ func parseCliArgs() {
 	flag.BoolVar(&cliArgs.purgeQueue, "purgequeue", false, "Purges all queued task updates from the local MongoDB")
 	flag.BoolVar(&cliArgs.version, "version", false, "Show the version of Flamenco Manager")
 	flag.BoolVar(&cliArgs.setup, "setup", false, "Enter setup mode, enabling the web-based configuration system")
+
+	flag.BoolVar(&cliArgs.garbageCollect, "gc", false, "Runs the Shaman garbage collector in dry-run mode, then exits.")
+	flag.BoolVar(&cliArgs.iKnowWhatIAmDoing, "i-know-what-i-am-doing", false,
+		"Together with -gc runs the garbage collector for real (so DELETES FILES), then exits.")
+
 	flag.StringVar(&cliArgs.mode, "mode", "", "Run mode, either 'develop' or 'production'. Overrides the 'mode' in the configuration file.")
 	if runtime.GOOS == "windows" {
 		flag.IntVar(&cliArgs.killPID, "kill-after-start", 0, "Used on Windows for restarting the daemon")
@@ -458,6 +466,12 @@ func setupMode() (*websetup.Routes, *mux.Router, error) {
 	return web, router, err
 }
 
+func garbageCollectMode() {
+	shamanServer = shaman.NewServer(config.Shaman)
+	stats := shamanServer.GCStorage(!cliArgs.iKnowWhatIAmDoing)
+	log.Debugf("ran GC: %#v", stats)
+}
+
 func showStartup() {
 	// This *always* has to be logged.
 	oldLevel := log.GetLevel()
@@ -523,6 +537,9 @@ func main() {
 	var setup *websetup.Routes
 	if cliArgs.setup {
 		setup, router, err = setupMode()
+	} else if cliArgs.garbageCollect {
+		garbageCollectMode()
+		return
 	} else {
 		router, err = normalMode()
 	}
