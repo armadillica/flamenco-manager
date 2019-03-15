@@ -80,126 +80,6 @@ var (
 var shutdownComplete chan struct{}
 var httpShutdownComplete chan struct{}
 
-func httpRegisterWorker(w http.ResponseWriter, r *http.Request) {
-	mongoSess := session.Copy()
-	defer mongoSess.Close()
-	flamenco.RegisterWorker(w, r, mongoSess.DB(""))
-}
-
-func httpTaskRedirToServer(w http.ResponseWriter, r *http.Request) {
-	taskID, err := flamenco.ObjectIDFromRequest(w, r, "task-id")
-	if err != nil {
-		return
-	}
-
-	serverURL, err := config.Flamenco.Parse("/flamenco/tasks/" + taskID.Hex())
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Unable to construct URL: %s", err.Error()), http.StatusBadRequest)
-		return
-	}
-
-	http.Redirect(w, r, serverURL.String(), http.StatusTemporaryRedirect)
-}
-
-func httpScheduleTask(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-	taskScheduler.ScheduleTask(w, r)
-}
-
-func httpKick(w http.ResponseWriter, r *http.Request) {
-	upstream.KickDownloader(false)
-	fmt.Fprintln(w, "Kicked task downloader")
-}
-
-func httpTaskLog(w http.ResponseWriter, r *http.Request) {
-	jobID, err := flamenco.ObjectIDFromRequest(w, r, "job-id")
-	if err != nil {
-		return
-	}
-	taskID, err := flamenco.ObjectIDFromRequest(w, r, "task-id")
-	if err != nil {
-		return
-	}
-
-	flamenco.ServeTaskLog(w, r, jobID, taskID, taskUpdateQueue)
-}
-
-func httpTaskUpdate(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-	mongoSess := session.Copy()
-	defer mongoSess.Close()
-
-	taskID, err := flamenco.ObjectIDFromRequest(w, &r.Request, "task-id")
-	if err != nil {
-		return
-	}
-
-	taskUpdateQueue.QueueTaskUpdateFromWorker(w, r, mongoSess.DB(""), taskID)
-}
-
-func httpTaskReturn(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-	mongoSess := session.Copy()
-	defer mongoSess.Close()
-
-	taskID, err := flamenco.ObjectIDFromRequest(w, &r.Request, "task-id")
-	if err != nil {
-		return
-	}
-
-	taskScheduler.ReturnTaskFromWorker(w, r, mongoSess.DB(""), taskID)
-}
-
-/**
- * Called by a worker, to check whether it is allowed to keep running this task.
- */
-func httpWorkerMayRunTask(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-	mongoSess := session.Copy()
-	defer mongoSess.Close()
-
-	taskID, err := flamenco.ObjectIDFromRequest(w, &r.Request, "task-id")
-	if err != nil {
-		return
-	}
-
-	taskScheduler.WorkerMayRunTask(w, r, mongoSess.DB(""), taskID)
-}
-
-func httpWorkerAckStatusChange(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-	mongoSess := session.Copy()
-	defer mongoSess.Close()
-
-	vars := mux.Vars(&r.Request)
-	ackStatus := vars["ack-status"]
-
-	flamenco.WorkerAckStatusChange(w, r, mongoSess.DB(""), ackStatus)
-}
-
-func httpWorkerGetStatusChange(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-	mongoSess := session.Copy()
-	defer mongoSess.Close()
-
-	flamenco.WorkerGetStatusChange(w, r, mongoSess.DB(""))
-}
-
-func httpWorkerSignOn(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-	mongoSess := session.Copy()
-	defer mongoSess.Close()
-
-	flamenco.WorkerSignOn(w, r, mongoSess.DB(""), upstreamNotifier)
-}
-
-func httpWorkerSignOff(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-	mongoSess := session.Copy()
-	defer mongoSess.Close()
-
-	flamenco.WorkerSignOff(w, r, mongoSess.DB(""), taskScheduler)
-}
-
-func workerSecret(user, realm string) string {
-	mongoSess := session.Copy()
-	defer mongoSess.Close()
-
-	return flamenco.WorkerSecret(user, mongoSess.DB(""))
-}
-
 func startSSDPServer() *gossdp.Ssdp {
 	ssdpServer, err := gossdp.NewSsdpWithLogger(nil, log.StandardLogger())
 	if err != nil {
@@ -416,18 +296,7 @@ func normalMode() (*mux.Router, error) {
 	dashboard.AddRoutes(router)
 	latestImageSystem.AddRoutes(router, workerAuthenticator)
 	shamanServer.AddRoutes(router)
-	router.HandleFunc("/register-worker", httpRegisterWorker).Methods("POST")
-	router.HandleFunc("/task", workerAuthenticator.Wrap(httpScheduleTask)).Methods("POST")
-	router.HandleFunc("/tasks/{task-id}/update", workerAuthenticator.Wrap(httpTaskUpdate)).Methods("POST")
-	router.HandleFunc("/tasks/{task-id}/return", workerAuthenticator.Wrap(httpTaskReturn)).Methods("POST")
-	router.HandleFunc("/tasks/{task-id}/redir-to-server", httpTaskRedirToServer)
-	router.HandleFunc("/may-i-run/{task-id}", workerAuthenticator.Wrap(httpWorkerMayRunTask)).Methods("GET")
-	router.HandleFunc("/status-change", workerAuthenticator.Wrap(httpWorkerGetStatusChange)).Methods("GET")
-	router.HandleFunc("/ack-status-change/{ack-status}", workerAuthenticator.Wrap(httpWorkerAckStatusChange)).Methods("POST")
-	router.HandleFunc("/sign-on", workerAuthenticator.Wrap(httpWorkerSignOn)).Methods("POST")
-	router.HandleFunc("/sign-off", workerAuthenticator.Wrap(httpWorkerSignOff)).Methods("POST")
-	router.HandleFunc("/kick", httpKick)
-	router.HandleFunc("/logfile/{job-id}/{task-id}", httpTaskLog)
+	AddRoutes(router, workerAuthenticator)
 
 	upstreamNotifier.SendStartupNotification()
 	blacklist.EnsureDBIndices()
