@@ -164,12 +164,12 @@ func (s *Server) gcFindOldFiles(ageThreshold time.Time, logger *logrus.Entry) (m
 		}
 		modTime := info.ModTime()
 		isOld := modTime.Before(ageThreshold)
-		logger.WithFields(logrus.Fields{
-			"path":      path,
-			"mtime":     info.ModTime(),
-			"threshold": ageThreshold,
-			"isOld":     isOld,
-		}).Debug("comparing mtime")
+		// logger.WithFields(logrus.Fields{
+		// 	"path":      path,
+		// 	"mtime":     info.ModTime(),
+		// 	"threshold": ageThreshold,
+		// 	"isOld":     isOld,
+		// }).Debug("comparing mtime")
 		if isOld {
 			oldFiles[path] = modTime
 		}
