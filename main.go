@@ -37,6 +37,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/armadillica/flamenco-manager/jwtauth"
+
 	mgo "gopkg.in/mgo.v2"
 
 	auth "github.com/abbot/go-http-auth"
@@ -289,6 +291,7 @@ func normalMode() (*mux.Router, error) {
 	latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
 	workerRemover = flamenco.CreateWorkerRemover(&config, session, taskScheduler)
 	shamanServer = shaman.NewServer(config.Shaman)
+	jwtRedirector := jwtauth.NewRedirector(config.ManagerID, config.ManagerSecret, config.Flamenco)
 
 	// Set up our own HTTP server
 	workerAuthenticator := auth.NewBasicAuthenticator("Flamenco Manager", workerSecret)
@@ -296,6 +299,7 @@ func normalMode() (*mux.Router, error) {
 	dashboard.AddRoutes(router)
 	latestImageSystem.AddRoutes(router, workerAuthenticator)
 	shamanServer.AddRoutes(router)
+	jwtRedirector.AddRoutes(router)
 	AddRoutes(router, workerAuthenticator)
 
 	upstreamNotifier.SendStartupNotification()
