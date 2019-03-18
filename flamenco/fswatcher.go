@@ -184,9 +184,9 @@ func (lis *LatestImageSystem) Go() {
 // Close gracefully shuts down the image watcher, if the path to watch isn't empty.
 func (lis *LatestImageSystem) Close() {
 	if lis.imageWatcher == nil {
+		close(lis.imageCreated)
 		return
 	}
-	close(lis.imageCreated)
 	lis.imageWatcher.Close()
 }
 
