@@ -25,29 +25,15 @@ package jwtauth
  */
 
 import (
-	"net/http"
-	"os"
-	"path"
-
-	"github.com/sirupsen/logrus"
+	"time"
 )
 
-// StatusTokenExpired is the HTTP status code that's returned when an expired token is used.
-const StatusTokenExpired = 498
+// Config contains the package configuration.
+type Config struct {
+	// Used only for unit tests, so that they know where the temporary
+	// directory created for this test is located.
+	TestTempDir string `yaml:"-"`
 
-// Authenticator is an interface for authenting HTTP wrappers.
-type Authenticator interface {
-	Wrap(handler http.Handler) http.Handler
-	WrapFunc(handlerFunc func(w http.ResponseWriter, r *http.Request)) http.Handler
-	GenerateToken() (string, error)
-}
-
-// Load JWT authentication keys from ./jwtkeys and create a new JWT authenticator.
-func Load(conf Config) Authenticator {
-	wd, err := os.Getwd()
-	if err != nil {
-		logrus.WithError(err).Fatal("unable to get current working directory")
-	}
-	LoadKeyStore(conf, path.Join(wd, "jwtkeys"))
-	return NewJWT(true)
+	PublicKeysURL        string        `yaml:"publicKeysURL"`
+	DownloadKeysInterval time.Duration `yaml:"publicKeysDownloadInterval"`
 }

@@ -36,8 +36,7 @@ import (
 )
 
 var (
-	errNoAuthHeader       = errors.New("No Authorization header")
-	errNoBearerToken      = errors.New("Bearer token is required in Authorization header")
+	errNoToken            = errors.New("Authentication token is required")
 	errNoPrivateKeyLoaded = errors.New("No private key loaded")
 	errTokenExpired       = errors.New("JTW token expired")
 )
@@ -75,16 +74,13 @@ func (j *JWT) validateWithKeystore(tokenString string, keyStore *KeyStore, logge
 
 		var err error
 		for index, key := range keyStore.TrustedPublicKeys {
-			indexLogger := logger.WithFields(logrus.Fields{
-				"keyIndex":      index,
-				logrus.ErrorKey: err,
-			})
+			indexLogger := logger.WithField("keyIndex", index)
 			if err = signingMethod.Verify(headerAndPayload, signature, key); err == nil {
 				// We found a key for which the signature is valid.
 				indexLogger.Debug("token signature valid for this key")
 				return nil
 			}
-			indexLogger.Debug("token signature invalid for this key")
+			indexLogger.WithError(err).Debug("token signature invalid for this key")
 		}
 
 		logger.Info("token signature invalid")
@@ -122,23 +118,42 @@ func (j *JWT) validateWithKeystore(tokenString string, keyStore *KeyStore, logge
 	return token, nil
 }
 
-func (j *JWT) parseBearerToken(r *http.Request) (*jwt.Token, error) {
-	logger := RequestLogger(r)
-
+func (j *JWT) getBearerToken(r *http.Request, logger *logrus.Entry) string {
 	// Get Authorization header
 	header := r.Header.Get("Authorization")
 	if header == "" {
 		logger.Debug("no authorization header")
-		return nil, errNoAuthHeader
+		return ""
 	}
 
 	// Get the Bearer token
 	const prefix = "Bearer "
 	if len(header) < len(prefix) || !strings.EqualFold(header[:len(prefix)], prefix) {
 		logger.Debug("no bearer token in the authorization header")
-		return nil, errNoBearerToken
+		return ""
 	}
-	tokenString := header[len(prefix):]
+	return header[len(prefix):]
+}
+
+func (j *JWT) getCookieToken(r *http.Request, logger *logrus.Entry) string {
+	cookie, err := r.Cookie("jwtToken")
+	if err != nil {
+		logger.WithError(err).Debug("no JWT token cookie")
+		return ""
+	}
+	return cookie.Value
+}
+
+func (j *JWT) parseToken(r *http.Request) (*jwt.Token, error) {
+	logger := RequestLogger(r)
+
+	tokenString := j.getCookieToken(r, logger)
+	if tokenString == "" {
+		tokenString = j.getBearerToken(r, logger)
+	}
+	if tokenString == "" {
+		return nil, errNoToken
+	}
 
 	return j.validate(tokenString, logger)
 }
@@ -146,14 +161,14 @@ func (j *JWT) parseBearerToken(r *http.Request) (*jwt.Token, error) {
 // Wrap a HTTP handler to provide Bearer token authentication.
 func (j *JWT) Wrap(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token, err := j.parseBearerToken(r)
+		token, err := j.parseToken(r)
 
 		if err == errTokenExpired {
 			http.Error(w, "JWT token expired", StatusTokenExpired)
 			return
 		}
 		if err != nil {
-			msg := "Bearer token authorization required"
+			msg := "JWT token authorization required"
 			if j.friendly {
 				msg = fmt.Sprintf("%s: %s", msg, err.Error())
 			}

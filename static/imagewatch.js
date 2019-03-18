@@ -24,18 +24,53 @@
  * ***** END MIT LICENCE BLOCK *****
  */
 
-var source = new EventSource('/imagewatch');
-
-source.addEventListener('image', function (event) {
-    var filename = event.data;
-    if (console) console.log(filename);
-
-    var url = '/static/' + filename + '?' + new Date().getTime();
+function loadLatestImage(filename) {
+    let url = '/static/' + filename + '?' + new Date().getTime();
     $('#last_rendered_image').attr('src', url);
     $('body.imageviewer').css('background-image', 'url(' + url + ')');
-}, false);
+}
 
-// For debugging purposes this can be handy:
-// source.addEventListener('notification', function (event) {
-//     console.log("Received notification from image watcher:", event.data);
-// }, false);
+function reloadLatestImage() {
+    let $img = $('#last_rendered_image');
+    $img.attr('src', $img.attr('src'));
+
+    let $imgviewer = $('body.imageviewer');
+    $imgviewer.css('background-image', $imgviewer.css('background-image'));
+}
+
+// Global variable to ensure the EventSource isn't garbage collected.
+var latestImageSource = null;
+
+function createLatestImageListener() {
+    if (latestImageSource != null) {
+        latestImageSource.close();
+    }
+
+    let source = new EventSource('/imagewatch');
+
+    source.addEventListener('image', function (event) {
+        let filename = event.data;
+        loadLatestImage(filename);
+    }, false);
+
+    source.onerror = obtainJWTToken;
+
+    // Recreate the EventSource when there is a new JWT token.
+    window.addEventListener("newJWTToken", function() {
+        createLatestImageListener();
+    });
+
+    // Prevent errors when navigating away or reloading the page.
+    window.addEventListener("beforeunload", function() {
+        source.close();
+    }, false);
+
+    reloadLatestImage();
+
+    latestImageSource = source;
+    return source;
+}
+
+$(function () {
+    createLatestImageListener();
+});

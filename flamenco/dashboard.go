@@ -32,7 +32,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
+
+	"github.com/armadillica/flamenco-manager/jwtauth"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -78,16 +81,20 @@ func CreateDashboard(config *Conf,
 }
 
 // AddRoutes adds routes to serve reporting status requests.
-func (dash *Dashboard) AddRoutes(router *mux.Router) {
-	router.HandleFunc("/", dash.showStatusPage).Methods("GET")
-	router.HandleFunc("/as-json", dash.sendStatusReport).Methods("GET")
-	router.HandleFunc("/latest-image", dash.showLatestImagePage).Methods("GET")
+func (dash *Dashboard) AddRoutes(router *mux.Router, auther jwtauth.Authenticator) {
+	// JWT token protected:
+	router.Handle("/as-json", auther.WrapFunc(dash.sendStatusReport)).Methods("GET")
+	router.Handle("/worker-action/{worker-id}", auther.WrapFunc(dash.workerAction)).Methods("POST")
+	router.Handle("/set-sleep-schedule/{worker-id}", auther.WrapFunc(dash.setSleepSchedule)).Methods("POST")
 
-	router.HandleFunc("/worker-action/{worker-id}", dash.workerAction).Methods("POST")
-	router.HandleFunc("/set-sleep-schedule/{worker-id}", dash.setSleepSchedule).Methods("POST")
+	// Unprotected, treat as accessible to the world:
+	router.HandleFunc("/", dash.showStatusPage).Methods("GET")
+	router.HandleFunc("/latest-image", dash.showLatestImagePage).Methods("GET")
+	router.Handle("/static/latest-image.jpg", auther.WrapFunc(dash.serveLatestImage)).Methods("GET")
 
 	static := noDirListing(http.StripPrefix("/static/", http.FileServer(http.Dir(dash.root+"static"))))
 	router.PathPrefix("/static/").Handler(static).Methods("GET")
+
 }
 
 func noDirListing(h http.Handler) http.Handler {
@@ -98,6 +105,10 @@ func noDirListing(h http.Handler) http.Handler {
 		}
 		h.ServeHTTP(w, r)
 	})
+}
+
+func (dash *Dashboard) serveLatestImage(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, path.Join(dash.root, "static", "latest-image.jpg"))
 }
 
 func (dash *Dashboard) showTemplate(templfname string, w http.ResponseWriter, r *http.Request) {

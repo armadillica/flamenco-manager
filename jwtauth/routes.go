@@ -28,8 +28,8 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
-	"hash"
 	"net/http"
 	"net/url"
 	"time"
@@ -47,26 +47,51 @@ const (
 // Redirector redirects a HTTP client to the URL on Flamenco Server to get a JWT token.
 type Redirector struct {
 	managerID string
-	hmac      hash.Hash
+	hmacKey   []byte
 	server    *url.URL
+}
+
+// RedirectorResponse is sent to the browser when it asks for a token.
+type RedirectorResponse struct {
+	// Where to get the token.
+	TokenURL string `json:"tokenURL"`
+	// Where to send the browser if the Token URL sends a 403 Forbidden.
+	LoginURL string `json:"loginURL"`
 }
 
 // NewRedirector creates a new Redirector instance.
 func NewRedirector(managerID, managerSecret string, flamencoServer *url.URL) *Redirector {
 	return &Redirector{
 		managerID,
-		hmac.New(sha256.New, []byte(managerSecret)),
+		[]byte(managerSecret),
 		flamencoServer,
 	}
 }
 
 // AddRoutes adds HTTP routes to the muxer.
 func (red *Redirector) AddRoutes(router *mux.Router) {
-	router.HandleFunc("/jwt/get-token", red.routeGetToken).Methods("GET")
+	router.HandleFunc("/jwt/token-urls", red.routeGetTokenURLs).Methods("GET")
 }
 
-// Redirect users to the URL they can get a JWT token.
-func (red *Redirector) routeGetToken(w http.ResponseWriter, r *http.Request) {
+// Construct the URL back to the dashboard.
+func (red *Redirector) dashboardURL(r *http.Request) string {
+	dashURL := url.URL{
+		Host: r.Host,
+		Path: "/",
+	}
+
+	if r.TLS == nil {
+		dashURL.Scheme = "http"
+	} else {
+		dashURL.Scheme = "https"
+	}
+
+	return dashURL.String()
+}
+
+// Return the URLs users can use to get a JWT token and to log in at the server.
+// The 'get token' URL is only valid for a short time.
+func (red *Redirector) routeGetTokenURLs(w http.ResponseWriter, r *http.Request) {
 	logger := packageLogger.WithFields(RequestLogFields(r))
 	if red.server == nil {
 		logger.Error("no Flamenco Server URL set, unable to redirect user to get JWT token")
@@ -77,24 +102,47 @@ func (red *Redirector) routeGetToken(w http.ResponseWriter, r *http.Request) {
 	// Compute the deadline for the request, and HMAC it with our secret to make
 	// the Server trust the redirect.
 	expires := time.Now().In(time.UTC).Add(jwtRequestExpiry).Format(time.RFC3339)
-	hmacPayload := expires + "-" + red.managerID
-	red.hmac.Reset()
-	red.hmac.Write([]byte(hmacPayload))
-	hmac := red.hmac.Sum(nil)
+	hasher := hmac.New(sha256.New, red.hmacKey)
+	hasher.Write([]byte(expires + "-" + red.managerID))
+	computedHMAC := hasher.Sum(nil)
 
 	// Construct the URL to redirect to.
 	urlQuery := url.Values{}
 	urlQuery.Set("expires", expires)
-	urlQuery.Set("hmac", hex.EncodeToString(hmac))
-	url, err := red.server.Parse(fmt.Sprintf(jwtServerURL, red.managerID))
+	urlQuery.Set("hmac", hex.EncodeToString(computedHMAC))
+	tokenURL, err := red.server.Parse(fmt.Sprintf(jwtServerURL, red.managerID))
 	if err != nil {
 		logger.WithError(err).Error("unable to construct JWT URL to Flamenco Server")
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	url.RawQuery = urlQuery.Encode()
-	redirectTo := url.String()
+	tokenURL.RawQuery = urlQuery.Encode()
+	redirectTo := tokenURL.String()
 
-	logger.WithField("redirectTo", redirectTo).Debug("redirecting user to obtain JWT token")
-	http.Redirect(w, r, redirectTo, http.StatusTemporaryRedirect)
+	loginURL, err := red.server.Parse("login")
+	if err != nil {
+		logger.WithError(err).Error("unable to construct URL to Flamenco Server login endpoint")
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	urlQuery = url.Values{}
+	urlQuery.Set("next", red.dashboardURL(r))
+	loginURL.RawQuery = urlQuery.Encode()
+
+	logger.Debug("redirecting user to obtain JWT token")
+
+	response := RedirectorResponse{
+		TokenURL: redirectTo,
+		LoginURL: loginURL.String(),
+	}
+	payload, err := json.Marshal(response)
+	if err != nil {
+		logger.WithError(err).Error("unable to construct JSON response")
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(payload)
 }

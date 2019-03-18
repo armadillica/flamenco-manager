@@ -416,6 +416,13 @@ var vueApp = new Vue({
         loadWorkers() {
             window.clearTimeout(load_workers_timeout_handle);
 
+            let token = jwtToken();
+            if (typeof token == 'undefined') {
+                // Don't even bother trying to do a GET, it's going to fail.
+                this.obtainJWTTokenAndReload();
+                return;
+            }
+
             $.get('/as-json')
                 .done(info => {
                     this.errormsg = '';
@@ -464,7 +471,7 @@ var vueApp = new Vue({
                 })
                 .fail(error => {
                     if (error.status == 401) {
-                        getJWTToken().then(this.loadWorkers);
+                        this.obtainJWTTokenAndReload();
                         return;
                     }
                     if (error.status) {
@@ -505,6 +512,14 @@ var vueApp = new Vue({
             } else {
                 this.selected_worker_ids = this.current_workers.map(worker => worker._id);
             }
+        },
+
+        obtainJWTTokenAndReload() {
+            obtainJWTToken()
+            .then(() => setTimeout(this.loadWorkers, 100))
+            .catch(error => {
+                this.errormsg = 'Error ' + error.status + ' getting authentication token: ' + error.responseText;
+            })
         },
     },
     watch: {
@@ -619,4 +634,4 @@ $(function () {
     toastr.options.hideMethod = 'slideUp';
 
     $('#downloadkick').on('click', downloadkick);
-})
+});

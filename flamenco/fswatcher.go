@@ -33,6 +33,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/armadillica/flamenco-manager/jwtauth"
+
 	"github.com/armadillica/flamenco-manager/flamenco/chantools"
 
 	auth "github.com/abbot/go-http-auth"
@@ -111,8 +113,12 @@ func CreateLatestImageSystem(watchPath string) *LatestImageSystem {
 }
 
 // AddRoutes adds the HTTP Server-Side Events endpoint to the router.
-func (lis *LatestImageSystem) AddRoutes(router *mux.Router, workerAuth *auth.BasicAuth) {
-	router.HandleFunc("/imagewatch", lis.serverSideEvents).Methods("GET")
+func (lis *LatestImageSystem) AddRoutes(
+	router *mux.Router,
+	workerAuth *auth.BasicAuth,
+	userAuth jwtauth.Authenticator,
+) {
+	router.Handle("/imagewatch", userAuth.WrapFunc(lis.serverSideEvents)).Methods("GET")
 	router.HandleFunc("/output-produced", workerAuth.Wrap(lis.outputProduced)).Methods("POST")
 
 	// Just for logging stuff, nothing special.
