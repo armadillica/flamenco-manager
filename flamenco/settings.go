@@ -31,7 +31,8 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"path/filepath"
+	"path"
+	"runtime"
 	"strings"
 	"time"
 
@@ -421,16 +422,10 @@ func transposeVariableMatrix(in, out *map[string]map[string]string) {
 
 // GetTestConfig returns the configuration for unit tests.
 func GetTestConfig() Conf {
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
+	_, myFilename, _, _ := runtime.Caller(0)
+	myDir := path.Dir(myFilename)
 
-	if filepath.Base(cwd) != "flamenco" {
-		log.Fatalf("Expecting tests to run from flamenco package dir, not from %v", cwd)
-	}
-
-	conf, err := GetConf()
+	conf, err := LoadConf(path.Join(myDir, "flamenco-manager.yaml"))
 	if err != nil {
 		log.Fatalf("Unable to load config: %s", err)
 	}
