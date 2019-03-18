@@ -122,13 +122,14 @@ func queueTestBlenderRenderTask(worker *Worker, conf *Conf, db *mgo.Database, lo
 
 	// Figure out the local job storage path, so that we can write a blend file there.
 	localStorage := ReplaceLocal(jobStorage, conf)
+	localRenderOutput := ReplaceLocal(renderOutput, conf)
 	taskB := filepath.Join(localStorage, "test.blend")
 
 	localTestBlendFilePrefix := TemplatePathPrefix(localTestBlendFile)
 	localB := filepath.Join(localTestBlendFilePrefix, localTestBlendFile)
 	logger = logger.WithFields(log.Fields{
-		"job_storage":     jobStorage,
-		"render_output":   renderOutput,
+		"job_storage":     localStorage,
+		"render_output":   localRenderOutput,
 		"task_blendfile":  taskB,
 		"local_blendfile": localB,
 	})
@@ -141,9 +142,9 @@ func queueTestBlenderRenderTask(worker *Worker, conf *Conf, db *mgo.Database, lo
 		logger.WithError(err).Error("unable to copy blend file")
 		return fmt.Errorf("unable to copy blend file: %s", err)
 	}
-	if err := os.MkdirAll(renderOutput, 0775); err != nil {
+	if err := os.MkdirAll(localRenderOutput, 0775); err != nil {
 		logger.WithError(err).Error("unable to create render output directory")
-		return fmt.Errorf("unable to create render output directory %s", renderOutput)
+		return fmt.Errorf("unable to create render output directory %s", localRenderOutput)
 	}
 
 	stampNote := "Flamenco Test Task for " + worker.Identifier()
