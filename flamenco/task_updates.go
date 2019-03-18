@@ -555,6 +555,9 @@ func (tuq *TaskUpdateQueue) maybeBlacklistWorker(task *Task, tupdate *TaskUpdate
 // taskLogPath returns the directory and the filename suitable to write a log file.
 func taskLogPath(jobID, taskID bson.ObjectId, config *Conf) (string, string) {
 	jobHex := jobID.Hex()
+	if jobHex == "" {
+		jobHex = testTaskJobID.Hex()
+	}
 	dirpath := path.Join(config.TaskLogsPath, "job-"+jobHex[:4], jobHex)
 	filename := "task-" + taskID.Hex() + ".txt"
 	return dirpath, filename
