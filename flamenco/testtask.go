@@ -43,7 +43,7 @@ type taskCreator func(*Worker, *Conf, *mgo.Database, *log.Entry) error
 var (
 	// Mapping from task type to function that creates such a task for a given worker.
 	testTaskCreators = map[string]taskCreator{
-		"test-blender-render": sendTestBlenderRenderTask,
+		"test-blender-render": queueTestBlenderRenderTask,
 	}
 
 	localTestBlendFile  = "static/testfiles/test.blend"
@@ -62,8 +62,8 @@ func (t *Task) isManagerLocalTask() bool {
 	return t.JobType == managerLocalJobType
 }
 
-// SendTestJob constructs a test job definition at the Server, which queues it for the worker to pick up.
-func SendTestJob(worker *Worker, conf *Conf, db *mgo.Database) (string, error) {
+// CreateTestTask constructs a Manager-local test task and queues it for the worker to pick up.
+func CreateTestTask(worker *Worker, conf *Conf, db *mgo.Database) (string, error) {
 	if worker.Status != workerStatusTesting {
 		return "", fmt.Errorf("worker is in status '%s', test jobs only work in status '%s'",
 			worker.Status, workerStatusTesting)
@@ -111,8 +111,8 @@ func SendTestJob(worker *Worker, conf *Conf, db *mgo.Database) (string, error) {
 	return "Queued: " + strings.Join(queuedTaskTypes, ", "), nil
 }
 
-// sendTestBlenderRenderTask constructs a render task for testing.
-func sendTestBlenderRenderTask(worker *Worker, conf *Conf, db *mgo.Database, logger *log.Entry) error {
+// queueTestBlenderRenderTask constructs a render task for testing.
+func queueTestBlenderRenderTask(worker *Worker, conf *Conf, db *mgo.Database, logger *log.Entry) error {
 	renderCfg := conf.TestTasks.BlenderRender
 
 	// Figure out where to read/write from/to.

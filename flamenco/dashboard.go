@@ -294,7 +294,7 @@ func (dash *Dashboard) workerAction(w http.ResponseWriter, r *http.Request) {
 			actionErr = worker.AckTimeout(db)
 		},
 		"send-test-job": func() {
-			actionResult, actionErr = SendTestJob(worker, dash.config, db)
+			actionResult, actionErr = CreateTestTask(worker, dash.config, db)
 		},
 		"forget-worker": func() {
 			actionErr = forgetWorker(worker, db)
