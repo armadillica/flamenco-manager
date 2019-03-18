@@ -32,13 +32,12 @@ import (
 	"testing"
 	"time"
 
-	shamanconfig "github.com/armadillica/flamenco-manager/shaman/config"
 	"github.com/stretchr/testify/assert"
 	httpmock "gopkg.in/jarcoal/httpmock.v1"
 )
 
 func TestLoadKeyStoreNonExistant(t *testing.T) {
-	config, cleanup := shamanconfig.CreateTestConfig()
+	config, cleanup := CreateTestConfig()
 	defer cleanup()
 
 	loadKeyStore(config, "./non-existant-dir", true)
@@ -51,7 +50,7 @@ func TestLoadKeyStoreNonExistant(t *testing.T) {
 }
 
 func TestLoadKeyStore(t *testing.T) {
-	config, cleanup := shamanconfig.CreateTestConfig()
+	config, cleanup := CreateTestConfig()
 	defer cleanup()
 
 	// Test keys should be loaded.
@@ -76,7 +75,7 @@ func TestLoadKeyStore(t *testing.T) {
 }
 
 func TestGetKeyStore(t *testing.T) {
-	config, cleanup := shamanconfig.CreateTestConfig()
+	config, cleanup := CreateTestConfig()
 	defer cleanup()
 
 	// Test keys should be loaded.
@@ -99,7 +98,7 @@ func TestDownloadKeys(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	config, cleanup := shamanconfig.CreateTestConfig()
+	config, cleanup := CreateTestConfig()
 	defer cleanup()
 
 	keyPath := path.Join(config.TestTempDir, "downloaded-public.pem")
@@ -108,7 +107,7 @@ func TestDownloadKeys(t *testing.T) {
 	defer os.Remove(lastModPath)
 
 	getRequestPerformed := make(chan struct{})
-	httpmock.RegisterResponder("GET", config.JWTPublicKeysURL,
+	httpmock.RegisterResponder("GET", config.PublicKeysURL,
 		func(req *http.Request) (*http.Response, error) {
 			defer close(getRequestPerformed)
 

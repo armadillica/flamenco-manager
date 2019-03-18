@@ -1,4 +1,4 @@
-package config
+package jwtauth
 
 /* ***** BEGIN MIT LICENSE BLOCK *****
  * (c) 2019, Blender Foundation - Sybren A. Stüvel
@@ -27,27 +27,18 @@ package config
 import (
 	"io/ioutil"
 	"os"
-	"path"
-	"time"
 )
 
 // CreateTestConfig creates a configuration + cleanup function.
 func CreateTestConfig() (conf Config, cleanup func()) {
-	tempDir, err := ioutil.TempDir("", "shaman-test-")
+	tempDir, err := ioutil.TempDir("", "jwtauth-test-")
 	if err != nil {
 		panic(err)
 	}
 
 	conf = Config{
 		TestTempDir:   tempDir,
-		FileStorePath: path.Join(tempDir, "file-store"),
-		CheckoutPath:  path.Join(tempDir, "checkout"),
-
-		GarbageCollect: GarbageCollect{
-			Period:            8 * time.Hour,
-			MaxAge:            31 * 24 * time.Hour,
-			ExtraCheckoutDirs: []string{},
-		},
+		PublicKeysURL: "http://localhost:51234/api/flamenco/jwt/public-keys",
 	}
 
 	cleanup = func() {

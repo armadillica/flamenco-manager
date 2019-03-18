@@ -30,6 +30,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/armadillica/flamenco-manager/jwtauth"
 	"github.com/armadillica/flamenco-manager/shaman/config"
 	"github.com/armadillica/flamenco-manager/shaman/filestore"
 	"github.com/sirupsen/logrus"
@@ -38,7 +39,7 @@ import (
 
 func createTestShaman() (*Server, func()) {
 	conf, confCleanup := config.CreateTestConfig()
-	shaman := NewServer(conf)
+	shaman := NewServer(conf, jwtauth.Fake{})
 	return shaman, confCleanup
 }
 

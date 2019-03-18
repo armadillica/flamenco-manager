@@ -1,4 +1,9 @@
-package config
+package jwtauth
+
+import (
+	"errors"
+	"net/http"
+)
 
 /* ***** BEGIN MIT LICENSE BLOCK *****
  * (c) 2019, Blender Foundation - Sybren A. Stüvel
@@ -24,36 +29,25 @@ package config
  * ***** END MIT LICENCE BLOCK *****
  */
 
-import (
-	"io/ioutil"
-	"os"
-	"path"
-	"time"
-)
+// Fake is an always-denying Authenticator.
+type Fake struct{}
 
-// CreateTestConfig creates a configuration + cleanup function.
-func CreateTestConfig() (conf Config, cleanup func()) {
-	tempDir, err := ioutil.TempDir("", "shaman-test-")
-	if err != nil {
-		panic(err)
-	}
+var errNotImplemented = errors.New("not implemented")
 
-	conf = Config{
-		TestTempDir:   tempDir,
-		FileStorePath: path.Join(tempDir, "file-store"),
-		CheckoutPath:  path.Join(tempDir, "checkout"),
+// Wrap makes the wrapped handler uncallable because everything is rejected.
+func (f Fake) Wrap(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "JWT token denied", http.StatusUnauthorized)
+		return
+	})
+}
 
-		GarbageCollect: GarbageCollect{
-			Period:            8 * time.Hour,
-			MaxAge:            31 * 24 * time.Hour,
-			ExtraCheckoutDirs: []string{},
-		},
-	}
+// WrapFunc makes the wrapped handlerFunc uncallable because everything is rejected.
+func (f Fake) WrapFunc(handlerFunc func(w http.ResponseWriter, r *http.Request)) http.Handler {
+	return f.Wrap(http.HandlerFunc(handlerFunc))
+}
 
-	cleanup = func() {
-		if err := os.RemoveAll(tempDir); err != nil {
-			panic(err)
-		}
-	}
-	return
+// GenerateToken always returns an error and never generates a token.
+func (f Fake) GenerateToken() (string, error) {
+	return "", errNotImplemented
 }

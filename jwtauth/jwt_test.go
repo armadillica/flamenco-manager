@@ -33,7 +33,6 @@ import (
 	"testing"
 	"time"
 
-	shamanconfig "github.com/armadillica/flamenco-manager/shaman/config"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -102,7 +101,7 @@ func TestGenerateKey(t *testing.T) {
 	assert.Empty(t, tokenString)
 
 	// After loading it should be fine, even without recreating the auther.
-	loadKeyStore(shamanconfig.Config{}, testKeyPath, true)
+	loadKeyStore(Config{}, testKeyPath, true)
 	tokenString, err = auther.GenerateToken()
 	assert.Nil(t, err)
 	assert.NotEmpty(t, tokenString)
@@ -120,7 +119,7 @@ func TestGenerateKey(t *testing.T) {
 
 func TestRequest(t *testing.T) {
 	auther := NewJWT(true)
-	loadKeyStore(shamanconfig.Config{}, testKeyPath, true)
+	loadKeyStore(Config{}, testKeyPath, true)
 
 	httpFuncCalled := false
 	expectedTokenString := ""
@@ -137,14 +136,14 @@ func TestRequest(t *testing.T) {
 
 	// Unauthenticated call, so httpFunc should not be called.
 	respRec := httptest.NewRecorder()
-	request := httptest.NewRequest("POST", "http://shaman.local/files/sha256sum/4700", nil)
+	request := httptest.NewRequest("POST", "http://flamanager.local/files/sha256sum/4700", nil)
 	wrapped.ServeHTTP(respRec, request)
 	assert.False(t, httpFuncCalled)
 	assert.Equal(t, http.StatusUnauthorized, respRec.Code)
 
 	// 'Authenticate' with a non-Bearer header
 	respRec = httptest.NewRecorder()
-	request = httptest.NewRequest("POST", "http://shaman.local/files/sha256sum/4700", nil)
+	request = httptest.NewRequest("POST", "http://flamanager.local/files/sha256sum/4700", nil)
 	request.Header.Set("Authorization", "Basic username:password")
 	wrapped.ServeHTTP(respRec, request)
 	assert.False(t, httpFuncCalled)
@@ -152,7 +151,7 @@ func TestRequest(t *testing.T) {
 
 	// 'Authenticate' with a too-short header
 	respRec = httptest.NewRecorder()
-	request = httptest.NewRequest("POST", "http://shaman.local/files/sha256sum/4700", nil)
+	request = httptest.NewRequest("POST", "http://flamanager.local/files/sha256sum/4700", nil)
 	request.Header.Set("Authorization", "Baa")
 	wrapped.ServeHTTP(respRec, request)
 	assert.False(t, httpFuncCalled)
@@ -160,7 +159,7 @@ func TestRequest(t *testing.T) {
 
 	// 'Authenticate' with an invalid token.
 	respRec = httptest.NewRecorder()
-	request = httptest.NewRequest("POST", "http://shaman.local/files/sha256sum/4700", nil)
+	request = httptest.NewRequest("POST", "http://flamanager.local/files/sha256sum/4700", nil)
 	request.Header.Set("Authorization", "Bearer 123.abc.327")
 	wrapped.ServeHTTP(respRec, request)
 	assert.False(t, httpFuncCalled)
@@ -171,7 +170,7 @@ func TestRequest(t *testing.T) {
 	assert.NotEmpty(t, tokenString)
 
 	respRec = httptest.NewRecorder()
-	request = httptest.NewRequest("POST", "http://shaman.local/files/sha256sum/4700", nil)
+	request = httptest.NewRequest("POST", "http://flamanager.local/files/sha256sum/4700", nil)
 	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tokenString))
 	expectedTokenString = tokenString
 	wrapped.ServeHTTP(respRec, request)
@@ -181,7 +180,7 @@ func TestRequest(t *testing.T) {
 	// Authenticate with a valid token that's signed with the secondary key.
 	tokenString = generateSecondKeyToken()
 	respRec = httptest.NewRecorder()
-	request = httptest.NewRequest("POST", "http://shaman.local/files/sha256sum/4700", nil)
+	request = httptest.NewRequest("POST", "http://flamanager.local/files/sha256sum/4700", nil)
 	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tokenString))
 	expectedTokenString = tokenString
 	httpFuncCalled = false
@@ -194,12 +193,12 @@ func TestRequest(t *testing.T) {
 func TestWrongTokens(t *testing.T) {
 	auther := NewJWT(true)
 	wrapped := auther.WrapFunc(httpPanic)
-	loadKeyStore(shamanconfig.Config{}, "./test-keys", true)
+	loadKeyStore(Config{}, "./test-keys", true)
 
 	// Generate a token with the wrong signing method.
 	tokenString := generateHMACToken()
 	respRec := httptest.NewRecorder()
-	request := httptest.NewRequest("POST", "http://shaman.local/files/sha256sum/4700", nil)
+	request := httptest.NewRequest("POST", "http://flamanager.local/files/sha256sum/4700", nil)
 	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tokenString))
 	wrapped.ServeHTTP(respRec, request)
 	assert.Equal(t, http.StatusUnauthorized, respRec.Code)
@@ -209,7 +208,7 @@ func TestWrongTokens(t *testing.T) {
 	tokenString, err := token.SignedString(globalKeyStore.MyPrivateKey)
 	assert.Nil(t, err)
 	respRec = httptest.NewRecorder()
-	request = httptest.NewRequest("POST", "http://shaman.local/files/sha256sum/4700", nil)
+	request = httptest.NewRequest("POST", "http://flamanager.local/files/sha256sum/4700", nil)
 	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tokenString))
 	wrapped.ServeHTTP(respRec, request)
 	assert.Equal(t, StatusTokenExpired, respRec.Code)

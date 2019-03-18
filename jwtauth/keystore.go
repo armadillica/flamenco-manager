@@ -35,7 +35,6 @@ import (
 	"sync"
 	"time"
 
-	shamanconfig "github.com/armadillica/flamenco-manager/shaman/config"
 	"github.com/sirupsen/logrus"
 )
 
@@ -63,10 +62,10 @@ var globalKeyStoreMutex sync.Mutex
 var downloadKeysInitialWait = 2 * time.Second
 
 // newKeyStore loads all keys in the given directory.
-func newKeyStore(config shamanconfig.Config, keyDirectory string, mayLoadTestKeys bool) *KeyStore {
+func newKeyStore(config Config, keyDirectory string, mayLoadTestKeys bool) *KeyStore {
 	ks := &KeyStore{
 		keyDirectory:         keyDirectory,
-		jwtPublicKeysURL:     config.JWTPublicKeysURL,
+		jwtPublicKeysURL:     config.PublicKeysURL,
 		mayLoadTestKeys:      mayLoadTestKeys,
 		downloadKeysInterval: config.DownloadKeysInterval,
 
@@ -80,11 +79,11 @@ func newKeyStore(config shamanconfig.Config, keyDirectory string, mayLoadTestKey
 }
 
 // LoadKeyStore loads all keys from a directory and stores them in the global key store.
-func LoadKeyStore(config shamanconfig.Config, keyDirectory string) {
+func LoadKeyStore(config Config, keyDirectory string) {
 	loadKeyStore(config, keyDirectory, false)
 }
 
-func loadKeyStore(config shamanconfig.Config, keyDirectory string, mayLoadTestKeys bool) {
+func loadKeyStore(config Config, keyDirectory string, mayLoadTestKeys bool) {
 	keyStore := newKeyStore(config, keyDirectory, mayLoadTestKeys)
 	swapGlobalKeyStore(keyStore)
 }
@@ -146,10 +145,10 @@ func GoDownloadLoop() {
 	} else {
 		logger := packageLogger.WithField("jwtKeyDirectory", ks.keyDirectory)
 		if len(ks.TrustedPublicKeys) == 0 {
-			logger.Warning("No shaman.jwtPublicKeysURL setting configured and no JWT public keys found, Shaman will not work.")
+			logger.Warning("No publicKeysURL setting configured and no JWT public keys found, authentication will not work.")
 		} else {
 			logger = logger.WithField("publicKeyCount", len(ks.TrustedPublicKeys))
-			logger.Warning("No shaman.jwtPublicKeysURL setting configured, Shaman will not download fresh keys.")
+			logger.Warning("No publicKeysURL setting configured, Flamenco Manager will not download fresh keys.")
 		}
 	}
 }

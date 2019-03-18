@@ -139,6 +139,8 @@ func shutdown(signum os.Signal) {
 		if shamanServer != nil {
 			shamanServer.Close()
 		}
+		jwtauth.CloseKeyStore()
+
 		if timeoutChecker != nil {
 			timeoutChecker.Close()
 		}
@@ -290,8 +292,9 @@ func normalMode() (*mux.Router, error) {
 	dashboard := flamenco.CreateDashboard(&config, session, sleeper, blacklist, applicationVersion)
 	latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
 	workerRemover = flamenco.CreateWorkerRemover(&config, session, taskScheduler)
-	shamanServer = shaman.NewServer(config.Shaman)
 	jwtRedirector := jwtauth.NewRedirector(config.ManagerID, config.ManagerSecret, config.Flamenco)
+	jwtAuther := jwtauth.Load(config.JWT)
+	shamanServer = shaman.NewServer(config.Shaman, jwtAuther)
 
 	// Set up our own HTTP server
 	workerAuthenticator := auth.NewBasicAuthenticator("Flamenco Manager", workerSecret)
@@ -315,6 +318,7 @@ func normalMode() (*mux.Router, error) {
 		workerRemover.Go()
 	}
 	shamanServer.Go()
+	jwtauth.GoDownloadLoop()
 
 	// Make ourselves discoverable through SSDP.
 	if config.SSDPDiscovery {
@@ -341,7 +345,7 @@ func setupMode() (*websetup.Routes, *mux.Router, error) {
 
 func garbageCollectMode() {
 	config.Shaman.GarbageCollect.SilentlyDisable = true
-	shamanServer = shaman.NewServer(config.Shaman)
+	shamanServer = shaman.NewServer(config.Shaman, jwtauth.Fake{})
 	stats := shamanServer.GCStorage(!cliArgs.iKnowWhatIAmDoing)
 	log.Debugf("ran GC: %#v", stats)
 }

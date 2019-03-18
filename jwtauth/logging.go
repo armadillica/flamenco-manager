@@ -30,7 +30,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var packageLogger = logrus.WithField("package", "shaman/auth")
+var packageLogger = logrus.WithField("package", "jwtauth")
 
 // RequestLogFields returns request-specific fields.
 func RequestLogFields(r *http.Request) logrus.Fields {

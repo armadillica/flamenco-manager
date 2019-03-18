@@ -41,9 +41,6 @@ type Config struct {
 	FileStorePath string `yaml:"fileStorePath"`
 	CheckoutPath  string `yaml:"checkoutPath"`
 
-	JWTPublicKeysURL     string        `yaml:"jwtPublicKeysURL"`
-	DownloadKeysInterval time.Duration `yaml:"jwtPublicKeysDownloadInterval"`
-
 	GarbageCollect GarbageCollect `yaml:"garbageCollect"`
 }
 

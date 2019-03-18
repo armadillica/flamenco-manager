@@ -38,6 +38,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/armadillica/flamenco-manager/jwtauth"
 	shamanconfig "github.com/armadillica/flamenco-manager/shaman/config"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -134,6 +135,9 @@ type Conf struct {
 
 	// Shaman configuration settings.
 	Shaman shamanconfig.Config `yaml:"shaman"`
+
+	// JWT Authentication settings.
+	JWT jwtauth.Config `yaml:"authentication"`
 }
 
 // GetConf parses flamenco-manager.yaml and returns its contents as a Conf object.
@@ -205,15 +209,18 @@ func LoadConf(filename string) (Conf, error) {
 		},
 
 		Shaman: shamanconfig.Config{
-			FileStorePath:        "../shaman-file-store",
-			CheckoutPath:         "../shaman-checkout",
-			DownloadKeysInterval: 1 * time.Hour,
+			FileStorePath: "../shaman-file-store",
+			CheckoutPath:  "../shaman-checkout",
 
 			GarbageCollect: shamanconfig.GarbageCollect{
 				Period:            0,
 				MaxAge:            31 * 24 * time.Hour,
 				ExtraCheckoutDirs: []string{},
 			},
+		},
+
+		JWT: jwtauth.Config{
+			DownloadKeysInterval: 1 * time.Hour,
 		},
 	}
 	if err != nil {
@@ -404,7 +411,7 @@ func (c *Conf) parseURLs() {
 			log.ErrorKey: err,
 		}).Error("unable to construct URL to get JWT public keys")
 	} else {
-		c.Shaman.JWTPublicKeysURL = jwtURL.String()
+		c.JWT.PublicKeysURL = jwtURL.String()
 	}
 }
 

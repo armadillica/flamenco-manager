@@ -25,8 +25,6 @@ package shaman
  */
 
 import (
-	"os"
-	"path"
 	"sync"
 
 	"github.com/armadillica/flamenco-manager/jwtauth"
@@ -36,7 +34,6 @@ import (
 	"github.com/armadillica/flamenco-manager/shaman/filestore"
 	"github.com/armadillica/flamenco-manager/shaman/httpserver"
 	"github.com/gorilla/mux"
-	"github.com/sirupsen/logrus"
 )
 
 // Server represents a Shaman Server.
@@ -52,19 +49,8 @@ type Server struct {
 	wg           sync.WaitGroup
 }
 
-// Load JWT authentication keys from ./jwtkeys
-func loadAuther(conf config.Config) jwtauth.Authenticator {
-	wd, err := os.Getwd()
-	if err != nil {
-		logrus.WithError(err).Fatal("unable to get current working directory")
-	}
-	jwtauth.LoadKeyStore(conf, path.Join(wd, "jwtkeys"))
-	return jwtauth.NewJWT(true)
-}
-
 // NewServer creates a new Shaman server.
-func NewServer(conf config.Config) *Server {
-	auther := loadAuther(conf)
+func NewServer(conf config.Config, auther jwtauth.Authenticator) *Server {
 	fileStore := filestore.New(conf)
 	checkoutMan := checkout.NewManager(conf, fileStore)
 	fileServer := fileserver.New(fileStore)
@@ -87,7 +73,6 @@ func NewServer(conf config.Config) *Server {
 // After Go() has been called, use Close() to stop those goroutines.
 func (s *Server) Go() {
 	packageLogger.Info("Shaman server starting")
-	jwtauth.GoDownloadLoop()
 	s.fileServer.Go()
 
 	if s.config.GarbageCollect.Period == 0 {
@@ -119,6 +104,5 @@ func (s *Server) Close() {
 	close(s.shutdownChan)
 	s.fileServer.Close()
 	s.checkoutMan.Close()
-	jwtauth.CloseKeyStore()
 	s.wg.Wait()
 }
