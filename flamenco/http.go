@@ -34,7 +34,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
+	"runtime"
 
 	"github.com/gorilla/mux"
 	"github.com/kardianos/osext"
@@ -130,10 +132,17 @@ func TemplatePathPrefix(fileToFind string) string {
 	logger := log.WithField("file_to_find", fileToFind)
 
 	// Find as relative path, i.e. relative to CWD.
-	_, err := os.Stat(fileToFind)
-	if err == nil {
+	if _, err := os.Stat(fileToFind); err == nil {
 		logger.Debug("Found templates in current working directory")
 		return ""
+	}
+
+	// Find relative to this source file.
+	_, myFilename, _, _ := runtime.Caller(0)
+	topSourceDir := path.Dir(path.Dir(myFilename))
+	if _, err := os.Stat(path.Join(topSourceDir, fileToFind)); err == nil {
+		logger.Debug("Found templates in source directory")
+		return topSourceDir
 	}
 
 	// Find relative to executable folder.
