@@ -30,6 +30,7 @@ import (
 
 	"github.com/armadillica/flamenco-manager/jwtauth"
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 )
 
 var userInfo = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +54,13 @@ func RegisterTestRoutes(r *mux.Router, auther jwtauth.Authenticator) {
 	getTokenHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tokenString, err := auther.GenerateToken()
 		if err != nil {
-			packageLogger.WithError(err).Warning("unable to sign JWT")
+			logger := packageLogger.WithFields(logrus.Fields{
+				logrus.ErrorKey: err,
+				"remoteAddr":    r.RemoteAddr,
+				"requestURI":    r.RequestURI,
+				"requestMethod": r.Method,
+			})
+			logger.Warning("unable to sign JWT")
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(fmt.Sprintf("error signing token: %v", err)))
 			return
