@@ -318,7 +318,10 @@ func normalMode() (*mux.Router, error) {
 		workerRemover.Go()
 	}
 	shamanServer.Go()
-	jwtauth.GoDownloadLoop()
+
+	if !config.JWT.DisableSecurity {
+		jwtauth.GoDownloadLoop()
+	}
 
 	// Make ourselves discoverable through SSDP.
 	if config.SSDPDiscovery {
@@ -345,7 +348,7 @@ func setupMode() (*websetup.Routes, *mux.Router, error) {
 
 func garbageCollectMode() {
 	config.Shaman.GarbageCollect.SilentlyDisable = true
-	shamanServer = shaman.NewServer(config.Shaman, jwtauth.Fake{})
+	shamanServer = shaman.NewServer(config.Shaman, jwtauth.AlwaysDeny{})
 	stats := shamanServer.GCStorage(!cliArgs.iKnowWhatIAmDoing)
 	log.Debugf("ran GC: %#v", stats)
 }

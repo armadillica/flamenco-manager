@@ -39,7 +39,7 @@ import (
 
 func createTestShaman() (*Server, func()) {
 	conf, confCleanup := config.CreateTestConfig()
-	shaman := NewServer(conf, jwtauth.Fake{})
+	shaman := NewServer(conf, jwtauth.AlwaysDeny{})
 	return shaman, confCleanup
 }
 

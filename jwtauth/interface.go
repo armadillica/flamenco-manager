@@ -44,6 +44,11 @@ type Authenticator interface {
 
 // Load JWT authentication keys from ./jwtkeys and create a new JWT authenticator.
 func Load(conf Config) Authenticator {
+	if conf.DisableSecurity {
+		logrus.Warning("security is disabled, Flamenco Manager is open and will do anything requested by anyone")
+		return AlwaysAllow{}
+	}
+
 	wd, err := os.Getwd()
 	if err != nil {
 		logrus.WithError(err).Fatal("unable to get current working directory")

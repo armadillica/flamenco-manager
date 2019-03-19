@@ -416,13 +416,6 @@ var vueApp = new Vue({
         loadWorkers() {
             window.clearTimeout(load_workers_timeout_handle);
 
-            let token = jwtToken();
-            if (typeof token == 'undefined') {
-                // Don't even bother trying to do a GET, it's going to fail.
-                this.obtainJWTTokenAndReload();
-                return;
-            }
-
             $.get('/as-json')
                 .done(info => {
                     this.errormsg = '';

@@ -29,13 +29,16 @@ import (
  * ***** END MIT LICENCE BLOCK *****
  */
 
-// Fake is an always-denying Authenticator.
-type Fake struct{}
+// AlwaysDeny is an always-denying Authenticator.
+type AlwaysDeny struct{}
+
+// AlwaysAllow is an always-allowing Authenticator.
+type AlwaysAllow struct{}
 
 var errNotImplemented = errors.New("not implemented")
 
 // Wrap makes the wrapped handler uncallable because everything is rejected.
-func (f Fake) Wrap(handler http.Handler) http.Handler {
+func (f AlwaysDeny) Wrap(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "JWT token denied", http.StatusUnauthorized)
 		return
@@ -43,11 +46,26 @@ func (f Fake) Wrap(handler http.Handler) http.Handler {
 }
 
 // WrapFunc makes the wrapped handlerFunc uncallable because everything is rejected.
-func (f Fake) WrapFunc(handlerFunc func(w http.ResponseWriter, r *http.Request)) http.Handler {
+func (f AlwaysDeny) WrapFunc(handlerFunc func(w http.ResponseWriter, r *http.Request)) http.Handler {
 	return f.Wrap(http.HandlerFunc(handlerFunc))
 }
 
 // GenerateToken always returns an error and never generates a token.
-func (f Fake) GenerateToken() (string, error) {
+func (f AlwaysDeny) GenerateToken() (string, error) {
+	return "", errNotImplemented
+}
+
+// Wrap does nothing and allows all requests.
+func (f AlwaysAllow) Wrap(handler http.Handler) http.Handler {
+	return handler
+}
+
+// WrapFunc does nothing and allows all requests.
+func (f AlwaysAllow) WrapFunc(handlerFunc func(w http.ResponseWriter, r *http.Request)) http.Handler {
+	return http.HandlerFunc(handlerFunc)
+}
+
+// GenerateToken always returns an error and never generates a token.
+func (f AlwaysAllow) GenerateToken() (string, error) {
 	return "", errNotImplemented
 }

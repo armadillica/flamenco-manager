@@ -34,6 +34,7 @@ type Config struct {
 	// directory created for this test is located.
 	TestTempDir string `yaml:"-"`
 
+	DisableSecurity      bool          `yaml:"disableSecurity"`
 	PublicKeysURL        string        `yaml:"publicKeysURL"`
 	DownloadKeysInterval time.Duration `yaml:"publicKeysDownloadInterval"`
 }
