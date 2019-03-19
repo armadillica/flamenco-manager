@@ -302,7 +302,9 @@ func normalMode() (*mux.Router, error) {
 	dashboard.AddRoutes(router, shamanServer.Auther())
 	latestImageSystem.AddRoutes(router, workerAuthenticator, jwtAuther)
 	shamanServer.AddRoutes(router)
-	jwtRedirector.AddRoutes(router)
+	if !config.JWT.DisableSecurity {
+		jwtRedirector.AddRoutes(router)
+	}
 	AddRoutes(router, workerAuthenticator, jwtAuther)
 
 	upstreamNotifier.SendStartupNotification()

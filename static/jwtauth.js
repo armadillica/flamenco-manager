@@ -68,6 +68,11 @@ function obtainJWTToken() {
     jwtTokenObtainingPromise = new Promise((resolve, reject) => {
         $.get('/jwt/token-urls')
         .fail(error => {
+            if (error.status == 404) {
+                // This indicates that the Flamenco Manager has disabled security.
+                resolve();
+                return;
+            }
             let event = new Event("JWTTokenManagerError");
             event.error = error;
             window.dispatchEvent(event);
