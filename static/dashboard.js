@@ -236,7 +236,7 @@ Vue.component('worker-row', {
             // Use a dirty trick to make the URL absolute.
             let a = document.createElement('a');
             a.href = this.task_log_url;
-            return 'curl ' + a.href + ' -H "Authorization: Bearer ' + jwtToken() + '"';
+            return 'curl -H "Authorization: Bearer ' + jwtToken() + '" ' + a.href;
         },
         task_server_url: function() {
             return '/tasks/' + this.worker.current_task + '/redir-to-server';
