@@ -53,7 +53,7 @@
 
 <!-- template for the 'worker-table' Vue.js component -->
 <script type='text/x-template' id='template_worker_table'>
-    <div>
+    <div v-if="has_workers">
         <action-bar
             :workers="workers"
             :selected_worker_ids="selected_worker_ids"

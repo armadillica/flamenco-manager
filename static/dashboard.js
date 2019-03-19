@@ -167,6 +167,11 @@ Vue.component('worker-table', {
     data: function() { return {
         show_schedule: localStorage.getItem('show_schedule') == 'true',
     }},
+    computed: {
+        has_workers: function() {
+            return this.workers.length > 0;
+        }
+    },
     template: '#template_worker_table',
     methods: {
         // Copy the given schedule to all selected workers.
