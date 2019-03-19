@@ -80,6 +80,7 @@
                     </template>
                     <template v-else>
                         <th>Cur/last Task</th>
+                        <th>Task Log</th>
                         <th>Last Seen</th>
                         <th>Software</th>
                     </template>
@@ -115,12 +116,12 @@
             <tr class='details'>
                 <td colspan='3'></td>
                 <th>Details:</th>
-                <th>Worker ID</th>
+                <th colspan='2'>Worker ID</th>
                 <th colspan='2'>Address</th>
             </tr>
             <tr class='details'>
                 <td colspan='4'></td>
-                <td class="click-to-copy worker-id" :data-clipboard-text="worker._id">
+                <td colspan='2' class="click-to-copy worker-id" :data-clipboard-text="worker._id">
                     {{ worker._id }}
                 </td>
                 <td colspan='2' class="click-to-copy worker-address" :data-clipboard-text="worker.address">
@@ -213,14 +214,16 @@
                         </template>
                         )
                     </template>
-                    <template v-if="worker.current_task && worker.current_job">
-                        <a :href="task_log_url" target="_blank"
-                            title="View the head &amp; tail of this log file">view log</a> |
-                        <span class="click-to-copy" :data-clipboard-text="task_log_curl_command"
-                            title="Click to copy a Curl command that downloads this entire task log file">copy curl</span>
-                    </template>
                 </template>
                 <template v-else>-none-</template>
+            </td><td>
+                <template v-if="worker.current_task && worker.current_job">
+                    <a :href="task_log_url" target="_blank"
+                        title="View the head &amp; tail of this log file">view</a> |
+                    <button class="btn btn-primary btn-sm click-to-copy"
+                        :data-clipboard-text="task_log_curl_command"
+                        title="Click to copy a Curl command that downloads this entire task log file">curl</a>
+                </template>
             </td>
             <td :title="last_activity_abs">{{ last_activity_rel() }}</td>
             <td>

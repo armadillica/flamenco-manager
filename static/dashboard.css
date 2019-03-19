@@ -13,6 +13,10 @@ a:hover { color: #d0f7eb; }
 a:active { color: #f7d0d2; }
 
 a.btn-default { color: black; }
+.btn-sm {
+    padding-top: 0.05ex;
+    padding-bottom: 0.1ex;
+}
 
 h1 img {
     width: auto;
