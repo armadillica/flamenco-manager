@@ -27,14 +27,19 @@ const jwtTokenCookieOptions = {
     expires: 1,  // the token will be way shorter lived than 1 day.
     path: '/',
 };
+var _jwtToken = null;  // cache so that we don't have to round-trip to cookies all the time.
 
 /* Return the JWT token, if we have gotten any. */
 function jwtToken() {
-    return Cookies.get(jwtTokenCookieName);
+    if (_jwtToken == null) {
+        _jwtToken = Cookies.get(jwtTokenCookieName)
+    }
+    return _jwtToken;
 }
 
 /* Set a new JWT token. */
 function setJWTToken(newToken) {
+    _jwtToken = newToken;
     Cookies.set(jwtTokenCookieName, newToken, jwtTokenCookieOptions);
 
     // Let the world know there is a new token.
@@ -47,6 +52,7 @@ function setJWTToken(newToken) {
 /* Forget the JWT token; only used for debugging purposes. */
 function removeJWTToken() {
     Cookies.remove(jwtTokenCookieName, jwtTokenCookieOptions);
+    _jwtToken = null;
     console.log('JWT token forgotten');
 }
 
