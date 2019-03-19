@@ -413,6 +413,15 @@ var vueApp = new Vue({
         },
     },
     methods: {
+        // Load workers after a slight delay. Used to prevent very speedy
+        // infinite loops when we (temporarily) cannot get a JWT token.
+        loadWorkersSoon() {
+            this.loadWorkersAfterMs(250);
+        },
+        loadWorkersAfterMs(milliseconds) {
+            window.clearTimeout(load_workers_timeout_handle);
+            load_workers_timeout_handle = setTimeout(vueApp.loadWorkers, milliseconds);
+        },
         loadWorkers() {
             window.clearTimeout(load_workers_timeout_handle);
 
@@ -460,11 +469,11 @@ var vueApp = new Vue({
                     this.selected_worker_ids = this.selected_worker_ids.filter(id => selectable_worker_ids.has(id));
 
                     // Everything went fine, let's try it again soon.
-                    load_workers_timeout_handle = setTimeout(this.loadWorkers, 2000);
+                    this.loadWorkersAfterMs(2000);
                 })
                 .fail(error => {
-                    if (error.status == 401) {
-                        this.obtainJWTTokenAndReload();
+                    if (error.status == 401 || error.status == 498) {
+                        obtainJWTToken();
                         return;
                     }
                     if (error.status) {
@@ -474,7 +483,7 @@ var vueApp = new Vue({
                     }
 
                     // Everything is bugging out, let's try it again soon-ish.
-                    load_workers_timeout_handle = setTimeout(this.loadWorkers, 10000);
+                    this.loadWorkersAfterMs(10000);
                 })
                 .always(function () {
                     if (typeof clipboard != 'undefined') {
@@ -507,12 +516,21 @@ var vueApp = new Vue({
             }
         },
 
-        obtainJWTTokenAndReload() {
-            obtainJWTToken()
-            .then(() => setTimeout(this.loadWorkers, 100))
-            .catch(error => {
-                this.errormsg = 'Error ' + error.status + ' getting authentication token: ' + error.responseText;
-            })
+        onJWTServerError(event) {
+            if (event.error.status == 0) {
+                this.errormsg = 'Unable to get authentication token; is Flamenco Server still running?';
+            } else {
+                this.errormsg = 'Error ' + event.error.status + ' getting authentication token from Flamenco Server: ' + event.error.responseText;
+            }
+            this.loadWorkersAfterMs(5000);
+        },
+        onJWTManagerError(event) {
+            if (event.error.status == 0) {
+                this.errormsg = 'Unable to get authentication URLs; is Flamenco Manager still running?';
+            } else {
+                this.errormsg = 'Error ' + event.error.status + ' getting authentication URLs from Flamenco Manager: ' + event.error.responseText;
+            }
+            this.loadWorkersAfterMs(5000);
         },
     },
     watch: {
@@ -525,6 +543,9 @@ var vueApp = new Vue({
         },
     },
 });
+window.addEventListener("newJWTToken", vueApp.loadWorkersSoon);
+window.addEventListener("JWTTokenServerError", vueApp.onJWTServerError);
+window.addEventListener("JWTTokenManagerError", vueApp.onJWTManagerError);
 
 
 function time_diff(timestamp) {

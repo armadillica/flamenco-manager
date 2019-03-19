@@ -61,6 +61,13 @@ function obtainJWTToken() {
 
     jwtTokenObtainingPromise = new Promise((resolve, reject) => {
         $.get('/jwt/token-urls')
+        .fail(error => {
+            let event = new Event("JWTTokenManagerError");
+            event.error = error;
+            window.dispatchEvent(event);
+
+            reject(error);
+        })
         .done(tokenInfo => {
             // console.log("Token info:", tokenInfo)
             return $.ajax({
@@ -70,26 +77,26 @@ function obtainJWTToken() {
                     withCredentials: true
                 }
             })
+            .fail(error => {
+                if (error.status == 403) {
+                    window.location = tokenInfo.loginURL;
+                    return;
+                }
+
+                let event = new Event("JWTTokenServerError");
+                event.error = error;
+                window.dispatchEvent(event);
+
+                reject(error);
+            })
             .done(tokenResponse => {
                 // console.log("JWT token received: ", tokenResponse);
                 setJWTToken(tokenResponse);
                 resolve();
             })
-            .fail(error => {
-                if (error.status == 403) {
-                    console.log("403 Forbidden received getting JWT, going to login page.");
-                    window.location = tokenInfo.loginURL;
-                    return;
-                }
-                console.log("Unknown error " + error.status + " getting JWT: ", error);
-                reject(error);
-            })
             ;
         })
-        .fail(error => {
-            console.log("Unknown error " + error.status + " getting JWT URLs: ", error);
-            reject(error);
-        });
+        ;
     });
 
     jwtTokenObtainingPromise.finally(() => {

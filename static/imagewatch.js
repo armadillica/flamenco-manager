@@ -55,11 +55,6 @@ function createLatestImageListener() {
 
     source.onerror = obtainJWTToken;
 
-    // Recreate the EventSource when there is a new JWT token.
-    window.addEventListener("newJWTToken", function() {
-        createLatestImageListener();
-    });
-
     // Prevent errors when navigating away or reloading the page.
     window.addEventListener("beforeunload", function() {
         source.close();
@@ -73,4 +68,8 @@ function createLatestImageListener() {
 
 $(function () {
     createLatestImageListener();
+    // Recreate the EventSource when there is a new JWT token.
+    window.addEventListener("newJWTToken", createLatestImageListener);
+
+    obtainJWTToken();
 });
