@@ -232,6 +232,12 @@ Vue.component('worker-row', {
         task_log_url: function () {
             return '/logfile/' + this.worker.current_job + '/' + this.worker.current_task;
         },
+        task_log_curl_command: function() {
+            // Use a dirty trick to make the URL absolute.
+            let a = document.createElement('a');
+            a.href = this.task_log_url;
+            return 'curl ' + a.href + ' -H "Authorization: Bearer ' + jwtToken() + '"';
+        },
         task_server_url: function() {
             return '/tasks/' + this.worker.current_task + '/redir-to-server';
         },
@@ -499,7 +505,10 @@ var vueApp = new Vue({
                         $(e.trigger).flashOnce();
                     });
 
-                    $('.click-to-copy').attr('title', 'Click to copy');
+                    $('.click-to-copy').each(function() {
+                        if (this.hasAttribute('title')) return;
+                        this.setAttribute('title', 'Click to copy');
+                    });
                 })
                 ;
         },

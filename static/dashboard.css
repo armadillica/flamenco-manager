@@ -89,6 +89,9 @@ span.idle-worker-name:not(:first-child)::before {
 *[title] {
     cursor: help;
 }
+a[title] {
+    cursor: pointer;
+}
 
 #statusheading {
     position: relative;
