@@ -28,13 +28,15 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/armadillica/flamenco-manager/jwtauth"
+
 	auth "github.com/abbot/go-http-auth"
 	"github.com/armadillica/flamenco-manager/flamenco"
 	"github.com/gorilla/mux"
 )
 
 // AddRoutes adds the main Flamenco Manager endpoints to the Router.
-func AddRoutes(router *mux.Router, workerAuthenticator *auth.BasicAuth) {
+func AddRoutes(router *mux.Router, workerAuthenticator *auth.BasicAuth, userAuthenticator jwtauth.Authenticator) {
 	router.HandleFunc("/register-worker", httpRegisterWorker).Methods("POST")
 	router.HandleFunc("/task", workerAuthenticator.Wrap(httpScheduleTask)).Methods("POST")
 	router.HandleFunc("/tasks/{task-id}/update", workerAuthenticator.Wrap(httpTaskUpdate)).Methods("POST")
@@ -45,8 +47,8 @@ func AddRoutes(router *mux.Router, workerAuthenticator *auth.BasicAuth) {
 	router.HandleFunc("/ack-status-change/{ack-status}", workerAuthenticator.Wrap(httpWorkerAckStatusChange)).Methods("POST")
 	router.HandleFunc("/sign-on", workerAuthenticator.Wrap(httpWorkerSignOn)).Methods("POST")
 	router.HandleFunc("/sign-off", workerAuthenticator.Wrap(httpWorkerSignOff)).Methods("POST")
-	router.HandleFunc("/kick", httpKick)
-	router.HandleFunc("/logfile/{job-id}/{task-id}", httpTaskLog)
+	router.Handle("/kick", userAuthenticator.WrapFunc(httpKick))
+	router.Handle("/logfile/{job-id}/{task-id}", userAuthenticator.WrapFunc(httpTaskLog))
 }
 
 func httpRegisterWorker(w http.ResponseWriter, r *http.Request) {

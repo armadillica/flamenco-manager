@@ -303,7 +303,7 @@ func normalMode() (*mux.Router, error) {
 	latestImageSystem.AddRoutes(router, workerAuthenticator, jwtAuther)
 	shamanServer.AddRoutes(router)
 	jwtRedirector.AddRoutes(router)
-	AddRoutes(router, workerAuthenticator)
+	AddRoutes(router, workerAuthenticator, jwtAuther)
 
 	upstreamNotifier.SendStartupNotification()
 	blacklist.EnsureDBIndices()
