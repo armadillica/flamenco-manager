@@ -26,6 +26,10 @@ Changelog for Flamenco Manager
   cosmetic, and is shown in the dashboard. This makes it easier to tell multiple
   Managers apart.
 - Embedded Shaman file storage manager. See `shaman/README.md` for more information.
+- Added authentication for accessing the Dashboard and log files. Flamenco Manager now
+  transparently sends the user to the linked Flamenco Server to obtain authentication
+  tokens. It also automatically downloads the public keys from Flamenco Server to
+  be able to validate those tokens.
 
 
 ## Version 2.3.1 (2019-03-15)
