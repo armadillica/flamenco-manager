@@ -298,6 +298,7 @@ func normalMode() (*mux.Router, error) {
 
 	// Set up our own HTTP server
 	workerAuthenticator := auth.NewBasicAuthenticator("Flamenco Manager", workerSecret)
+	registrationAuthenticator := flamenco.NewWorkerRegistrationAuthoriser(&config)
 	router := mux.NewRouter().StrictSlash(true)
 	dashboard.AddRoutes(router, shamanServer.Auther())
 	latestImageSystem.AddRoutes(router, workerAuthenticator, jwtAuther)
@@ -305,7 +306,7 @@ func normalMode() (*mux.Router, error) {
 	if !config.JWT.DisableSecurity {
 		jwtRedirector.AddRoutes(router)
 	}
-	AddRoutes(router, workerAuthenticator, jwtAuther)
+	AddRoutes(router, workerAuthenticator, jwtAuther, registrationAuthenticator)
 
 	upstreamNotifier.SendStartupNotification()
 	blacklist.EnsureDBIndices()

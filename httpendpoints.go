@@ -36,8 +36,12 @@ import (
 )
 
 // AddRoutes adds the main Flamenco Manager endpoints to the Router.
-func AddRoutes(router *mux.Router, workerAuthenticator *auth.BasicAuth, userAuthenticator jwtauth.Authenticator) {
-	router.HandleFunc("/register-worker", httpRegisterWorker).Methods("POST")
+func AddRoutes(router *mux.Router,
+	workerAuthenticator *auth.BasicAuth,
+	userAuthenticator jwtauth.Authenticator,
+	workerRegAuther flamenco.RegistrationAuth,
+) {
+	router.Handle("/register-worker", workerRegAuther.WrapFunc(httpRegisterWorker)).Methods("POST")
 	router.HandleFunc("/task", workerAuthenticator.Wrap(httpScheduleTask)).Methods("POST")
 	router.HandleFunc("/tasks/{task-id}/update", workerAuthenticator.Wrap(httpTaskUpdate)).Methods("POST")
 	router.HandleFunc("/tasks/{task-id}/return", workerAuthenticator.Wrap(httpTaskReturn)).Methods("POST")

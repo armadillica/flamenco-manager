@@ -136,8 +136,9 @@ type Conf struct {
 	// Shaman configuration settings.
 	Shaman shamanconfig.Config `yaml:"shaman"`
 
-	// JWT Authentication settings.
-	JWT jwtauth.Config `yaml:"user_authentication"`
+	// Authentication settings.
+	JWT                      jwtauth.Config `yaml:"user_authentication"`
+	WorkerRegistrationSecret string         `yaml:"worker_registration_secret"`
 }
 
 // GetConf parses flamenco-manager.yaml and returns its contents as a Conf object.

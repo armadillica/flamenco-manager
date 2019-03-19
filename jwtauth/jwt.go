@@ -51,6 +51,24 @@ func NewJWT(friendly bool) *JWT {
 	return &JWT{friendly}
 }
 
+// GetBearerToken obtains the bearer token from the HTTP request, if there is any.
+func GetBearerToken(r *http.Request, logger *logrus.Entry) string {
+	// Get Authorization header
+	header := r.Header.Get("Authorization")
+	if header == "" {
+		logger.Debug("no authorization header")
+		return ""
+	}
+
+	// Get the Bearer token
+	const prefix = "Bearer "
+	if len(header) < len(prefix) || !strings.EqualFold(header[:len(prefix)], prefix) {
+		logger.Debug("no bearer token in the authorization header")
+		return ""
+	}
+	return header[len(prefix):]
+}
+
 func (j *JWT) validate(tokenString string, logger *logrus.Entry) (*jwt.Token, error) {
 	keyStore := GetKeyStore()
 	return j.validateWithKeystore(tokenString, keyStore, logger)
@@ -118,23 +136,6 @@ func (j *JWT) validateWithKeystore(tokenString string, keyStore *KeyStore, logge
 	return token, nil
 }
 
-func (j *JWT) getBearerToken(r *http.Request, logger *logrus.Entry) string {
-	// Get Authorization header
-	header := r.Header.Get("Authorization")
-	if header == "" {
-		logger.Debug("no authorization header")
-		return ""
-	}
-
-	// Get the Bearer token
-	const prefix = "Bearer "
-	if len(header) < len(prefix) || !strings.EqualFold(header[:len(prefix)], prefix) {
-		logger.Debug("no bearer token in the authorization header")
-		return ""
-	}
-	return header[len(prefix):]
-}
-
 func (j *JWT) getCookieToken(r *http.Request, logger *logrus.Entry) string {
 	cookie, err := r.Cookie("jwtToken")
 	if err != nil {
@@ -149,7 +150,7 @@ func (j *JWT) parseToken(r *http.Request) (*jwt.Token, error) {
 
 	tokenString := j.getCookieToken(r, logger)
 	if tokenString == "" {
-		tokenString = j.getBearerToken(r, logger)
+		tokenString = GetBearerToken(r, logger)
 	}
 	if tokenString == "" {
 		return nil, errNoToken

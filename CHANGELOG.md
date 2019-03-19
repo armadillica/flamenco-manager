@@ -30,6 +30,10 @@ Changelog for Flamenco Manager
   transparently sends the user to the linked Flamenco Server to obtain authentication
   tokens. It also automatically downloads the public keys from Flamenco Server to
   be able to validate those tokens.
+- Worker registration can now be secured with a pre-shared secret. Set
+  `worker_registration_secret` in both the Manager's and the Workers' configuration
+  files to the same secret string. If this string is not set, worker registration is open
+  to any machine that can connect to the Manager.
 
 
 ## Version 2.3.1 (2019-03-15)
