@@ -33,7 +33,10 @@ func setupMode() (*websetup.Routes, *mux.Router, error) {
 	// Always do verbose logging while running setup mode. It wouldn't make sense to log normal
 	// informative things (like the URLs available to access the server) at warning level just to
 	// ensure visibility.
-	cliArgs.verbose = true
+	oldQuiet := cliArgs.quiet
+	defer func() { cliArgs.quiet = oldQuiet }()
+
+	cliArgs.quiet = false
 	configLogging()
 
 	router := mux.NewRouter().StrictSlash(true)
