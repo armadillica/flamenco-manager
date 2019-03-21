@@ -90,7 +90,7 @@ func normalMode() (*mux.Router, error) {
 	taskScheduler = flamenco.CreateTaskScheduler(&config, upstream, session, taskUpdateQueue, blacklist, taskUpdatePusher)
 	timeoutChecker = flamenco.CreateTimeoutChecker(&config, session, taskUpdateQueue, taskScheduler)
 	taskCleaner = flamenco.CreateTaskCleaner(&config, session)
-	dashboard := flamenco.CreateDashboard(&config, session, sleeper, blacklist, applicationVersion)
+	dashboard = flamenco.CreateDashboard(&config, session, sleeper, blacklist, applicationVersion)
 	latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
 	workerRemover = flamenco.CreateWorkerRemover(&config, session, taskScheduler)
 	jwtRedirector := jwtauth.NewRedirector(config.ManagerID, config.ManagerSecret, config.Flamenco)

@@ -57,6 +57,9 @@ func reconstructCliForRestart() []string {
 	if cliArgs.jsonLog {
 		args = append(args, "-json")
 	}
+	if cliArgs.setup {
+		args = append(args, "-setup")
+	}
 
 	if runtime.GOOS == "windows" {
 		args = append(args, "-kill-after-start")

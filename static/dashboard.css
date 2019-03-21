@@ -100,10 +100,11 @@ a[title] {
 #statusheading {
     position: relative;
 }
-button#downloadkick {
+#statusactions {
     position: absolute;
     top: 0.75ex;
     right: 1ex;
+    z-index: 10;
 }
 
 .click-to-copy {

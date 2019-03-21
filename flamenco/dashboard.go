@@ -51,6 +51,9 @@ type Dashboard struct {
 	serverName      string
 	serverURL       string
 	root            string
+
+	// Set by main.go
+	RestartFunction func()
 }
 
 // CreateDashboard creates a new Dashboard object.
@@ -75,6 +78,7 @@ func CreateDashboard(config *Conf,
 		serverURL.Host,
 		serverURL.String(),
 		TemplatePathPrefix("templates/dashboard.html"),
+		nil,
 	}
 }
 
@@ -82,6 +86,7 @@ func CreateDashboard(config *Conf,
 func (dash *Dashboard) AddRoutes(router *mux.Router, auther jwtauth.Authenticator) {
 	// JWT token protected:
 	router.Handle("/as-json", auther.WrapFunc(dash.sendStatusReport)).Methods("GET")
+	router.Handle("/restart-to-websetup", auther.WrapFunc(dash.restartToWebSetup)).Methods("POST")
 	router.Handle("/set-sleep-schedule/{worker-id}", auther.WrapFunc(dash.setSleepSchedule)).Methods("POST")
 	router.Handle("/static/latest-image.jpg", auther.WrapFunc(dash.serveLatestImage)).Methods("GET")
 	router.Handle("/worker-action/{worker-id}", auther.WrapFunc(dash.workerAction)).Methods("POST")
@@ -89,6 +94,7 @@ func (dash *Dashboard) AddRoutes(router *mux.Router, auther jwtauth.Authenticato
 	// Unprotected, treat as accessible to the world:
 	router.HandleFunc("/", dash.showStatusPage).Methods("GET")
 	router.HandleFunc("/latest-image", dash.showLatestImagePage).Methods("GET")
+	router.HandleFunc("/restart-to-websetup", dash.restartToWebSetup).Methods("GET")
 
 	static := noDirListing(http.StripPrefix("/static/", http.FileServer(http.Dir(dash.root+"static"))))
 	router.PathPrefix("/static/").Handler(static).Methods("GET")
@@ -398,4 +404,31 @@ func (dash *Dashboard) setSleepSchedule(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Error setting sleep schedule: "+err.Error(), http.StatusInternalServerError)
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// On GET shows a confirmation screen, on POST actually restarts.
+func (dash *Dashboard) restartToWebSetup(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		dash.showTemplate("templates/restart-to-websetup.html", w, r)
+		return
+	}
+
+	userID, ok := jwtauth.SubjectFromContext(r.Context())
+	if !ok {
+		log.Error("user requested restart to web setup but did not have JWT token")
+		http.Error(w, "Not authenticated; how did you get here?", http.StatusForbidden)
+		return
+	}
+	logger := log.WithField("userID", userID)
+
+	if dash.RestartFunction == nil {
+		logger.Error("Unable to restart Flamenco Manager, no restart function was registered.")
+		http.Error(w, "No restart function was registered", http.StatusNotImplemented)
+		return
+	}
+
+	fmt.Fprintf(w, "Restart request confirmed")
+
+	logger.Warning("Restarting Flamenco Manager by request of the dashboard.")
+	dash.RestartFunction()
 }

@@ -40,8 +40,10 @@ import (
 )
 
 var (
+	config    flamenco.Conf
+	dashboard *flamenco.Dashboard
+
 	blacklist         *flamenco.WorkerBlacklist
-	config            flamenco.Conf
 	httpServer        *http.Server
 	latestImageSystem *flamenco.LatestImageSystem
 	mongoRunner       *bundledmongo.Runner

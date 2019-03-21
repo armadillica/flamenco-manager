@@ -1,0 +1,47 @@
+{{template "layout" .}}
+
+{{define "extrahead"}}
+<script>
+    function restart() {
+        toastr.remove();
+        toastr.info("Requesting restart");
+
+        $.post(window.location.href)
+        .fail(error => {
+            if (error.status == 401 || error.status == 498) {
+                toastr.info("Obtaining new authentication token");
+
+                obtainJWTToken()
+                .then(function() {
+                    // Just try to restart again.
+                    restart();
+                })
+                return;
+            }
+
+            toastr.error(error.responseText, "Error " + error.status + " requesting a restart");
+        })
+        .done(info => {
+            toastr.options.progressBar = true;
+            toastr.options.onHidden = function() {
+                window.location = "/setup";
+            }
+            toastr.remove();
+            toastr.success("Flamenco Server is restarting", "Restarting", {timeOut: 3000});
+        })
+        ;
+    }
+</script>
+{{end}}
+{{define "simplepage"}}
+<div id='restart'>
+    <h2>Restart Flamenco Manager to Web Setup</h2>
+    <p>Are you sure you want to restart Flamenco Manager into setup mode?
+    This will disable normal Flamenco Manager operations and enable the web setup.</p>
+
+    <div class='row' style='margin: 2em'>
+        <div class='col-md-4'><a href="/" class='btn btn-success'>« Back to dashboard</a></div>
+        <div class='col-md-offset-4 col-md-4' style='text-align: right'><button class='btn btn-danger' onclick="restart()">Restart to Web Setup</button></div>
+    </div>
+</div>
+{{end}}

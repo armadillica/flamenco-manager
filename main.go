@@ -152,6 +152,14 @@ func main() {
 	if setup != nil {
 		setup.RestartFunction = func() {
 			doRestartAfterShutdown = true
+			cliArgs.setup = false // The Web Setup restarts to the Dashboard.
+			shutdown(os.Interrupt)
+		}
+	}
+	if dashboard != nil {
+		dashboard.RestartFunction = func() {
+			doRestartAfterShutdown = true
+			cliArgs.setup = true // The Dashboard restarts to the Web Setup.
 			shutdown(os.Interrupt)
 		}
 	}
