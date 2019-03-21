@@ -86,7 +86,7 @@ func main() {
 
 	configLogging()
 	showStartup()
-	killParentProcess()
+	platformSpecificPostStartup()
 
 	defer func() {
 		// If there was a panic, make sure we log it before quitting.

@@ -1,5 +1,3 @@
-package main
-
 /* ***** BEGIN MIT LICENSE BLOCK *****
  * (c) 2019, Blender Foundation - Sybren A. Stüvel
  *
@@ -24,46 +22,55 @@ package main
  * ***** END MIT LICENCE BLOCK *****
  */
 
-import (
-	"runtime"
-	"strconv"
-	"syscall"
+package main
 
-	"github.com/kardianos/osext"
+import (
+	"os"
+	"os/exec"
+	"time"
+
 	log "github.com/sirupsen/logrus"
 )
 
-// Try to restart in an environment-dependent way.
-// - Windows: the child kills the parent (the child is killed if the parent stops too early).
-// - POSIX: we use execve() to replace the current process with a new one.
-func restart() {
-	exename, err := osext.Executable()
-	if err != nil {
-		log.WithError(err).Fatal("unable to determine the path of the currently running executable")
+func platformSpecificPostStartup() {
+	if cliArgs.killPID == 0 {
+		return
 	}
 
-	args := reconstructCliForRestart()
-	platformSpecificRestart(exename, args)
+	logger := log.WithField("pid", cliArgs.killPID)
+
+	proc, err := os.FindProcess(cliArgs.killPID)
+	if err != nil {
+		logger.Debug("Unable to find parent process, will not terminate it.")
+		return
+	}
+
+	err = proc.Kill()
+	if err != nil {
+		logger.WithError(err).Warning("Unable to terminate parent process.")
+	} else {
+		logger.Debug("Parent process terminated.")
+	}
 }
 
-func reconstructCliForRestart() []string {
-	args := []string{
-		"-mode", cliArgs.mode,
-	}
+func platformSpecificRestart(exename string, args []string) {
+	cmd := exec.Command(exename, args...)
+	cmd.Env = os.Environ()
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
-	if cliArgs.debug {
-		args = append(args, "-debug")
-	} else if cliArgs.quiet {
-		args = append(args, "-quiet")
+	logFields := log.Fields{
+		"exename": exename,
+		"args":    args,
 	}
-	if cliArgs.jsonLog {
-		args = append(args, "-json")
+	if err := cmd.Start(); err != nil {
+		log.WithFields(logFields).WithError(err).Fatal("Failed to launch new Manager")
 	}
+	log.WithFields(logFields).Info("Started another Flamenco Manager")
 
-	if runtime.GOOS == "windows" {
-		args = append(args, "-kill-after-start")
-		args = append(args, strconv.Itoa(syscall.Getpid()))
-	}
-
-	return args
+	// Give the other process time to start. This is required on Windows. Our child will kill us
+	// when it has started succesfully.
+	log.Debug("waiting for our child process to kill us")
+	time.Sleep(15 * time.Second)
 }

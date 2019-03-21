@@ -1,4 +1,4 @@
-package main
+// +build !windows
 
 /* ***** BEGIN MIT LICENSE BLOCK *****
  * (c) 2019, Blender Foundation - Sybren A. Stüvel
@@ -24,46 +24,28 @@ package main
  * ***** END MIT LICENCE BLOCK *****
  */
 
+package main
+
 import (
-	"runtime"
-	"strconv"
+	"os"
 	"syscall"
 
-	"github.com/kardianos/osext"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
-// Try to restart in an environment-dependent way.
-// - Windows: the child kills the parent (the child is killed if the parent stops too early).
-// - POSIX: we use execve() to replace the current process with a new one.
-func restart() {
-	exename, err := osext.Executable()
-	if err != nil {
-		log.WithError(err).Fatal("unable to determine the path of the currently running executable")
-	}
-
-	args := reconstructCliForRestart()
-	platformSpecificRestart(exename, args)
+func platformSpecificPostStartup() {
 }
 
-func reconstructCliForRestart() []string {
-	args := []string{
-		"-mode", cliArgs.mode,
-	}
+func platformSpecificRestart(exename string, args []string) {
+	logrus.Debug("replacing current process with a new Flamenco Manager")
 
-	if cliArgs.debug {
-		args = append(args, "-debug")
-	} else if cliArgs.quiet {
-		args = append(args, "-quiet")
-	}
-	if cliArgs.jsonLog {
-		args = append(args, "-json")
-	}
+	// Exec needs to have the executable name as args[0]
+	args = append([]string{exename}, args...)
 
-	if runtime.GOOS == "windows" {
-		args = append(args, "-kill-after-start")
-		args = append(args, strconv.Itoa(syscall.Getpid()))
-	}
-
-	return args
+	err := syscall.Exec(exename, args, os.Environ())
+	logrus.WithFields(logrus.Fields{
+		logrus.ErrorKey: err,
+		"exename":       exename,
+		"args":          args,
+	}).Panic("exec call failed")
 }
