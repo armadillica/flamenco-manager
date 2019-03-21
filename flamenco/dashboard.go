@@ -82,9 +82,9 @@ func CreateDashboard(config *Conf,
 func (dash *Dashboard) AddRoutes(router *mux.Router, auther jwtauth.Authenticator) {
 	// JWT token protected:
 	router.Handle("/as-json", auther.WrapFunc(dash.sendStatusReport)).Methods("GET")
-	router.Handle("/worker-action/{worker-id}", auther.WrapFunc(dash.workerAction)).Methods("POST")
 	router.Handle("/set-sleep-schedule/{worker-id}", auther.WrapFunc(dash.setSleepSchedule)).Methods("POST")
 	router.Handle("/static/latest-image.jpg", auther.WrapFunc(dash.serveLatestImage)).Methods("GET")
+	router.Handle("/worker-action/{worker-id}", auther.WrapFunc(dash.workerAction)).Methods("POST")
 
 	// Unprotected, treat as accessible to the world:
 	router.HandleFunc("/", dash.showStatusPage).Methods("GET")
