@@ -23,11 +23,12 @@
         })
         .done(info => {
             toastr.options.progressBar = true;
+            toastr.options.hideDuration = 200;
             toastr.options.onHidden = function() {
                 window.location = "/setup";
             }
             toastr.remove();
-            toastr.success("Flamenco Server is restarting", "Restarting", {timeOut: 3000});
+            toastr.success("Flamenco Server is restarting", "Restarting", {timeOut: 2500});
         })
         ;
     }
