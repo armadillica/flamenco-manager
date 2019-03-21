@@ -137,21 +137,29 @@ func shutdown(signum os.Signal) {
 	close(shutdownComplete)
 }
 
+// Commandline argument values.
+// When changing, also update reconstructCliForRestart() in restart.go
 var cliArgs struct {
-	verbose    bool
-	quiet      bool
-	debug      bool
-	jsonLog    bool
-	cleanSlate bool
-	purgeQueue bool
-	version    bool
-	setup      bool
-	killPID    int
+	// Influence logging:
+	verbose bool
+	quiet   bool
+	debug   bool
+	jsonLog bool
 
+	// Options that run a certain operation, then exit the process:
+	cleanSlate        bool
+	purgeQueue        bool
+	version           bool
 	garbageCollect    bool
 	iKnowWhatIAmDoing bool
 
-	// Run mode, see validModes in flamenco/settings.go
+	// Used for setup mode and restarting the process:
+	setup   bool // whether to start in web setup mode (true) or normal operation (false)
+	killPID int  // PID to kill when we've started up. Used by Windows to restart Flamenco Manager.
+
+	// Run mode, see validModes in flamenco/settings.go (things like "development", "production" etc.)
+	// This is purely cosmetic; it is shown in the dashboard but otherwise does
+	// not have an impact on the behaviour of Flamenco Manager.
 	mode string
 }
 
