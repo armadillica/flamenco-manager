@@ -95,6 +95,8 @@ func (dash *Dashboard) AddRoutes(router *mux.Router, auther jwtauth.Authenticato
 	router.HandleFunc("/", dash.showStatusPage).Methods("GET")
 	router.HandleFunc("/latest-image", dash.showLatestImagePage).Methods("GET")
 	router.HandleFunc("/restart-to-websetup", dash.restartToWebSetup).Methods("GET")
+	// When refreshing the setup page after we restarted to normal mode, just redirect to the dashboard.
+	router.HandleFunc("/setup", dash.redirectToDashboard).Methods("GET")
 
 	static := noDirListing(http.StripPrefix("/static/", http.FileServer(http.Dir(dash.root+"static"))))
 	router.PathPrefix("/static/").Handler(static).Methods("GET")
@@ -431,4 +433,8 @@ func (dash *Dashboard) restartToWebSetup(w http.ResponseWriter, r *http.Request)
 
 	logger.Warning("Restarting Flamenco Manager by request of the dashboard.")
 	dash.RestartFunction()
+}
+
+func (dash *Dashboard) redirectToDashboard(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
