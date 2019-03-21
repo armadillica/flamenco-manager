@@ -33,6 +33,6 @@ type Config struct {
 	TestTempDir string `yaml:"-"`
 
 	DisableSecurity      bool          `yaml:"disableSecurity"`
-	PublicKeysURL        string        `yaml:"publicKeysURL"`
+	PublicKeysURL        string        `yaml:"-"`
 	DownloadKeysInterval time.Duration `yaml:"publicKeysDownloadInterval"`
 }
