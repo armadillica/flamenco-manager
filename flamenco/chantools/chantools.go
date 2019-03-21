@@ -1,9 +1,4 @@
-// Package chantools was obtained from https://github.com/theepicsnail/goChanTools
-// and subsequently altered for our needs.
-package chantools
-
-/* ***** BEGIN MIT LICENSE BLOCK *****
- * (c) 2019, Blender Foundation - Sybren A. Stüvel
+/* (c) 2019, Blender Foundation - Sybren A. Stüvel
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -23,8 +18,11 @@ package chantools
  * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- * ***** END MIT LICENCE BLOCK *****
  */
+
+// Package chantools was obtained from https://github.com/theepicsnail/goChanTools
+// and subsequently altered for our needs.
+package chantools
 
 import "sync"
 

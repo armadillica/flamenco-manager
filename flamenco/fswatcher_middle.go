@@ -1,7 +1,4 @@
-package flamenco
-
-/* ***** BEGIN MIT LICENSE BLOCK *****
- * (c) 2019, Blender Foundation - Sybren A. Stüvel
+/* (c) 2019, Blender Foundation - Sybren A. Stüvel
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -21,8 +18,9 @@ package flamenco
  * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- * ***** END MIT LICENCE BLOCK *****
  */
+
+package flamenco
 
 import (
 	"bytes"

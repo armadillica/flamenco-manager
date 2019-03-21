@@ -1,13 +1,4 @@
-// Package slugify provide a function that
-// gives a non accentuated and minus separated string from a
-// accentuated string. The code is based from a Javascript function
-// that you can get here:
-// http://irz.fr/slugme-permalien-javascript-slug/
-// The original Go code lives at https://github.com/metal3d/go-slugify/blob/master/main.go
-package slugify
-
-/* ***** BEGIN MIT LICENSE BLOCK *****
- * (c) 2019, Blender Foundation - Sybren A. Stüvel
+/* (c) 2019, Blender Foundation - Sybren A. Stüvel
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -27,8 +18,15 @@ package slugify
  * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- * ***** END MIT LICENCE BLOCK *****
  */
+
+// Package slugify provide a function that
+// gives a non accentuated and minus separated string from a
+// accentuated string. The code is based from a Javascript function
+// that you can get here:
+// http://irz.fr/slugme-permalien-javascript-slug/
+// The original Go code lives at https://github.com/metal3d/go-slugify/blob/master/main.go
+package slugify
 
 import (
 	"regexp"
