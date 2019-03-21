@@ -84,11 +84,11 @@ func (dash *Dashboard) AddRoutes(router *mux.Router, auther jwtauth.Authenticato
 	router.Handle("/as-json", auther.WrapFunc(dash.sendStatusReport)).Methods("GET")
 	router.Handle("/worker-action/{worker-id}", auther.WrapFunc(dash.workerAction)).Methods("POST")
 	router.Handle("/set-sleep-schedule/{worker-id}", auther.WrapFunc(dash.setSleepSchedule)).Methods("POST")
+	router.Handle("/static/latest-image.jpg", auther.WrapFunc(dash.serveLatestImage)).Methods("GET")
 
 	// Unprotected, treat as accessible to the world:
 	router.HandleFunc("/", dash.showStatusPage).Methods("GET")
 	router.HandleFunc("/latest-image", dash.showLatestImagePage).Methods("GET")
-	router.Handle("/static/latest-image.jpg", auther.WrapFunc(dash.serveLatestImage)).Methods("GET")
 
 	static := noDirListing(http.StripPrefix("/static/", http.FileServer(http.Dir(dash.root+"static"))))
 	router.PathPrefix("/static/").Handler(static).Methods("GET")
