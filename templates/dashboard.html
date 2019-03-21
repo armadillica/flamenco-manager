@@ -1,28 +1,11 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Flamenco Manager {{.Version}}</title>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/static/toastr/toastr.min.css">
-    <link rel='stylesheet' href='/static/dashboard.css'>
-
-
-    <script src="/static/js.cookie.min.js"></script>
-    <script src="/static/jwtauth.js"></script>
+{{define "extrahead"}}
     <script src='/static/vuejs/vue{{if ne .Config.Mode "develop"}}.min{{end}}.js'></script>
-    <script src="/static/jquery.min.js"></script>
-    <script src="/static/toastr/toastr.min.js"></script>
-    <script src="/static/bootstrap/js/bootstrap.min.js" async></script>
     <script src="/static/clipboard.min.js" async></script>
     <script src="/static/imagewatch.js" async></script>
 
     {{ .VueTemplates }}
-</head>
-<body>
+{{end}}
+{{define "body"}}
 <div class="container theme-showcase" role="main" id='vue_app'>
     <page-header :serverinfo="serverinfo"></page-header>
 
@@ -31,7 +14,10 @@
             <div class="card">
                 <div class="card-header" id='statusheading'>
                     <h3 class="card-title">Status</h3>
-                    <button id='downloadkick' class='btn btn-sm btn-outline-light'>Kick task downloader</button>
+                    <div id='statusactions'>
+                        <button id='downloadkick' class='btn btn-sm btn-outline-light'>Kick task downloader</button>
+                        <a id='restart' class='btn btn-sm btn-outline-light' href="/restart-to-websetup">Setup</a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <status id='status'
@@ -70,5 +56,4 @@
 </div>
 
 <script src="/static/dashboard.js"></script>
-</body>
-</html>
+{{end}}

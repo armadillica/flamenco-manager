@@ -110,9 +110,29 @@ func (dash *Dashboard) serveLatestImage(w http.ResponseWriter, r *http.Request) 
 }
 
 func (dash *Dashboard) showTemplate(templfname string, w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles(dash.root + templfname)
+	tmpl := template.New("").Funcs(template.FuncMap{
+		"dict": func(values ...interface{}) (map[string]interface{}, error) {
+			if len(values)%2 != 0 {
+				return nil, errors.New("invalid dict call")
+			}
+			dict := make(map[string]interface{}, len(values)/2)
+			for i := 0; i < len(values); i += 2 {
+				key, ok := values[i].(string)
+				if !ok {
+					return nil, errors.New("dict keys must be strings")
+				}
+				dict[key] = values[i+1]
+				log.Infof("dict[%q] = %q", key, values[i+1])
+			}
+			return dict, nil
+		},
+	})
+
+	tmpl, err := tmpl.ParseFiles(
+		dash.root+"templates/layout.html",
+		dash.root+templfname)
 	if err != nil {
-		log.Error("Error parsing HTML template: ", err.Error())
+		log.Errorf("Error parsing HTML template %s: %s", templfname, err)
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
@@ -131,7 +151,13 @@ func (dash *Dashboard) showTemplate(templfname string, w http.ResponseWriter, r 
 		"VueTemplates": template.HTML(vueTemplates),
 	}
 
-	tmpl.Execute(w, data)
+	log.WithField("fname", templfname).Debug("serving template")
+
+	err = tmpl.ExecuteTemplate(w, "layout", data)
+	if err != nil {
+		log.Errorf("Error executing HTML template %s: %s", templfname, err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+	}
 }
 
 func (dash *Dashboard) showStatusPage(w http.ResponseWriter, r *http.Request) {
