@@ -34,6 +34,10 @@ Changelog for Flamenco Manager
   `worker_registration_secret` in both the Manager's and the Workers' configuration
   files to the same secret string. If this string is not set, worker registration is open
   to any machine that can connect to the Manager.
+- Flamenco Manager can now be restarted into Web Setup mode from the dashboard.
+- Restarting Flamenco Manager on POSIX-compliant systems (Linux, macOS) now happens
+  'in-place'; the PID remains the same and the process stays attached to the same
+  shell (if running from a shell). Systemd does not notice this restart.
 
 
 ## Version 2.3.1 (2019-03-15)
