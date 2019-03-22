@@ -41,13 +41,6 @@ var (
 	ErrNoInterface = errors.New("No network interface found")
 )
 
-// URLConfigOptions contains a URL with some metadata
-type URLConfigOptions struct {
-	URL               *url.URL
-	IsUsedForSetup    bool // currently in use to access the web setup
-	IsCurrentInConfig bool // currently configured as "own_url"
-}
-
 func networkInterfaces(includeLinkLocal, includeLocalhost bool) ([]net.IP, error) {
 	log.Debug("Iterating over all network interfaces.")
 
@@ -226,9 +219,9 @@ func urlConfigOptions(config *flamenco.Conf, r *http.Request) []URLConfigOptions
 
 	urls := make([]URLConfigOptions, len(ownURLs))
 	for idx, url := range ownURLs {
-		urls[idx].URL = url
-
 		stringURL := url.String()
+
+		urls[idx].URL = stringURL
 		urls[idx].IsCurrentInConfig = stringURL == config.OwnURL
 		urls[idx].IsUsedForSetup = stringURL == setupURLString
 	}

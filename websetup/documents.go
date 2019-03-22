@@ -22,6 +22,10 @@
 
 package websetup
 
+import (
+	"github.com/armadillica/flamenco-manager/flamenco"
+)
+
 type keyExchangeRequest struct {
 	KeyHex string `json:"key"`
 }
@@ -50,4 +54,17 @@ type authTokenResetResponse struct {
 
 type errorMessage struct {
 	Message string `json:"_message"`
+}
+
+// URLConfigOptions contains a URL with some metadata
+type URLConfigOptions struct {
+	URL               string `yaml:"url"`
+	IsUsedForSetup    bool   `yaml:"is_used_for_setup,omitempty"`    // currently in use to access the web setup
+	IsCurrentInConfig bool   `yaml:"is_current_in_config,omitempty"` // currently configured as "own_url"
+}
+
+// setupData is what is sent back & forth between the web interface and Flamenco Manager.
+type setupData struct {
+	OwnURLs []URLConfigOptions `yaml:"own_urls"`
+	Config  flamenco.Conf      `yaml:"config"`
 }

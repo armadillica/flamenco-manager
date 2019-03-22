@@ -1,5 +1,5 @@
 {{template "layout" .}}
-{{define "content"}}
+{{define "simplepage"}}
 <div id='restart'>
     <h2>Restart Flamenco Manager</h2>
     <p>Are you sure you want to restart Flamenco Manager? This will disable the web setup and start
@@ -11,8 +11,8 @@
 
     <form method="POST">
         <div class='row' style='margin: 2em'>
-            <div class='col-md-4'><a href="/setup" class='btn btn-success'>« Back to web setup</a></div>
-            <div class='col-md-offset-4 col-md-4' style='text-align: right'><button type="submit" class='btn btn-danger'>Restart to Normal Operation</button></div>
+            <div class='col-md-4'><a href="/setup">« Back to web setup</a></div>
+            <div class='col-md-offset-4 col-md-4' style='text-align: right'><button type="submit" class='btn btn-success'>Restart to Normal Operation</button></div>
         </div>
     </form>
 </div>

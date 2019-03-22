@@ -47,6 +47,10 @@ type Redirector struct {
 	managerID string
 	hmacKey   []byte
 	server    *url.URL
+
+	// The path (on Flamenco Manager) that users are to be redirected to
+	// after logging in (on Flamenco Server).
+	nextAfterLoginPath string
 }
 
 // RedirectorResponse is sent to the browser when it asks for a token.
@@ -58,11 +62,12 @@ type RedirectorResponse struct {
 }
 
 // NewRedirector creates a new Redirector instance.
-func NewRedirector(managerID, managerSecret string, flamencoServer *url.URL) *Redirector {
+func NewRedirector(managerID, managerSecret string, flamencoServer *url.URL, nextAfterLoginPath string) *Redirector {
 	return &Redirector{
 		managerID,
 		[]byte(managerSecret),
 		flamencoServer,
+		nextAfterLoginPath,
 	}
 }
 
@@ -75,7 +80,7 @@ func (red *Redirector) AddRoutes(router *mux.Router) {
 func (red *Redirector) dashboardURL(r *http.Request) string {
 	dashURL := url.URL{
 		Host: r.Host,
-		Path: "/",
+		Path: red.nextAfterLoginPath,
 	}
 
 	if r.TLS == nil {

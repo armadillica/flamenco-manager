@@ -116,3 +116,46 @@ function obtainJWTToken() {
 
     return jwtTokenObtainingPromise;
 }
+
+(function($) {
+    /* $.jwtAjax(...) performs $.ajax(...) but if the request fails with a 401 Unauthorized
+     * or 498 Token Expired, obtains a new JWT token then tries again.
+     *
+     * When an error occurs, the returned promise is rejected with that error.
+     * In this case consult error.requestStage to see if it was a failure
+     * getting the JWT token (error.requestStage="JWT") or the AJAX request
+     * itself (error.requestStage="request").
+     */
+    jQuery.jwtAjax = function(options) {
+        let $target = this;
+
+        let promise = new Promise((resolve, reject) => {
+            var requestCounter = 0;
+            function performRequest() {
+                if (requestCounter++ > 5) {
+                    reject({responseText: "infinite loop detected"});
+                    return;
+                }
+
+                $.ajax(options)
+                .fail(ajaxError => {
+                    if (ajaxError.status == 401 || ajaxError.status == 498) {
+                        obtainJWTToken()
+                        .then(performRequest)  // if we got a new JWT token, retry the request.
+                        .catch(function(jwtError) {
+                            jwtError.requestStage = "JWT";
+                            reject(jwtError);
+                        });
+                        return;
+                    }
+                    ajaxError.requestStage = "request";
+                    reject(ajaxError);
+                })
+                .done(resolve)
+                ;
+            }
+            performRequest();
+        });
+        return promise;
+    };
+})(jQuery);

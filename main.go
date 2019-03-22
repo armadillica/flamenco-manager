@@ -155,9 +155,9 @@ func main() {
 	// Register the restart function when we're in setup mode
 	doRestartAfterShutdown := false
 	if setup != nil {
-		setup.RestartFunction = func() {
+		setup.RestartFunction = func(enterSetup bool) {
 			doRestartAfterShutdown = true
-			cliArgs.setup = false // The Web Setup restarts to the Dashboard.
+			cliArgs.setup = enterSetup
 			shutdown(os.Interrupt)
 		}
 	}

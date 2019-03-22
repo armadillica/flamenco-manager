@@ -3,7 +3,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Flamenco Manager</title>
+    <title>{{block "title" .}}Flamenco Manager{{end}}</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -13,11 +13,12 @@
 
     <link rel='icon' type='image/png' href='/static/flamenco.png'>
 
+    <script src="/static/jquery.min.js"></script>
     <script src="/static/js.cookie.min.js"></script>
     <script src="/static/jwtauth.js"></script>
-    <script src="/static/jquery.min.js"></script>
     <script src="/static/toastr/toastr.min.js"></script>
     <script src="/static/bootstrap/js/bootstrap.min.js" async></script>
+    <script src="/static/restart.js" async></script>
 
     {{block "extrahead" .}}{{ end }}
 </head>

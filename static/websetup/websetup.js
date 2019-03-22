@@ -27,8 +27,30 @@
 function linkRequired() {
     var $result = $('#link-check-result');
 
-    return $.get('/setup/api/link-required')
+    $.get('/setup/api/link-required')
+    .fail(error => {
+        if (error.status == 401 || error.status == 498) {
+            window.addEventListener("newJWTToken", linkRequired);
+            obtainJWTToken()
+            .then(linkRequired)
+            .catch(function(err) {
+                showLinkButton();
+
+                if (err.getResponseHeader("Content-Type").startsWith("text/html") && err.responseText) {
+                    $result.html("Link check failed auth check: " + err.responseText);
+                } else {
+                    var errorMsg = err.responseText || "unable to connect to Flamenco Server";
+                    $result.text("Link check failed auth check: " + errorMsg);
+                }
+            });
+            return;
+        }
+        showLinkButton();
+        $result.text("Link check failed: " + error.responseText);
+    })
     .done(function(response) {
+        window.removeEventListener("newJWTToken", linkRequired);
+
         if (response.link_required) {
             $result.text("You need to link this Flamenco Manager to a Flamenco Server.");
             showLinkButton();
@@ -41,10 +63,6 @@ function linkRequired() {
                 .append($link);
             $('#relink-action').show();
         }
-    })
-    .fail(function(err) {
-        $result.text("Link check failed: " + err.responseText);
-        showLinkButton();
     })
     .always(function() {
         $('#link-check-in-progress').remove();
@@ -107,6 +125,209 @@ function saveDataTables() {
     return true;
 }
 
+Vue.component('setup-form', {
+    props: {
+        own_urls: Array,
+        config: Object,
+        original_config: Object,
+        mongo_choice: String,
+    },
+    template: "#template_setup_form",
+    methods: {
+        saveContent(restartAfterSaving) {
+            this.$emit('configupdated', {
+                config: this.config,
+                restartAfterSaving: !!restartAfterSaving,
+            });
+        },
+    },
+});
+
+Vue.component('yaml-editor', {
+    props: {
+        config: Object,
+        original_config: Object,
+    },
+    data() { return {
+        editor: null,
+    }},
+    template: "#template_yaml_editor",
+    created() {
+        this.$nextTick(this.createEditor);
+    },
+    destroyed() {
+        this.editor.destroy();
+        this.editor.container.remove();
+    },
+    watch: {
+        config(newConfig, oldConfig) {
+            let curpos = this.editor.selection.getCursor();
+            this.editor.setValue(this.yaml);
+            this.editor.gotoLine(curpos.row+1);
+        },
+    },
+    computed: {
+        yaml() {
+            return jsyaml.safeDump(this.config);
+        },
+    },
+    methods: {
+        createEditor() {
+            this.editor = ace.edit("ace_yaml_editor");
+            this.editor.setTheme("ace/theme/github");
+            this.editor.session.setMode("ace/mode/yaml");
+            this.editor.setOption("fontSize", "4mm");
+        },
+        saveContent(restartAfterSaving) {
+            var config;
+            try {
+                config = jsyaml.safeLoad(this.editor.getValue());
+            } catch (ex) {
+                if (ex.name != 'YAMLException') throw ex;
+
+                toastr.error(ex.reason, "Error parsing YAML:");
+                this.editor.gotoLine(ex.mark.line);
+                return;
+            }
+            this.$emit('configupdated', {
+                config: config,
+                restartAfterSaving: !!restartAfterSaving,
+            });
+        },
+        restart(restartURL) {
+            restart(restartURL);
+        },
+    },
+});
+
+
+Vue.component('input-field', {
+    props: {
+        id_input: String,
+        placeholder: String,
+        label: String,
+        help: String,
+        value: String,
+        original_value: String,
+    },
+    template: '#template_input_field',
+    computed: {
+        restore_title: function () {
+            return 'Restore Saved Value: ' + this.original_value;
+        },
+    },
+});
+
+Vue.component('checkbox-field', {
+    props: {
+        id_input: String,
+        label: String,
+        label2: String,
+        help: String,
+        value: Boolean,
+        original_value: Boolean,
+    },
+    template: '#template_checkbox_field',
+    computed: {
+        restore_title: function () {
+            return 'Restore Saved Value: ' + this.original_value;
+        },
+    },
+});
+
+
+var vueApp = new Vue({
+    el: '#vueApp',
+    data: {
+        own_urls: [],
+        config: {},
+        original_config: {},
+        mongo_choice: "builtin",
+        vueAppMode: "form",   // or "yaml", see switchAppMode().
+    },
+    created() {
+        this.loadSetupData();
+    },
+    computed: {
+        appModeButtonText() {
+            return {
+                form: "Advanced",
+                yaml: "Simple",
+            }[this.vueAppMode];
+        },
+    },
+    methods: {
+        switchAppMode() {
+            this.vueAppMode = {
+                form: "yaml",
+                yaml: "form",
+            }[this.vueAppMode];
+        },
+
+        loadSetupData() {
+            $.jwtAjax({
+                method: 'GET',
+                url: '/setup/data',
+            })
+            .then(response => {
+                window.removeEventListener("newJWTToken", this.loadSetupData);
+                let settings = jsyaml.safeLoad(response);
+
+                this.own_urls = settings.own_urls;
+                this.setConfig(settings.config);
+            })
+            .catch(error => {
+                var title;
+                let message = error.responseText || "Unable to connect to server.";
+                if (error.requestStage == "JWT") {
+                    title = "Unable to obtain authorization token";
+                } else {
+                    title = "Unable to load settings";
+                }
+                toastr.error(message, title);
+                showLinkButton();
+            })
+            ;
+        },
+
+        setConfig(config) {
+            this.config = config;
+            this.mongo_choice = config.database_url == '' ? 'bundled' : 'external';
+
+            // Keep a deep copy around so that we can go back to unchanged values.
+            this.original_config = JSON.parse(JSON.stringify(config));
+        },
+
+        saveConfig(options) {
+            this.setConfig(options.config);
+
+            $.jwtAjax({
+                method: 'POST',
+                url: '/setup/data',
+                data: jsyaml.safeDump(options.config),
+                headers: {'Content-Type': 'application/x-yaml'},
+            })
+            .then(() => {
+                if (options.restartAfterSaving) {
+                    restart("/setup/restart-to-setup");
+                } else {
+                    toastr.success("Restart Flamenco Manager to apply the new settings.", "Configuration saved");
+                }
+            })
+            .catch(error => {
+                var title;
+                let message = error.responseText || "Unable to connect to server.";
+                if (error.requestStage == "JWT") {
+                    title = "Unable to obtain authorization token";
+                } else {
+                    title = "Unable to save settings";
+                }
+                toastr.error(message, title);
+            })
+            ;
+        },
+    },
+});
 
 // Stuff to run on every "page ready" event.
 $(document).ready(function() {
@@ -121,6 +342,13 @@ $(document).ready(function() {
 
     $('.table-remove').click(function() {
         $(this).parents('tr').detach();
+    });
+
+    $(document).ajaxStart(function() {
+        $('#loading-settings').show();
+    });
+    $(document).ajaxStop(function() {
+        $('#loading-settings').hide();
     });
 
     // A few jQuery helpers for exporting only

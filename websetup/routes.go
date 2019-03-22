@@ -23,15 +23,18 @@
 package websetup
 
 import (
-	"crypto/hmac"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
+
+	yaml "gopkg.in/yaml.v2"
+
+	"github.com/armadillica/flamenco-manager/jwtauth"
 
 	"github.com/armadillica/flamenco-manager/flamenco"
 
@@ -42,12 +45,14 @@ import (
 // End points at this Manager
 const (
 	setupURL           = "/setup"
+	setupDataURL       = "/setup/data"
 	saveConfigURL      = "/setup/save-configuration"
 	apiLinkRequiredURL = "/setup/api/link-required"
 	apiLinkStartURL    = "/setup/api/link-start"
 	linkReturnURL      = "/setup/link-return"
 	linkDoneURL        = "/setup/link-done"
 	restartURL         = "/setup/restart"
+	restartToSetupURL  = "/setup/restart-to-setup"
 )
 
 // Routes handles all HTTP routes and server-side context for the web setup wizard.
@@ -55,7 +60,7 @@ type Routes struct {
 	config          *flamenco.Conf
 	flamencoVersion string
 	linker          *ServerLinker
-	RestartFunction func()
+	RestartFunction func(enterSetup bool)
 	root            string
 }
 
@@ -69,7 +74,7 @@ func createWebSetup(config *flamenco.Conf, flamencoVersion string) *Routes {
 		flamencoVersion,
 		nil,
 		nil,
-		flamenco.TemplatePathPrefix("templates/websetup/layout.html"),
+		flamenco.TemplatePathPrefix("templates/layout.html"),
 	}
 }
 
@@ -103,16 +108,6 @@ func sendJSONnoCheck(w http.ResponseWriter, r *http.Request, payload interface{}
 	return nil
 }
 
-func sendErrorMessage(w http.ResponseWriter, r *http.Request, status int, msg string, args ...interface{}) error {
-	urlPrefix := fmt.Sprintf("%s: ", r.URL)
-	formattedMessage := fmt.Sprintf(msg, args...)
-	log.Error(urlPrefix + formattedMessage)
-
-	w.WriteHeader(status)
-	_, err := fmt.Fprint(w, formattedMessage)
-	return err
-}
-
 func (web *Routes) showTemplate(templfname string, w http.ResponseWriter, r *http.Request, templateData TemplateData) {
 	tmpl := template.New("").Funcs(template.FuncMap{
 		"dict": func(values ...interface{}) (map[string]interface{}, error) {
@@ -133,39 +128,61 @@ func (web *Routes) showTemplate(templfname string, w http.ResponseWriter, r *htt
 	})
 
 	tmpl, err := tmpl.ParseFiles(
-		web.root+"templates/websetup/layout.html",
+		web.root+"templates/layout.html",
 		web.root+"templates/websetup/vartable.html",
 		web.root+templfname)
 	if err != nil {
-		log.Errorf("Error parsing HTML template %s: %s", templfname, err)
+		log.WithFields(log.Fields{
+			"template":   templfname,
+			log.ErrorKey: err,
+		}).Error("Error parsing HTML template")
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+	// TODO(Sybren): cache this in memory and check mtime.
+	vueTemplates, err := ioutil.ReadFile(web.root + "static/websetup/vue-components.html")
+	if err != nil {
+		log.WithError(err).Error("Error loading Vue.js templates")
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
 	usedData := TemplateData{
-		"Version": web.flamencoVersion,
-		"Config":  web.config,
+		"Version":      web.flamencoVersion,
+		"Config":       web.config,
+		"VueTemplates": template.HTML(vueTemplates),
 	}
 	merge(usedData, templateData)
 
 	err = tmpl.ExecuteTemplate(w, "layout", usedData)
 	if err != nil {
-		log.Errorf("Error executing HTML template %s: %s", templfname, err)
+		log.WithFields(log.Fields{
+			"template":   templfname,
+			log.ErrorKey: err,
+		}).Error("Error executing HTML template")
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 	}
 }
 
 // addWebSetupRoutes registers HTTP endpoints for setup mode.
-func (web *Routes) addWebSetupRoutes(router *mux.Router) {
+func (web *Routes) addWebSetupRoutes(router *mux.Router, userauth jwtauth.Authenticator) {
 	router.HandleFunc("/", web.httpIndex)
-	router.HandleFunc(setupURL, web.httpSetupIndex)
-	router.HandleFunc(saveConfigURL, web.httpSaveConfig).Methods("POST")
-	router.HandleFunc(apiLinkRequiredURL, web.apiLinkRequired)
-	router.HandleFunc(apiLinkStartURL, web.apiLinkStart)
-	router.HandleFunc(linkReturnURL, web.httpLinkReturn)
-	router.HandleFunc(linkDoneURL, web.httpLinkDone)
-	router.HandleFunc(restartURL, web.httpRestart).Methods("GET", "POST")
+	router.HandleFunc(setupURL, web.httpSetupIndex).Methods("GET")
 
+	router.Handle(setupDataURL, userauth.WrapFunc(web.httpSetupData)).Methods("GET")
+	router.Handle(setupDataURL, userauth.WrapFunc(web.httpSaveYAML)).Methods("POST")
+
+	router.Handle(apiLinkRequiredURL, userauth.WrapFunc(web.apiLinkRequired))
+	router.Handle(apiLinkStartURL, userauth.WrapFunc(web.apiLinkStart))
+	router.Handle(linkReturnURL, userauth.WrapFunc(web.httpLinkReturn))
+	router.Handle(linkDoneURL, userauth.WrapFunc(web.httpLinkDone))
+
+	router.Handle(restartURL, userauth.WrapFunc(web.httpRestart)).Methods("GET", "POST")
+	router.Handle(restartToSetupURL, userauth.WrapFunc(web.httpRestartToSetup)).Methods("POST")
+
+	// The last-rendered image is private, and not used in web setup, so mask it out.
+	router.HandleFunc("/static/latest-image.jpg", http.NotFound).Methods("GET")
 	static := noDirListing(http.StripPrefix("/static/", http.FileServer(http.Dir(web.root+"static"))))
 	router.PathPrefix("/static/").Handler(static).Methods("GET")
 }
@@ -182,7 +199,7 @@ func (web *Routes) httpSetupIndex(w http.ResponseWriter, r *http.Request) {
 		log.Infof("Own URL is not configured, choosing one based on the current request")
 		for _, url := range urls {
 			if url.IsUsedForSetup {
-				web.config.OwnURL = url.URL.String()
+				web.config.OwnURL = url.URL
 				break
 			}
 		}
@@ -193,129 +210,73 @@ func (web *Routes) httpSetupIndex(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Check connection to Flamenco Server. Response indicates whether (re)linking is necessary.
-func (web *Routes) apiLinkRequired(w http.ResponseWriter, r *http.Request) {
-	payload := linkRequiredResponse{
-		Required: LinkRequired(web.config),
-	}
-	if web.config.Flamenco != nil {
-		payload.ServerURL = web.config.Flamenco.String()
+func (web *Routes) httpSetupData(w http.ResponseWriter, r *http.Request) {
+	logger := log.WithField("remote_addr", r.RemoteAddr)
+	urls := urlConfigOptions(web.config, r)
+
+	// Set a default "own URL" when entering the setup.
+	if web.config.OwnURL == "" {
+		logger.Info("Own URL is not configured, choosing one based on the current request")
+		for _, url := range urls {
+			if url.IsUsedForSetup {
+				web.config.OwnURL = url.URL
+				break
+			}
+		}
 	}
 
-	sendJSONnoCheck(w, r, payload)
+	payload := setupData{
+		OwnURLs: urls,
+		Config:  *web.config,
+		// TODO: Include mtime of config file so that saving can require If-Unmodified-Since header.
+	}
+	payload.Config.ManagerSecret = ""
+
+	asBytes, err := yaml.Marshal(payload)
+	if err != nil {
+		logger.WithError(err).Error("unable to create YAML response")
+		http.Error(w, "Error creating YAML response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/x-yaml")
+	w.Write(asBytes)
 }
 
-// Starts the linking process, should result in a redirect to Server.
-func (web *Routes) apiLinkStart(w http.ResponseWriter, r *http.Request) {
-	serverURL := r.FormValue("server")
-	if serverURL == "" {
-		sendErrorMessage(w, r, http.StatusBadRequest, "No server URL given")
+func (web *Routes) httpSaveYAML(w http.ResponseWriter, r *http.Request) {
+	logger := log.WithFields(jwtauth.RequestLogFields(r))
+
+	ct := r.Header.Get("Content-Type")
+	if ct != "application/x-yaml" {
+		http.Error(w, "Expecting application/x-yaml content type", http.StatusNotAcceptable)
+		logger.WithField("contentTYpe", ct).Warning("invalid content type received")
 		return
 	}
 
-	ourURL, err := ourURL(web.config, r)
-	if err != nil {
-		log.Errorf("Unable to parse request host %q: %s", r.Host, err)
-		sendErrorMessage(w, r, http.StatusInternalServerError, "I don't know what you're doing")
+	logger.Info("receiving new YAML configuration file")
+
+	config := *web.config
+	dec := yaml.NewDecoder(r.Body)
+
+	// Send YAML decoding errors as-is back to the HTTP client.
+	// They need to know what they did wrong.
+	if err := dec.Decode(&config); err != nil {
+		logger.WithError(err).Warning("unable to decode user-supplied YAML")
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	linker, err := StartLinking(serverURL, ourURL)
-	if err != nil {
-		sendErrorMessage(w, r, http.StatusInternalServerError, "the linking process cannot start: %s", err)
+	// TODO: Require If-Unmodified-Since header + config file mtime check.
+
+	// Errors saving the config file shouldn't be sent back, because
+	// those contain potentially security-sensitive information.
+	if err := config.Overwrite(); err != nil {
+		logger.WithError(err).Error("unable to save new configuration file from user-supplied YAML")
+		http.Error(w, "Unable to save configuration", http.StatusInternalServerError)
 		return
 	}
 
-	// Server URL has been parsed correctly, so we can save it to our configuration file.
-	web.config.Flamenco = linker.upstream
-	web.config.Overwrite()
-
-	err = linker.ExchangeKey()
-	if err != nil {
-		sendErrorMessage(w, r, http.StatusInternalServerError, "unable to exchange secret key: %s", err)
-		return
-	}
-
-	// Redirect the user to the Flamenco Server to log in and create/choose a Manager.
-	log.Infof("%s: going to link to %s", r.URL, linker.upstream)
-	redirectURL, err := linker.redirectURL()
-	if err != nil {
-		sendErrorMessage(w, r, http.StatusInternalServerError, "error constructing URL to redirect to: %s", err)
-		return
-	}
-	log.Infof("%s: redirecting user to %s", r.URL, redirectURL)
-
-	// Store the linker object in our memory. The server shouldn't be restarted while linking.
-	web.linker = linker
-
-	sendJSONnoCheck(w, r, linkStartResponse{redirectURL.String()})
-}
-
-func (web *Routes) httpLinkReturn(w http.ResponseWriter, r *http.Request) {
-	// Check the HMAC to see if we can trust this request.
-	mac := r.FormValue("hmac")
-	oid := r.FormValue("oid")
-	if mac == "" || oid == "" {
-		sendErrorMessage(w, r, http.StatusBadRequest, "no mac or oid received")
-		return
-	}
-
-	if web.linker == nil {
-		log.Warning("Flamenco Manager restarted mid link procedure, redirecting to setup again")
-		http.Redirect(w, r, setupURL, http.StatusSeeOther)
-		return
-	}
-
-	msg := []byte(web.linker.identifier + "-" + oid)
-	hash, err := web.linker.hmacObject()
-	if err != nil {
-		sendErrorMessage(w, r, http.StatusInternalServerError, "error constructing HMAC: %s", err)
-		return
-	}
-
-	if _, err = hash.Write(msg); err != nil {
-		sendErrorMessage(w, r, http.StatusInternalServerError, "error computing HMAC: %s", err)
-		return
-	}
-	receivedMac, err := hex.DecodeString(mac)
-	if err != nil {
-		log.Errorf("Unable to decode received mac: %s", err)
-		sendErrorMessage(w, r, http.StatusBadRequest, "bad HMAC")
-		return
-	}
-	computedMac := hash.Sum(nil)
-	if !hmac.Equal(receivedMac, computedMac) {
-		sendErrorMessage(w, r, http.StatusBadRequest, "bad HMAC")
-		return
-	}
-
-	// Remember our Manager ID and request a reset of our auth token.
-	log.Infof("Our Manager ID is %s", oid)
-	web.config.ManagerID = oid
-	web.linker.managerID = oid
-
-	log.Infof("Requesting new authentication token from Flamenco Server")
-	token, err := web.linker.resetAuthToken()
-	if err != nil {
-		sendErrorMessage(w, r, http.StatusInternalServerError,
-			"Unable to request a new authentication token from Flamenco Server: %s", err)
-		return
-	}
-	log.Infof("Received new authentication token")
-	web.config.ManagerSecret = token
-
-	// Save our configuration file.
-	if err = web.config.Overwrite(); err != nil {
-		sendErrorMessage(w, r, http.StatusInternalServerError, "error saving configuration: %s", err)
-		return
-	}
-
-	// Redirect to the "done" page
-	http.Redirect(w, r, linkDoneURL, http.StatusSeeOther)
-}
-
-func (web *Routes) httpLinkDone(w http.ResponseWriter, r *http.Request) {
-	web.showTemplate("templates/websetup/link-done.html", w, r, nil)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func parseVariables(formValue string) (map[string]map[string]string, error) {
@@ -335,32 +296,6 @@ func parseVariables(formValue string) (map[string]map[string]string, error) {
 	return variablesByVarName, nil
 }
 
-func (web *Routes) httpSaveConfig(w http.ResponseWriter, r *http.Request) {
-	log.Infof("Merging configuration with POST data")
-
-	web.config.DatabaseURL = r.FormValue("database-url")
-	web.config.DatabasePath = r.FormValue("database-path")
-	web.config.TaskLogsPath = r.FormValue("task-logs-path")
-	web.config.Listen = r.FormValue("listen")
-	web.config.OwnURL = r.FormValue("own-url")
-	web.config.SSDPDiscovery = r.FormValue("ssdp-discovery") != ""
-
-	// Parse the posted variables.
-	if vars, err := parseVariables(r.FormValue("variables")); err != nil {
-		log.Error(err)
-	} else {
-		web.config.VariablesByVarname = vars
-	}
-	if vars, err := parseVariables(r.FormValue("path-variables")); err != nil {
-		log.Error(err)
-	} else {
-		web.config.PathReplacementByVarname = vars
-	}
-	web.config.Overwrite()
-
-	http.Redirect(w, r, setupURL, http.StatusSeeOther)
-}
-
 func (web *Routes) httpRestart(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		web.showTemplate("templates/websetup/restart.html", w, r, nil)
@@ -368,17 +303,30 @@ func (web *Routes) httpRestart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	web.showTemplate("templates/websetup/restarting.html", w, r, nil)
+	logger := log.WithField("remote_addr", r.RemoteAddr)
+	logger.Warning("Restarting Flamenco Manager by request of the web setup.")
 
 	go func() {
 		// Give the browser some time to load static files for the template, before shutting down.
 		time.Sleep(1 * time.Second)
 
 		if web.RestartFunction == nil {
-			log.Errorf("Unable to restart Flamenco Manager, no restart function was registered.")
+			logger.Error("Unable to restart Flamenco Manager, no restart function was registered.")
 			return
 		}
 
-		log.Warningf("Restarting Flamenco Manager by request of the web setup.")
-		web.RestartFunction()
+		web.RestartFunction(false)
 	}()
+}
+
+func (web *Routes) httpRestartToSetup(w http.ResponseWriter, r *http.Request) {
+	logger := log.WithField("remote_addr", r.RemoteAddr)
+	if web.RestartFunction == nil {
+		logger.Error("web setup has no restart function configured")
+		http.Error(w, "Unable to restart Flamenco Manager, no restart function was registered.", http.StatusInternalServerError)
+		return
+	}
+	logger.Warning("Restarting Flamenco Manager into setup mode by request of the web setup.")
+	w.WriteHeader(http.StatusNoContent)
+	web.RestartFunction(true)
 }

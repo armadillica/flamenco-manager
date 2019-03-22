@@ -26,6 +26,7 @@ import (
 	"fmt"
 
 	"github.com/armadillica/flamenco-manager/flamenco"
+	"github.com/armadillica/flamenco-manager/jwtauth"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -38,7 +39,22 @@ type RestartFunction func()
 
 // EnterSetupMode registers HTTP endpoints and logs which URLs are available to visit it.
 func EnterSetupMode(config *flamenco.Conf, flamencoVersion string, router *mux.Router) (*Routes, error) {
-	log.Info("Entering setup mode")
+	log.WithField("securityEnabled", !config.JWT.DisableSecurity).Info("Entering setup mode")
+
+	// Disable security until we have a way to get our JWT keys from the server.
+	var jwtAuther jwtauth.Authenticator
+	linkRequired := LinkRequired(config)
+	if linkRequired {
+		log.Warning("This Manager is not yet linked to a Server, disabling security.")
+		jwtAuther = jwtauth.AlwaysAllow{}
+	} else {
+		jwtAuther = jwtauth.Load(config.JWT)
+		jwtRedirector := jwtauth.NewRedirector(config.ManagerID, config.ManagerSecret, config.Flamenco, "/setup")
+		if !config.JWT.DisableSecurity {
+			jwtRedirector.AddRoutes(router)
+			jwtauth.GoDownloadLoop()
+		}
+	}
 
 	urls, err := availableURLs(config, false)
 	if err != nil {
@@ -60,7 +76,7 @@ func EnterSetupMode(config *flamenco.Conf, flamencoVersion string, router *mux.R
 	// We don't need to return a reference to this object, since it's still referred to by the
 	// muxer.
 	web := createWebSetup(config, flamencoVersion)
-	web.addWebSetupRoutes(router)
+	web.addWebSetupRoutes(router, jwtAuther)
 
 	return web, nil
 }

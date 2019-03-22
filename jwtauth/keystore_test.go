@@ -115,7 +115,6 @@ func TestDownloadKeys(t *testing.T) {
 		},
 	)
 
-	downloadKeysInitialWait = 10 * time.Millisecond
 	loadKeyStore(config, config.TestTempDir, true)
 	globalKeyStore.Go()
 

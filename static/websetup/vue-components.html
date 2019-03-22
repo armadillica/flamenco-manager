@@ -1,0 +1,170 @@
+<script type="text/x-template" id="template_setup_form">
+    <div id='config'>
+        <h2>Flamenco Manager Configuration</h2>
+        <p>This web interface allows you to set up the most important settings for Flamenco Server.
+        There are more settings to tweak in the configuration file flamenco-manager.yaml.
+        Configuration changes will not be taken into account immediately; restart Flamenco Manager for
+        that.</p>
+
+        <section>
+            <h3>Core Settings</h3>
+
+            <input-field id_input="manager_name" placeholder="Flamenco Manager"
+                label="Name of this Manager"
+                v-model="config.manager_name" :original_value="original_config.manager_name"
+                help="This name is purely cosmetic, and is shown only on the dashboard. It can help you distinguish between different Managers."></input-field>
+
+            <div class="form-group row">
+                <label class="col-sm-2 col-form-label" for="mongo_choice">Database Choice</label>
+                <div class="col-sm-9">
+                    <div class=" form-check">
+                        <input type="radio" class="form-check-input" id="mongo_choice_bundled" name="mongo_choice"
+                            value="bundled" :checked="mongo_choice == 'bundled'"
+                            @input="$emit('mongo_choice', $event.target.value)">
+                        <label class="form-check-label" for="mongo_choice_bundled">Bundled - easiest to set up</label>
+                    </div>
+                    <div class=" form-check">
+                        <input type="radio" class="form-check-input" id="mongo_choice_external" name="mongo_choice"
+                            value="external" :checked="mongo_choice == 'external'"
+                            @input="$emit('mongo_choice', $event.target.value)">
+                        <label class="form-check-label" for="mongo_choice_external">External - if you already have MongoDB installed</label>
+                    </div>
+                </div>
+            </div>
+
+            <input-field id_input="database_path" v-model="config.database_path" :original_value="original_config.database_path"
+                v-if="mongo_choice == 'bundled'"
+                placeholder="location of the database"
+                label="Database Location"
+                help="Location where the bundled MongoDB database should store its files. Relative paths are interpreted from the directory Flamenco Manager was started from. only use local filesystems, and not a path mounted via CIFS/Samba/NFS.">
+            </input-field>
+
+            <input-field id_input="database_url" v-model="config.database_url" :original_value="original_config.database_url"
+                v-if="mongo_choice == 'external'"
+                placeholder="mongodb://hostname/databasename"
+                label="Database URL"
+                help="URL of the MongoDB database to use.">
+            </input-field>
+
+            <input-field id_input="task_logs_path" v-model="config.task_logs_path" :original_value="original_config.task_logs_path"
+                placeholder="/var/log/flamenco-tasks"
+                label="Task Logs"
+                help="Path to where Flamenco Manager should store the task logs. Must be writable by the user running Flamenco Manager. Note that automatic cleanup is currently &lt;strong&gt;not implemented&lt;/strong&gt; in Flamenco Manager.">
+            </input-field>
+
+            <input-field id_input="worker_registration_secret" v-model="config.worker_registration_secret" :original_value="original_config.worker_registration_secret"
+                placeholder="secret phrase"
+                label="Worker Registration Secret"
+                help="Secret phrase for Flamenco Workers to register themselves with this Flamenco Manager. Place this phrase in your worker's &lt;code&gt;worker_registration_secret&lt;/code&gt; setting. Leave this empty to allow any machine to register itself as Worker.">
+            </input-field>
+
+            <input-field id_input="own_url" v-model="config.own_url" :original_value="original_config.own_url"
+                placeholder="http://flamenco-manager:8083/"
+                label="URL of this Flamenco Manager"
+                help="This URL is sent to the Flamenco Server and Flamenco Workers to tell them where this Manager lives. Type one in yourself, or choose one from the available URLs below.">
+
+                <button v-for="urlInfo in own_urls"
+                    type="button"
+                    :class='"own-url-suggestion btn btn-sm " + (urlInfo.is_used_for_setup ? "btn-info" : "btn-outline-light")'
+                    :title='urlInfo.is_used_for_setup ? "You are using this URL now" : ""'
+                    @click="config.own_url = urlInfo.url">
+                    {{ urlInfo.url }}
+                </button>
+            </input-field>
+
+            <input-field id_input="listen" v-model="config.listen" :original_value="original_config.listen"
+                placeholder="[::]:8083"
+                label="Listen IP and port number"
+                help="Address and port to listen on, such as '[::]:8083' on an IPv6-enabled system (the default), or '0.0.0.0:8083' on an IPv4-only system. IP address is optional, port number is required.">
+            </input-field>
+
+            <checkbox-field id_input="ssdp_discovery" v-model="config.ssdp_discovery" :original_value="original_config.ssdp_discovery"
+                label="Autodiscovery"
+                label2="Enable UPnP/SSDP auto-discovery"
+                help="This allows Workers to automatically find this Manager if they are on the same network. However, it can conflict with other UPnP/SSDP applications (such as Spotify) running on the same machine.">
+            </checkbox-field>
+        </section>
+
+        <section>
+            <h3>Shaman File Storage</h3>
+
+            <p>Shaman is a file storage server built into Flamenco Manager. It accepts uploaded files via HTTP,
+            and stores them based on their SHA256-sum and their file length. It can recreate directory structures
+            by symlinking those files. Effectively it ensures that, when you create a new render job, you only
+            have to upload those files that are new or have changed.</p>
+
+            <input-field id_input="shaman_fileStorePath" v-model="config.fileStorePath" :original_value="original_config.fileStorePath"
+                placeholder="/mnt/shared-filesystem/flamenco-file-store"
+                label="File Storage"
+                help="Path where the Shaman stores the files. Must be on the same filesystem as the Checkout path, and must be accessible by Workers.">
+            </input-field>
+
+            <input-field id_input="shaman_checkoutPath" v-model="config.checkoutPath" :original_value="original_config.checkoutPath"
+                placeholder="/mnt/shared-filesystem/flamenco-checkout"
+                label="Checkout"
+                help="Path where render job file structures are created. Must be on the same filesystem as the File Storage path, and must be accessible by Workers.">
+            </input-field>
+        </section>
+
+        <section>
+            <button class='btn btn-success' style='float: right' type="button" @click="saveContent(false)">Save configuration</button>
+            <a class='btn btn-warning' href='/setup/restart' title='Does NOT save your configuration. You will have to confirm before the restart happens.'>Restart Flamenco Manager</a>
+        </section>
+    </div>
+</script>
+
+<script type="text/x-template" id="template_yaml_editor">
+    <div id='yaml_mode'>
+        <h2>Flamenco Manager Advanced Configuration</h2>
+
+        <div class="btn-group" role="group" aria-label="Actions">
+            <button type="button" class="btn btn-secondary" @click="$emit('reloadconfig')">⎌ Load Active Configuration</button>
+            <button type="button" class="btn btn-secondary" @click="saveContent(false)">💾 Save YAML</button>
+            <button type="button" class="btn btn-secondary" @click="saveContent(true)">💾 Save YAML and Apply</button>
+            <button type="button" class="btn btn-secondary" @click="restart('/setup/restart')">Restart to Normal Mode</button>
+        </div>
+
+        <pre id="ace_yaml_editor">{{ yaml }}</pre>
+    </div>
+</script>
+
+<script type="text/x-template" id="template_input_field">
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label" :for="id_input">{{ label }}</label>
+        <div class="col-sm-9">
+            <input :id="id_input" class="form-control" :name="id_input" :placeholder="placeholder"
+                v-bind:value="value"
+                v-on:input="$emit('input', $event.target.value)">
+            <p class="help-block" v-if="help" v-html="help"></p>
+            <slot></slot>
+        </div>
+        <div class="col-sm-1">
+            <button type="button" class="btn btn-outline-light"
+                v-if="original_value != value"
+                @click="$emit('input', original_value)"
+                :title="restore_title">⎌</button>
+        </div>
+    </div>
+</script>
+
+<script type="text/x-template" id="template_checkbox_field">
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label" :for="id_input">{{ label }}</label>
+        <div class="col-sm-9">
+            <div class="form-check">
+                <input :id="id_input" type="checkbox" class="form-check-input" :name="id_input"
+                    v-bind:checked="value"
+                    v-on:input="$emit('input', $event.target.checked)">
+                <label :for="id_input" class="form-check-label">{{ label2 }}</label>
+            </div>
+            <p class="help-block" v-if="help" v-html="help"></p>
+            <slot></slot>
+        </div>
+        <div class="col-sm-1">
+            <button type="button" class="btn btn-outline-light"
+                v-if="original_value != value"
+                @click="$emit('input', original_value)"
+                :title="restore_title">⎌</button>
+        </div>
+    </div>
+</script>

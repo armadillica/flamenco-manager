@@ -6,6 +6,12 @@ Changelog for Flamenco Manager
 - Go to web setup mode automatically when Flamenco Manager is not yet linked to a Flamenco Server.
   This makes it possible to create a partial configuration file with some defaults, and still
   automatically start in setup mode.
+- Web Setup is now optionally secured with JWT tokens (previously only the main dashboard was).
+  When the Manager is not linked to a Server, this SECURITY IS TURNED OFF. Flamenco Server is used
+  to supply us with JWT tokens and public keys for token validation; without knowing which server to
+  connect to, this workflow is impossible.
+- Web setup now loads and saves settings via YAML. It can show a web form as well as an advanced
+  mode that allows direct editing of YAML.
 
 
 ## Version 2.4.2 (2019-03-27)

@@ -1,5 +1,17 @@
 {{template "layout" .}}
-{{define "content"}}
+
+{{define "title"}}Flamenco Manager - Setup{{end}}
+
+{{define "extrahead"}}
+    <link rel='stylesheet' href='/static/websetup/websetup.css'>
+    <script src='/static/vuejs/vue{{if ne .Config.Mode "develop"}}.min{{end}}.js'></script>
+    <script src="/static/websetup/js-yaml.min.js"></script>
+    <script src="/static/websetup/ace/ace.js"></script>
+    <script src="/static/websetup/websetup.js" async></script>
+    {{ .VueTemplates }}
+{{end}}
+
+{{define "simplepage"}}
 <div id='linking'>
     <h2>Link to Flamenco Server</h2>
     <div id='link-check-in-progress'>Link check in progress, please wait…</div>
@@ -15,116 +27,26 @@
     <p id='relink-action' style='display: none'><a href='javascript:showLinkButton()'>Link to another server</a></p>
 </div>
 
-<div id='config'>
-    <h2>Flamenco Manager Configuration</h2>
-    <p>This web interface allows you to set up the most important settings for Flamenco Server.
-    There are more settings to tweak in the configuration file flamenco-manager.yaml.
-    Configuration changes will not be taken into account immediately; restart Flamenco Manager for
-    that.</p>
+<div id='loading-settings' class='loader'></div>
 
-    <form id='config-form' method='POST' action='/setup/save-configuration' onsubmit='return saveDataTables()'>
-        <section>
-            <h3>Network</h3>
+<div id='vueApp'>
+    <button id='appModeSwitch' type='button' class='btn btn-sm btn-primary'
+        @click="switchAppMode()">{{`{{ appModeButtonText }}`}}</button>
 
-            <div class="form-group">
-                <label for='listen'>Listen IP and port number</label>
-                <input id='listen' class="form-control" name='listen' placeholder='Address and port to listen to' value='{{.Config.Listen}}'>
-                <p class='help-block'>Address and port to listen on, such as "[::]:8083" on an IPv6-enabled
-                system (the default), or 0.0.0.0:8083 on an IPv4-only system. IP address is optional.</p>
-            </div>
-            <div class="form-group">
-                <label for='own-url'>URL you and the Workers can reach this Manager on</label>
-                <!-- TODO: style the entire select box when the currently configured URL is invalid for the network. -->
-                <input id='own-url' class="form-control" name='own-url' placeholder='URL of this Flamenco Manager' value='{{.Config.OwnURL}}'>
-                <p class='help-block'>This URL is sent to the Flamenco Server and Flamenco Workers
-                to tell them where this Manager lives. Type your own URL, or choose one from the
-                available URLs below:</p>
+    <setup-form v-if="vueAppMode == 'form'"
+        :own_urls="own_urls"
+        :config="config"
+        :original_config="original_config"
+        :mongo_choice="mongo_choice"
+        @mongo_choice="mongo_choice=$event"
+        @configupdated="saveConfig"
+        ></setup-form>
 
-                {{range .OwnURLs}}
-                    <a class='own-url-suggestion {{if .IsCurrentInConfig}}current-url{{end}}'
-                        data-url="{{.URL}}">
-                            {{.URL}}
-                            {{if .IsUsedForSetup}}(you are here now){{end}}
-                            {{if .IsCurrentInConfig}}(current value){{end}}
-                    </a>
-                {{end}}
-                <script>
-                $('.own-url-suggestion').click(function() {
-                    $('#own-url').val($(this).data('url'));
-                })
-                </script>
-            </div>
-
-            <div class="checkbox">
-                <label>
-                    <input id='ssdp-discovery' name='ssdp-discovery' type='checkbox' {{if .Config.SSDPDiscovery}}checked{{end}}>
-                    Enable UPnP/SSDP auto-discovery
-                </label>
-                <p class='help-block'>This allows Workers to automatically find this Manager.
-            </div>
-        </section>
-
-        <section>
-            <h3>Variables</h3>
-            <p>Click on any cell in the tables below to edit.</p>
-            <p class='alert alert-warning'><strong>IMPORTANT</strong>: Use forward slashes only, also on Windows (e.g. <code>S:/flamenco-jobs</code>).</p>
-
-            <h4>Regular variables</h4>
-            <p>Some tasks require certain variables. For example, rendering with Blender requires
-                that the `blender` variable points to the Blender executable for each Worker
-                platform. Also see the <a
-                href='https://www.flamenco.io/docs/user_manual/installation/#manager-configuration'
-                target='_blank'>Manager Configuration</a> section in the Flamenco documentation.</p>
-            <div id='variables-table' class='table-editable'>
-                {{template "vartable" .Config.VariablesByVarname}}
-            </div>
-            <h4>Path Replacement Variables</h4>
-            <p>These variables work both ways, so for example <code>R:/render/job.blend</code>
-                created on Windows may be rewritten to <code>{render}/job.blend</code>, which in
-                turn is seen as <code>/media/render/job.blend</code> on a Linux worker.</p>
-            <div id='path-variables-table' class='table-editable'>
-                {{template "vartable" .Config.PathReplacementByVarname}}
-            </div>
-            <input type='hidden' id='variables-field' name='variables' value=''>
-            <input type='hidden' id='path-variables-field' name='path-variables' value=''>
-        </section>
-
-        <section>
-            <h3>Task Logs</h3>
-
-            <div class="form-group">
-                <label for='task-log-path'>Task Logs</label>
-                <input id='task-logs-path' class="form-control" name='task-logs-path' placeholder='Task logs path' value='{{.Config.TaskLogsPath}}'>
-                <p class='help-block'>Where on the Manager's filesystem the task logs are stored.</p>
-            </div>
-        </section>
-
-        <section>
-            <h3>MongoDB database</h3>
-
-            <div class="form-group">
-                <label for='database-url'>Database URL</label>
-                <input id='database-url' class="form-control" name='database-url' placeholder='MongoDB server URL' value='{{.Config.DatabaseURL}}'>
-                <p class='help-block'>Leave this field empty and configure the database path below to use the bundled MongoDB server.</p>
-                <p class='help-block'>Set the URL to indicate the MongoDB database to use, like mongodb://servername:portnr/databasename.
-                    <strong>This is recommended on Windows</strong>, as it seems to be more stable than
-                    starting & stopping the bundled MongoDB from within Flamenco Manager.</p>
-                </div>
-
-            <div class="form-group">
-                <label for='database-path'>Database path</label>
-                <input id='database-path' class="form-control" name='database-path' placeholder='MongoDB data path' value='{{.Config.DatabasePath}}'>
-                <p class='help-block'>Only used by the built-in MongoDB server. Default value is
-                "./db". Relative paths are interpreted from the directory Flamenco Manager was
-                started from. <strong>Note:</strong> only use local filesystems, and not a path
-                mounted via CIFS/Samba/NFS.</p>
-            </div>
-        </section>
-
-        <section>
-            <button class='btn btn-success' style='float: right'>Save configuration</button>
-            <a class='btn btn-warning' href='/setup/restart' title='Does NOT save your configuration. You will have to confirm before the restart happens.'>Restart Flamenco Manager</a>
-        </section>
-    </form>
+    <yaml-editor v-if="vueAppMode == 'yaml'"
+        :config="config"
+        :original_config="original_config"
+        @configupdated="saveConfig"
+        @reloadconfig="loadSetupData()"
+        ></yaml-editor>
 </div>
 {{end}}

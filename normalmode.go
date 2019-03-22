@@ -93,7 +93,7 @@ func normalMode() (*mux.Router, error) {
 	dashboard = flamenco.CreateDashboard(&config, session, sleeper, blacklist, applicationVersion)
 	latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
 	workerRemover = flamenco.CreateWorkerRemover(&config, session, taskScheduler)
-	jwtRedirector := jwtauth.NewRedirector(config.ManagerID, config.ManagerSecret, config.Flamenco)
+	jwtRedirector := jwtauth.NewRedirector(config.ManagerID, config.ManagerSecret, config.Flamenco, "/")
 	jwtAuther := jwtauth.Load(config.JWT)
 	shamanServer = shaman.NewServer(config.Shaman, jwtAuther)
 

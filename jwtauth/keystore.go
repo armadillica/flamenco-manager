@@ -56,9 +56,6 @@ type KeyStore struct {
 var globalKeyStore *KeyStore
 var globalKeyStoreMutex sync.Mutex
 
-// Time to wait after application startup before downloading the JWT public keys.
-var downloadKeysInitialWait = 2 * time.Second
-
 // newKeyStore loads all keys in the given directory.
 func newKeyStore(config Config, keyDirectory string, mayLoadTestKeys bool) *KeyStore {
 	ks := &KeyStore{
@@ -167,12 +164,7 @@ func (ks *KeyStore) Go() {
 		defer ks.wg.Done()
 
 		// Refresh the JWT keys shortly after starting up.
-		select {
-		case <-ks.shutdownChan:
-			return
-		case <-time.After(downloadKeysInitialWait):
-			ks.refreshPublicKeys()
-		}
+		ks.refreshPublicKeys()
 
 		if ks.downloadKeysInterval == 0 {
 			packageLogger.Info("not starting JWT public key download loop, interval is 0")
