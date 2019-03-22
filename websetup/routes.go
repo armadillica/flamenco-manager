@@ -162,7 +162,7 @@ func (web *Routes) addWebSetupRoutes(router *mux.Router) {
 	router.HandleFunc(saveConfigURL, web.httpSaveConfig).Methods("POST")
 	router.HandleFunc(apiLinkRequiredURL, web.apiLinkRequired)
 	router.HandleFunc(apiLinkStartURL, web.apiLinkStart)
-	router.HandleFunc(linkReturnURL, web.httpReturn)
+	router.HandleFunc(linkReturnURL, web.httpLinkReturn)
 	router.HandleFunc(linkDoneURL, web.httpLinkDone)
 	router.HandleFunc(restartURL, web.httpRestart).Methods("GET", "POST")
 
@@ -251,7 +251,7 @@ func (web *Routes) apiLinkStart(w http.ResponseWriter, r *http.Request) {
 	sendJSONnoCheck(w, r, linkStartResponse{redirectURL.String()})
 }
 
-func (web *Routes) httpReturn(w http.ResponseWriter, r *http.Request) {
+func (web *Routes) httpLinkReturn(w http.ResponseWriter, r *http.Request) {
 	// Check the HMAC to see if we can trust this request.
 	mac := r.FormValue("hmac")
 	oid := r.FormValue("oid")
