@@ -415,13 +415,12 @@ func (dash *Dashboard) restartToWebSetup(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	userID, ok := jwtauth.SubjectFromContext(r.Context())
-	if !ok {
-		log.Error("user requested restart to web setup but did not have JWT token")
-		http.Error(w, "Not authenticated; how did you get here?", http.StatusForbidden)
-		return
+	logger := log.WithField("remoteAddr", r.RemoteAddr)
+	if userID, ok := jwtauth.SubjectFromContext(r.Context()); ok {
+		logger = logger.WithField("userID", userID)
+	} else {
+		logger = logger.WithField("userID", "anonymous")
 	}
-	logger := log.WithField("userID", userID)
 
 	if dash.RestartFunction == nil {
 		logger.Error("Unable to restart Flamenco Manager, no restart function was registered.")
