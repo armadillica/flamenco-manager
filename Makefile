@@ -3,7 +3,7 @@ PKG := github.com/armadillica/flamenco-manager
 VERSION := $(shell git describe --tags --dirty)
 PKG_LIST := $(shell go list ${PKG}/... | grep -v /vendor/)
 STATIC_OUT := ${OUT}-static-${VERSION}
-PACKAGE_PATH := dist/${OUT}-${VERSION}
+PACKAGE_PATH := dist/${OUT}-$(VERSION:v%=%)
 MONGO_BUNDLES := dist
 
 DEPLOYHOST := biflamanager
