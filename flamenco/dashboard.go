@@ -173,7 +173,7 @@ func (dash *Dashboard) showStatusPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (dash *Dashboard) showLatestImagePage(w http.ResponseWriter, r *http.Request) {
-	dash.showTemplate("templates/latest_image.html", w, r)
+	http.ServeFile(w, r, path.Join(dash.root, "static/latest-image.html"))
 }
 
 // sendStatusReport reports the status of the manager in JSON.
