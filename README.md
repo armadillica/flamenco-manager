@@ -30,6 +30,15 @@ and cannot be used in both `variables` and `path_replacement` sections. If this 
 Manager will log the offending name, and refuse to start.
 
 
+## Version numbers
+
+Released versions of Flamenco Manager have a version number `v{major}.{minor}`, like `v2.4`.
+Development versions have `v{major}.{minor}-{number}-{hash}`, where `number` indicates the
+number of commits since the official version `v{major}.{minor}`. The `hash` is the Git hash
+of the last commit. If the version number ends with `-dirty` it means that there were
+uncommitted changes when Flamenco Manager was built.
+
+
 ## Advanced Configuration
 
 Apart from the above web-based setup, you can configure advanced settings by editing
