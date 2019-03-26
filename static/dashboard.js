@@ -164,7 +164,7 @@ Vue.component('worker-table', {
         all_workers_selected: Boolean,
         server: Object,
     },
-    data: function() { return {
+    data() { return {
         show_schedule: localStorage.getItem('show_schedule') == 'true',
     }},
     computed: {
@@ -201,7 +201,7 @@ Vue.component('worker-tbody', {
         show_schedule: Boolean,
         server: Object,
     },
-    data: function() { return {
+    data() { return {
         show_details: false,
     }; },
     template: '#template_worker_tbody',
@@ -214,7 +214,7 @@ Vue.component('worker-row', {
         show_schedule: Boolean,
         show_details: Boolean,
     },
-    data: function() { return {
+    data() { return {
         mode: this.show_schedule ? 'show_schedule' : '',
         edit_schedule: {},
     }},
