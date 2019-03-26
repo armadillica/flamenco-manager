@@ -38,8 +38,7 @@ func RequestLogFields(r *http.Request) logrus.Fields {
 		"requestMethod": r.Method,
 	}
 
-	subjectFromToken, ok := SubjectFromContext(r.Context())
-	if ok {
+	if subjectFromToken, ok := SubjectFromContext(r.Context()); ok {
 		fields["userID"] = subjectFromToken
 	}
 
