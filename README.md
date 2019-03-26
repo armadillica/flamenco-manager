@@ -77,23 +77,22 @@ Flamenco Manager accepts the following CLI arguments:
 of this `flamenco-manager` directory.
 
 0. Make sure you have MongoDB up and running (on localhost)
-1. Install Go 1.9 or newer
+1. Install Go 1.12 or newer and GNU Make.
 2. `export GOPATH=/path/to/your/workspace/for/go`
 3. `cd $FM`
 4. Install "dep" with `go get -u github.com/golang/dep/cmd/dep`
 5. Download all dependencies with `dep ensure`
 6. Download Flamenco test dependencies with `go get -t ./...`
-7. Run the unittests with `go test ./...`
-8. Build your first Flamenco Manager with `go install`; this will create an executable
-   `flamenco-manager` in `$GOPATH/bin`. It may be a good idea to add `$GOPATH/bin` to your `PATH`
-   environment variable.
-9. Configure Flamenco Manager by starting it in *setup mode* (`flamenco-manager -setup`, see above).
-10. Run the Manager with `$GOPATH/bin/flamenco-manager -verbose`.
+7. Run the unittests with `make test`
+8. Build your first Flamenco Manager with `make`; this will create an executable
+   `flamenco-manager` in the current directory.
+9. Configure Flamenco Manager by starting it in *setup mode* (`./flamenco-manager -setup`, see above).
+10. Run the Manager with `./flamenco-manager`.
 
 
 ### Testing
 
-To run all unit tests, run `go test ./... -v`. To run a specific GoCheck test, run
+To run all unit tests, run `make test`. To run a specific GoCheck test, run
 `go test ./flamenco -v --run TestWithGocheck -check.f SchedulerTestSuite.TestVariableReplacement`
 where the argument to `--run` determines which suite to run, and `-check.f` determines the
 exact test function of that suite. Once all tests have been moved over to use GoCheck, the
@@ -154,23 +153,21 @@ In no particular order:
 
 ## Building distributable packages
 
-The distributable Flamenco Manager packages are built using Docker. This allows us to build a
-static binary without impacting the locally installed version of Go. The process is as follows:
+The distributable Flamenco Manager packages are built using GNU Make.
 
-1. Install [Docker Community Edition](https://www.docker.com/community-edition).
-2. `cd` into the `docker` directory.
-3. Prepare the bundled MongoDB server files:
+1. Install GNU Make for your platform.
+2. Prepare the bundled MongoDB server files:
     - [Download MongoDB](https://www.mongodb.com/download-center?jmp=nav#community)
       for Linux (the "legacy" build), Windows (the "2008 and later without SSL" version), and MacOS
       (the version without SSL). Versions without SSL support are used because they're simpler and
       we listen on localhost anyway so SSL is not necessary.
     - Extract the files you downloaded (the Windows version may require `msiextract` from the
       `msitools` package if you're extracting on Linux).
-    - Make sure the contents can be found in `docker/mongodb-{linux-x86_64,osx-x86_64,windows}-version`,
-      so the Linux `bin` directory should be in `docker/mongodb-{linux-x86_64,osx-x86_64,windows}-version/bin`.
+    - Make sure the contents can be found in `dist/mongodb-{linux-x86_64,osx-x86_64,windows}-version`,
+      so the Linux `bin` directory should be in `dist/mongodb-{linux-x86_64,osx-x86_64,windows}-version/bin`.
     - Remove everything from the `bin` directories except `mongod` (or `mongod.exe` for the Windows
       version).
-4. Run `./build-via-docker.sh` to create the distributable packages.
+3. Run `make package` to create the distributable packages.
 
 
 ## Worker Sleep Schedule
