@@ -63,12 +63,14 @@ func (s *VarReplTestSuite) SetUpTest(c *check.C) {
 	}
 }
 
-func (s *VarReplTestSuite) TearDownTest(c *check.C) {
-}
-
 func (s *VarReplTestSuite) TestReplaceVariables(t *check.C) {
 	worker := Worker{Platform: "linux"}
 	ReplaceVariables(&s.config, &s.task, &worker)
+
+	assert.Equal(t,
+		"/opt/myblenderbuild/blender",
+		s.task.Commands[2].Settings["blender_cmd"],
+	)
 
 	// Substitution should happen as often as needed.
 	assert.Equal(t,
@@ -76,7 +78,7 @@ func (s *VarReplTestSuite) TestReplaceVariables(t *check.C) {
 		s.task.Commands[0].Settings["message"],
 	)
 
-	// No substitution on keys, just on values.
+	// No substitution should happen on keys, just on values.
 	assert.Equal(t, 3, s.task.Commands[1].Settings["{blender}"])
 }
 

@@ -38,9 +38,7 @@ type WorkerRegistrationTestSuite struct{}
 var _ = check.Suite(&WorkerRegistrationTestSuite{})
 
 func (s *WorkerRegistrationTestSuite) TestEmptyString(t *check.C) {
-	conf := Conf{
-		WorkerRegistrationSecret: "",
-	}
+	conf := Conf{Base: Base{WorkerRegistrationSecret: ""}}
 	auther := NewWorkerRegistrationAuthoriser(&conf)
 	_, ok := auther.(OpenRegAuth)
 	assert.True(t, ok, "empty PSK should result in open registration")
@@ -59,7 +57,7 @@ func (s *WorkerRegistrationTestSuite) TestEmptyString(t *check.C) {
 }
 
 func (s *WorkerRegistrationTestSuite) TestPSKString(t *check.C) {
-	conf := Conf{WorkerRegistrationSecret: "je moeder op je hoofd"}
+	conf := Conf{Base: Base{WorkerRegistrationSecret: "je moeder op je hoofd"}}
 	auther := NewWorkerRegistrationAuthoriser(&conf)
 	psk, ok := auther.(*PSKRegAuth)
 	assert.True(t, ok, "non-PSK should result in secure registration")
@@ -67,7 +65,7 @@ func (s *WorkerRegistrationTestSuite) TestPSKString(t *check.C) {
 }
 
 func (s *WorkerRegistrationTestSuite) TestRejectWithoutToken(t *check.C) {
-	conf := Conf{WorkerRegistrationSecret: "je moeder op je hoofd"}
+	conf := Conf{Base: Base{WorkerRegistrationSecret: "je moeder op je hoofd"}}
 	auther := NewWorkerRegistrationAuthoriser(&conf)
 
 	httpFunc := func(w http.ResponseWriter, r *http.Request) {
@@ -106,7 +104,7 @@ func generateHMACToken(secret string) string {
 }
 
 func (s *WorkerRegistrationTestSuite) TestAcceptGoodToken(t *check.C) {
-	conf := Conf{WorkerRegistrationSecret: "je moeder op je hoofd"}
+	conf := Conf{Base: Base{WorkerRegistrationSecret: "je moeder op je hoofd"}}
 	auther := NewWorkerRegistrationAuthoriser(&conf)
 
 	wasCalled := false

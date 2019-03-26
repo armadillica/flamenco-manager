@@ -97,12 +97,12 @@ func (un *UpstreamNotifier) Close() {
 func (un *UpstreamNotifier) constructNotification(db *mgo.Database) UpstreamNotification {
 
 	notification := UpstreamNotification{
-		ManagerURL:               un.config.OwnURL,
-		VariablesByVarname:       un.config.VariablesByVarname,
-		PathReplacementByVarname: un.config.PathReplacementByVarname,
-		NumberOfWorkers:          WorkerCount(db),
-		WorkerTaskTypes:          []string{},
+		ManagerURL:      un.config.OwnURL,
+		Variables:       un.config.Variables,
+		NumberOfWorkers: WorkerCount(db),
+		WorkerTaskTypes: []string{},
 	}
+	notification.Meta.Version = 2
 
 	logger := log.WithField("number_of_workers", notification.NumberOfWorkers)
 

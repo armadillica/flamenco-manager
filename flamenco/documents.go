@@ -213,10 +213,13 @@ type ScheduleInfo struct {
 // workers change their task types. This is a combination of settings (see
 // settings.go) and information from the database.
 type UpstreamNotification struct {
+	Meta struct {
+		Version int `json:"version"`
+	} `json:"_meta"`
+
 	// Settings
-	ManagerURL               string                       `json:"manager_url"`
-	VariablesByVarname       map[string]map[string]string `json:"variables"`
-	PathReplacementByVarname map[string]map[string]string `json:"path_replacement"`
+	ManagerURL string                    `json:"manager_url"`
+	Variables  map[string]ConfV2Variable `json:"variables"`
 
 	// From our local database
 	NumberOfWorkers int      `json:"nr_of_workers"`

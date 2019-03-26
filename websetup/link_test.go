@@ -53,11 +53,11 @@ func (s *ServerLinkerTestSuite) SetUpTest(c *check.C) {
 	s.localURL, err = url.Parse("http://flamanager:8083/")
 	assert.Nil(c, err)
 
-	s.config = &flamenco.Conf{
+	s.config = &flamenco.Conf{Base: flamenco.Base{
 		Flamenco:      serverURL,
 		ManagerID:     "123",
 		ManagerSecret: "jemoeder",
-	}
+	}}
 }
 
 func (s *ServerLinkerTestSuite) TearDownTest(c *check.C) {
@@ -145,11 +145,11 @@ func (s *ServerLinkerTestSuite) TestLinkRequiredNon200Response(t *check.C) {
 	serverURL, err := url.Parse("http://cloud.localhost:5000/")
 	assert.Nil(t, err)
 
-	config := flamenco.Conf{
+	config := flamenco.Conf{Base: flamenco.Base{
 		Flamenco:      serverURL,
 		ManagerID:     "123",
 		ManagerSecret: "jemoeder",
-	}
+	}}
 
 	// Mock that the server receives the request and sends an identifier back.
 	responder, err := httpmock.NewJsonResponder(403, bson.M{"_error": "access denied"})

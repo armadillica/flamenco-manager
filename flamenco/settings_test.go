@@ -36,26 +36,39 @@ func (s *SettingsTestSuite) TestDefaultSettings(t *check.C) {
 	config, err := LoadConf("nonexistant.yaml")
 	assert.NotNil(t, err) // should indicate an error to open the file.
 
-	assert.Equal(t, "./task-logs", config.TaskLogsPath)
-
 	// The settings should contain the defaults, though.
+	assert.Equal(t, latestConfigVersion, config.Meta.Version)
+	assert.Equal(t, "./task-logs", config.TaskLogsPath)
 	assert.Equal(t, "7401c189-ef69-434b-b4d8-56d00075faf5", config.SSDPDeviceUUID)
-	assert.Contains(t, config.PathReplacementByVarname, "job_storage")
-	assert.Contains(t, config.PathReplacementByVarname, "render")
 
-	linuxPVars, ok := config.PathReplacementByPlatform["linux"]
-	assert.True(t, ok)
+	assert.Contains(t, config.Variables, "job_storage")
+	assert.Contains(t, config.Variables, "render")
+	assert.Equal(t, "oneway", config.Variables["ffmpeg"].Direction)
+	assert.Equal(t, "/usr/bin/ffmpeg", config.Variables["ffmpeg"].Values[0].Value)
+	assert.Equal(t, "linux", config.Variables["ffmpeg"].Values[0].Platform)
+
+	linuxPVars, ok := config.VariablesLookup["workers"]["linux"]
+	assert.True(t, ok, "workers/linux should have variables: %v", config.VariablesLookup)
 	assert.Equal(t, "/shared/flamenco-jobs", linuxPVars["job_storage"])
 
-	winPVars, ok := config.PathReplacementByPlatform["windows"]
+	winPVars, ok := config.VariablesLookup["users"]["windows"]
 	assert.True(t, ok)
 	assert.Equal(t, "S:", winPVars["job_storage"])
 }
 
-func (s *SettingsTestSuite) TestDuplicateVars(t *check.C) {
-	config, err := LoadConf("settings_test_duplicate_vars.yaml")
-	assert.Equal(t, ErrDuplicateVariables, err)
+func (s *SettingsTestSuite) TestVariableValidation(t *check.C) {
+	c := DefaultConfig()
 
-	// The settings should contain the defaults.
-	assert.Equal(t, "7401c189-ef69-434b-b4d8-56d00075faf5", config.SSDPDeviceUUID)
+	platformless := c.Variables["blender"]
+	platformless.Values = ConfV2VariableValues{
+		ConfV2VariableValue{Value: "/path/to/blender"},
+		ConfV2VariableValue{Platform: "linux", Value: "/valid/path/blender"},
+	}
+	c.Variables["blender"] = platformless
+
+	err := c.checkVariables()
+	assert.Equal(t, ErrMissingVariablePlatform, err)
+
+	assert.Equal(t, c.Variables["blender"].Values[0].Value, "/path/to/blender")
+	assert.Equal(t, c.Variables["blender"].Values[1].Value, "/valid/path/blender")
 }

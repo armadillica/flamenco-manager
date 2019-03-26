@@ -3,6 +3,7 @@ Changelog for Flamenco Manager
 
 ## Version 2.5 (in development)
 
+- Requires Flamenco Server 2.3+
 - Go to web setup mode automatically when Flamenco Manager is not yet linked to a Flamenco Server.
   This makes it possible to create a partial configuration file with some defaults, and still
   automatically start in setup mode.
@@ -12,6 +13,14 @@ Changelog for Flamenco Manager
   connect to, this workflow is impossible.
 - Web setup now loads and saves settings via YAML. It can show a web form as well as an advanced
   mode that allows direct editing of YAML.
+- How variables are handled & configured is changed. This is communicated with the server as
+  `settings_version: 2`.
+    - Path replacement and regular variables have been merged into one set of variables.
+    - Path replacement variables are now marked with `direction: twoway`, whereas what used to be
+      regular variables are now marked with `direction: oneway`.
+    - Values can now have an audience, which is either `all` (the old behaviour and implied when the
+      audience is not given), `workers` (only sent to workers), or `users` (for users to see them in
+      the web interface + Blender Cloud add-on).
 
 
 ## Version 2.4.2 (2019-03-27)
