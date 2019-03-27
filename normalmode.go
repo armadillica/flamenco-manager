@@ -43,7 +43,7 @@ func normalMode() (*mux.Router, error) {
 	if strings.TrimSpace(config.DatabaseURL) == "" {
 		// TODO: see if we can find an available port rather than hoping for the best.
 		localMongoPort := 27019
-		config.DatabaseURL = fmt.Sprintf("mongodb://localhost:%d/flamanager", localMongoPort)
+		config.DatabaseURL = fmt.Sprintf("mongodb://127.0.0.1:%d/flamanager", localMongoPort)
 
 		mongoRunner = bundledmongo.CreateMongoRunner(config.DatabasePath, localMongoPort)
 		if err := mongoRunner.Go(); err != nil {

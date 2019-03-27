@@ -1,6 +1,12 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.4.2 (2019-03-27)
+
+- When connecting to the bundled MongoDB, we now connect to `127.0.0.1` instead of `localhost`.
+  This seems to be much faster on Windows for some reason.
+
+
 ## Version 2.4.1 (2019-03-27)
 
 - Create `jwtkeys` directory if it doesn't exist yet.
