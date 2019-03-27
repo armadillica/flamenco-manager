@@ -26,6 +26,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	mgo "gopkg.in/mgo.v2"
@@ -48,9 +49,15 @@ func MongoSession(config *Conf) *mgo.Session {
 	var session *mgo.Session
 
 	logger := log.WithField("database_url", config.DatabaseURL)
-	logger.Info("Connecting to MongoDB")
-	if session, err = mgo.Dial(config.DatabaseURL); err != nil {
-		logger.WithError(err).Fatal("Unable to connect to MongoDB")
+
+	// Keep trying to connect until it works.
+	for {
+		logger.Info("Connecting to MongoDB")
+		if session, err = mgo.DialWithTimeout(config.DatabaseURL, 5*time.Second); err == nil {
+			break
+		}
+		logger.WithError(err).Error("Unable to connect to MongoDB")
+		time.Sleep(1 * time.Second)
 	}
 	session.SetMode(mgo.Monotonic, true)
 
