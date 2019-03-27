@@ -298,11 +298,18 @@ func (ks *KeyStore) downloadPublicKeys() (downloadedNew bool) {
 	}
 
 	if _, err := io.Copy(pubKeys, resp.Body); err != nil {
+		pubKeys.Close()
 		logger.WithFields(logrus.Fields{
 			"filename":      tempFilename,
 			logrus.ErrorKey: err,
 		}).Error("unable to download JWT key file")
 		return false
+	}
+	if err := pubKeys.Close(); err != nil {
+		logger.WithFields(logrus.Fields{
+			"filename":      tempFilename,
+			logrus.ErrorKey: err,
+		}).Error("unable to close downloaded JWT key file")
 	}
 
 	if err := os.Rename(tempFilename, keyFilename); err != nil {

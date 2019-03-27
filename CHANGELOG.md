@@ -4,6 +4,7 @@ Changelog for Flamenco Manager
 ## Version 2.4.1 (2019-03-27)
 
 - Create `jwtkeys` directory if it doesn't exist yet.
+- Fixed 'The process cannot access the file' error on Windows after downloading public JWT keys.
 
 
 ## Version 2.4 (2019-03-25)
