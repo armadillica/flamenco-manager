@@ -35,9 +35,11 @@ Manager will log the offending name, and refuse to start.
 
 ## Version numbers
 
-Released versions of Flamenco Manager have a version number `v{major}.{minor}`, like `v2.4`.
-Development versions have `v{major}.{minor}-{number}-{hash}`, where `number` indicates the
-number of commits since the official version `v{major}.{minor}`. The `hash` is the Git hash
+Released versions of Flamenco Manager have a version number `v{major}.{minor}`, like `v2.4`,
+or `v{major}.{minor}.{fix}`, like `v2.4.1`.
+
+Development versions have `v{release}-{number}-{hash}`, where `number` indicates the
+number of commits since the official version `v{release}`. The `hash` is the Git hash
 of the last commit. If the version number ends with `-dirty` it means that there were
 uncommitted changes when Flamenco Manager was built.
 
