@@ -2,16 +2,20 @@
 
 This directory contains the ECDSA keys for JWT signing and validation.
 
-One private key may exist and it should be named `es256-private.pem`.
-If it exists it will be loaded to allow token generation for testing
-purposes. Currently the key MUST exist, but that's because the software
-isn't finished yet.
-
-All files that match the `*-public*.pem` glob will be loaded as public
+All files that match the `*-public*.pem` pattern will be loaded as public
 keys, and be implicitly trusted as authoritative for any received JWT
-token. As an exception to this rule, any key that matches the above
-glob pattern but also has `test` in its filename will be excluded. This
-is to prevent unit test keys from being loaded.
+token.
+
+As an exception to the above rule, any key that has `test` in its filename
+will be excluded. This is to prevent unit test keys from being loaded.
+
+
+## Generating keys
+
+One private key `es256-private.pem` may exist. If it does it will be
+loaded to allow token generation for testing purposes. Note that
+your Flamenco Manager WILL BE INSECURE as anyone accessing it can also
+request an authentication token.
 
 To generate a keypair for `ES256`:
 

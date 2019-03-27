@@ -76,10 +76,11 @@ _package_darwin:
 _prepare_package:
 	git checkout -- static/latest-image.jpg
 	rm -rf ${PACKAGE_PATH}
-	mkdir -p ${PACKAGE_PATH}
+	mkdir -p ${PACKAGE_PATH}/jwtkeys
 	rsync static templates ${PACKAGE_PATH} -a --delete-after
 	cp -ua flamenco-manager-example.yaml ${PACKAGE_PATH}/
 	cp -ua README.md LICENSE.txt CHANGELOG.md ${PACKAGE_PATH}/
+	cp -ua jwtkeys/README.md ${PACKAGE_PATH}/jwtkeys/
 
 _finish_package:
 	rm -rf ${PACKAGE_PATH}
