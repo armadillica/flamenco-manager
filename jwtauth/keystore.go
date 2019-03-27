@@ -282,6 +282,11 @@ func (ks *KeyStore) downloadPublicKeys() (downloadedNew bool) {
 		return false
 	}
 
+	if err := os.MkdirAll(ks.keyDirectory, 0700); err != nil {
+		logger.WithError(err).Error("unable to create JWT key directory")
+		return false
+	}
+
 	tempFilename := keyFilename + "~"
 	pubKeys, err := os.Create(tempFilename)
 	if err != nil {
