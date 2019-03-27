@@ -9,20 +9,23 @@ Author: Sybren A. Stüvel <sybren@blender.studio>
 
 To run Flamenco Manager for the first time, follow these steps:
 
-0. Install [ImageMagick](https://www.imagemagick.org/script/download.php) and make sure that the
+1. Install [ImageMagick](https://www.imagemagick.org/script/download.php) and make sure that the
    `convert` command can be found on `$PATH`.
-1. Download [Flamenco Manager](https://www.flamenco.io/download/) for your platform.
-2. Extract the downloaded file.
-3. Run `./flamenco-manager -setup` (Linux/macOS) or `flamenco-manager.exe -setup` (Windows).
-4. Flamenco Manager will give you a list of URLs at which it can be reached. Open the URL that is
+2. If you don't want to use the bundled MongoDB server, download
+   [MongoDB Community Server](https://www.mongodb.com/download-center/community)
+   and install it. This is recommended on Windows as it seems to improve stability.
+3. Download [Flamenco Manager](https://www.flamenco.io/download/) for your platform.
+4. Extract the downloaded file.
+5. Run `./flamenco-manager -setup` (Linux/macOS) or `flamenco-manager.exe -setup` (Windows).
+6. Flamenco Manager will give you a list of URLs at which it can be reached. Open the URL that is
    reachable both for you and the workers.
-5. Link Flamenco Manager to Blender Cloud by following the steps in the web interface.
-6. Configure Flamenco Manager via the web interface. Update the variables and path replacement
+7. Link Flamenco Manager to Blender Cloud by following the steps in the web interface.
+8. Configure Flamenco Manager via the web interface. Update the variables and path replacement
    variables for your render farm; the `blender` variable should point to the Blender executable
    where it can be found *on the workers*, and similar for the `ffmpeg` variable.
    The path replacement variables allow you to set different paths for both Clients (like the
    Blender Cloud Add-on) and Workers, given their respective platforms.
-7. Once you have completed configuration, restart Flamenco Manager through the web interface. It
+9. Once you have completed configuration, restart Flamenco Manager through the web interface. It
    will now run in normal (i.e. non-setup) mode.
 
 Note that `variables` and `path_replacement` share a namespace -- variable names have to be unique,

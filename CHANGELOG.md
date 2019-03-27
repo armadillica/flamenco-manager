@@ -6,6 +6,7 @@ Changelog for Flamenco Manager
 - Create `jwtkeys` directory if it doesn't exist yet.
 - Bundled a corrected `jwtkeys/README.md` file.
 - Fixed 'The process cannot access the file' error on Windows after downloading public JWT keys.
+- Recommending installing MongoDB as standalone service on Windows, as this improves stability.
 
 
 ## Version 2.4 (2019-03-25)

@@ -105,9 +105,11 @@
             <div class="form-group">
                 <label for='database-url'>Database URL</label>
                 <input id='database-url' class="form-control" name='database-url' placeholder='MongoDB server URL' value='{{.Config.DatabaseURL}}'>
-                <p class='help-block'>Leave empty to use the built-in MongoDB server. Otherwise set
-                it to something like mongodb://servername:portnr/databasename</p>
-            </div>
+                <p class='help-block'>Leave this field empty and configure the database path below to use the bundled MongoDB server.</p>
+                <p class='help-block'>Set the URL to indicate the MongoDB database to use, like mongodb://servername:portnr/databasename.
+                    <strong>This is recommended on Windows</strong>, as it seems to be more stable than
+                    starting & stopping the bundled MongoDB from within Flamenco Manager.</p>
+                </div>
 
             <div class="form-group">
                 <label for='database-path'>Database path</label>
