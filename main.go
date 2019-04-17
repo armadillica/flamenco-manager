@@ -103,6 +103,11 @@ func main() {
 			log.WithError(err).Fatal("Unable to load configuration")
 		}
 	}
+	if config.ManagerID == "" {
+		log.Warning("Flamenco Manager not yet linked, entering setup mode.")
+		cliArgs.setup = true
+	}
+
 	if strings.TrimSpace(cliArgs.mode) != "" {
 		config.OverrideMode(cliArgs.mode)
 	} else {
