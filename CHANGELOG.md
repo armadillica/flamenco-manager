@@ -1,6 +1,11 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.4.3 (2019-04-18)
+
+- Call `magick.exe convert` on Windows, instead of `convert`.
+
+
 ## Version 2.4.2 (2019-03-27)
 
 - When connecting to the bundled MongoDB, we now connect to `127.0.0.1` instead of `localhost`.
