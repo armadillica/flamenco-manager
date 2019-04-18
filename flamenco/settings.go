@@ -54,7 +54,8 @@ const (
 var (
 	// ErrMissingVariablePlatform is returned when a variable doesn't declare any valid platform for a certain value.
 	ErrMissingVariablePlatform = errors.New("variable's value is missing platform declaration")
-	ErrBadDirection            = errors.New("variable's direction is invalid")
+	// ErrBadDirection is returned when a direction doesn't match "oneway" or "twoway"
+	ErrBadDirection = errors.New("variable's direction is invalid")
 
 	// Valid values for the "mode" config variable.
 	validModes = map[string]bool{
