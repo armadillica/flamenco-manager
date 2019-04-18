@@ -1,6 +1,13 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.5 (in development)
+
+- Go to web setup mode automatically when Flamenco Manager is not yet linked to a Flamenco Server.
+  This makes it possible to create a partial configuration file with some defaults, and still
+  automatically start in setup mode.
+
+
 ## Version 2.4.2 (2019-03-27)
 
 - When connecting to the bundled MongoDB, we now connect to `127.0.0.1` instead of `localhost`.
