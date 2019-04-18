@@ -24,7 +24,6 @@ package flamenco
 
 import (
 	"bytes"
-	"os/exec"
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
@@ -44,7 +43,7 @@ func ConvertAndForward(images <-chan string, storagePath string) <-chan string {
 			outname = filepath.Join(storagePath, "latest-image.jpg")
 
 			log.Infof("ConvertAndForward: Converting %s to %s", path, outname)
-			cmd := exec.Command("convert", path,
+			cmd := imageMagickConvert(path,
 				"-quality", "85",
 				"-resize", "1920x1080>", // convert to 2MPixels max, but never enlarge.
 				outname)
