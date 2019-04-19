@@ -317,7 +317,7 @@ func LoadConf(filename string) (Conf, error) {
 		}
 		confv1.upgradeToV2(&c)
 	case 2:
-		log.Info("interpreting as version 2")
+		log.Debug("interpreting settings as version 2")
 		if err := yaml.Unmarshal(yamlFile, &c); err != nil {
 			logger.WithError(err).Fatal("unable to parse YAML")
 		}
