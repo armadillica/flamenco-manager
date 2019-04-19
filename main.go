@@ -24,16 +24,15 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/armadillica/flamenco-manager/flamenco"
+	"github.com/armadillica/flamenco-manager/httpserver"
 	"github.com/armadillica/flamenco-manager/jwtauth"
 	"github.com/armadillica/flamenco-manager/shaman"
 	"github.com/armadillica/flamenco-manager/websetup"
@@ -132,14 +131,9 @@ func main() {
 	// Create the HTTP server before allowing the shutdown signal Handler
 	// to exist. This prevents a race condition when Ctrl+C is pressed after
 	// the http.Server is created, but before it is assigned to httpServer.
-	httpServer = &http.Server{
-		Addr:        config.Listen,
-		Handler:     router,
-		ReadTimeout: 15 * time.Second,
-	}
+	httpServer = httpserver.New(config, router)
 
 	shutdownComplete = make(chan struct{})
-	httpShutdownComplete = make(chan struct{})
 
 	// Handle Ctrl+C
 	c := make(chan os.Signal, 1)
@@ -169,16 +163,7 @@ func main() {
 		}
 	}
 
-	// Fall back to insecure server if TLS certificate/key is not defined.
-	var httpError error
-	if config.HasTLS() {
-		httpError = httpServer.ListenAndServeTLS(config.TLSCert, config.TLSKey)
-	} else {
-		httpError = httpServer.ListenAndServe()
-	}
-	log.WithError(httpError).Warning("HTTP server stopped")
-	close(httpShutdownComplete)
-
+	httpServer.ListenAndServe()
 	log.Info("Waiting for shutdown to complete.")
 
 	<-shutdownComplete

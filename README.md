@@ -49,13 +49,30 @@ uncommitted changes when Flamenco Manager was built.
 Apart from the above web-based setup, you can configure advanced settings by editing
 `flamenco-manager.yaml`. For example, you can:
 
-- Generate TLS certificates and set the path in the `tlskey` and `tlscert` configuration
-  options. Transport Layer Security (TLS) is the we-are-no-longer-living-in-the-90ies name for SSL.
+- Manager secure communication (see the next section).
 - Set intervals for various periodic operations. See `flamenco-manager-example.yaml` for a
   description.
 
 Intervals (like `download_task_sleep`) can be configured in seconds, minutes, or hours, by appending
 a suffix `s`, `m`, or `h`. Such a suffix must always be used.
+
+
+## HTTPS with custom TLS certificates or ACME/Let's Encrypt
+
+To secure web traffic using HTTPS, we recommend using either Let's Encrypt or custom TLS
+certificates. Transport Layer Security (TLS) is the we-are-no-longer-living-in-the-90ies name for
+SSL.
+
+Let's Encrypt can be used when the machine is publicly reachable and has a valid domain name. This
+is easy to set up, as it automatically requests & renews certificates:
+- Set `acme_domain_name` to the domain name of the machine.
+- Set both `listen` and `listen_https` to the ports Flamenco Manager should be listening to. By
+  default these are `:8080` and `:8443`.
+- Configure your firewall or user-facing proxy to forward ports 80 and 443 to respectively 8080 and
+  8443.
+
+If you want to manage your own TLS certificates, set the path in the `tlskey` and `tlscert`
+configuration options. Then set `listen_https` to the appropriate port number.
 
 
 ## CLI arguments

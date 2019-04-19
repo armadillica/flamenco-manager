@@ -25,13 +25,13 @@ package main
 import (
 	"context"
 	"flag"
-	"net/http"
 	"os"
 	"runtime"
 	"time"
 
 	"github.com/armadillica/flamenco-manager/flamenco"
 	"github.com/armadillica/flamenco-manager/flamenco/bundledmongo"
+	"github.com/armadillica/flamenco-manager/httpserver"
 	"github.com/armadillica/flamenco-manager/jwtauth"
 	"github.com/armadillica/flamenco-manager/shaman"
 	log "github.com/sirupsen/logrus"
@@ -44,7 +44,7 @@ var (
 	dashboard *flamenco.Dashboard
 
 	blacklist         *flamenco.WorkerBlacklist
-	httpServer        *http.Server
+	httpServer        httpserver.Server
 	latestImageSystem *flamenco.LatestImageSystem
 	mongoRunner       *bundledmongo.Runner
 	session           *mgo.Session
@@ -64,7 +64,6 @@ var (
 )
 
 var shutdownComplete chan struct{}
-var httpShutdownComplete chan struct{}
 
 func shutdown(signum os.Signal) {
 	shutdownDone := make(chan bool)
@@ -85,10 +84,13 @@ func shutdown(signum os.Signal) {
 
 		if httpServer != nil {
 			log.Info("Shutting down HTTP server")
+			shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), httpserver.ReadTimeout+1*time.Second)
+			defer shutdownCtxCancel()
+
 			// the Shutdown() function seems to hang sometime, even though the
 			// main goroutine continues execution after ListenAndServe().
-			go httpServer.Shutdown(context.Background())
-			<-httpShutdownComplete
+			go httpServer.Shutdown(shutdownCtx)
+			<-httpServer.Done()
 		} else {
 			log.Warning("HTTP server was not even started yet")
 		}

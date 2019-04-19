@@ -70,7 +70,7 @@ func normalMode() (*mux.Router, error) {
 		return nil, nil
 	}
 
-	if config.HasTLS() {
+	if config.HasCustomTLS() {
 		config.OwnURL = strings.Replace(config.OwnURL, "http://", "https://", 1)
 	} else {
 		config.OwnURL = strings.Replace(config.OwnURL, "https://", "http://", 1)

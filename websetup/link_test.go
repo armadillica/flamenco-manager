@@ -220,6 +220,28 @@ func (s *ServerLinkerTestSuite) TestRedirectURL(t *check.C) {
 	assert.True(t, len(q.Get("hmac")) > 10)
 }
 
+func (s *ServerLinkerTestSuite) TestRedirectURLhttps(t *check.C) {
+	localURL, err := url.Parse("https://flamanager/")
+	assert.Nil(t, err)
+
+	linker := ServerLinker{
+		upstream:   s.config.Flamenco,
+		identifier: "hahaha ident",
+		key:        make([]byte, 32),
+		localURL:   localURL,
+	}
+	_, err = rand.Read(linker.key)
+	assert.Nil(t, err, "Unable to generate secret key")
+
+	url, err := linker.redirectURL()
+	assert.Nil(t, err)
+
+	q := url.Query()
+	assert.Equal(t, "hahaha ident", q.Get("identifier"))
+	assert.Equal(t, "https://flamanager/setup/link-return", q.Get("return"))
+	assert.True(t, len(q.Get("hmac")) > 10)
+}
+
 func (s *ServerLinkerTestSuite) TestResetToken(t *check.C) {
 	linker := ServerLinker{
 		upstream:   s.config.Flamenco,

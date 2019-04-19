@@ -98,7 +98,7 @@ func networkInterfaces(includeLinkLocal, includeLocalhost bool) ([]net.IP, error
 
 func availableURLs(config *flamenco.Conf, includeLocal bool) ([]*url.URL, error) {
 	var schema string
-	if config.HasTLS() {
+	if config.HasCustomTLS() {
 		schema = "https"
 	} else {
 		schema = "http"

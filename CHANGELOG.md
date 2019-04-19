@@ -21,6 +21,11 @@ Changelog for Flamenco Manager
     - Values can now have an audience, which is either `all` (the old behaviour and implied when the
       audience is not given), `workers` (only sent to workers), or `users` (for users to see them in
       the web interface + Blender Cloud add-on).
+- Automatic TLS certificate creation and renewal with Let's Encrypt. See [README](README.md) for
+  instructions on how to use this.
+- Added setting `listen_https` which is used for serving HTTPS traffic (default `:8443`). If you are
+  using the `tlskey`/`tlscert` settings, you need to move `listen` to `listen_https`.
+- Changed the default value for `listen` to `:8080` (was `:8083`).
 
 
 ## Version 2.4.3 (2019-04-18)

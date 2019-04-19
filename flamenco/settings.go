@@ -78,7 +78,8 @@ var (
 
 			Mode:                        "production",
 			ManagerName:                 "Flamenco Manager",
-			Listen:                      ":8083",
+			Listen:                      ":8080",
+			ListenHTTPS:                 ":8433",
 			DatabasePath:                "./db",
 			TaskLogsPath:                "./task-logs",
 			DownloadTaskSleep:           10 * time.Minute,
@@ -188,13 +189,17 @@ type Base struct {
 	DatabasePath  string   `yaml:"database_path"`
 	TaskLogsPath  string   `yaml:"task_logs_path"`
 	Listen        string   `yaml:"listen"`
+	ListenHTTPS   string   `yaml:"listen_https"`
 	OwnURL        string   `yaml:"own_url"` // sent to workers via SSDP/UPnP
 	FlamencoStr   string   `yaml:"flamenco"`
 	Flamenco      *url.URL `yaml:"-"`
 	ManagerID     string   `yaml:"manager_id"`
 	ManagerSecret string   `yaml:"manager_secret,omitempty"`
-	TLSKey        string   `yaml:"tlskey"`
-	TLSCert       string   `yaml:"tlscert"`
+
+	// TLS certificate management. TLSxxx has priority over ACME.
+	TLSKey         string `yaml:"tlskey"`
+	TLSCert        string `yaml:"tlscert"`
+	ACMEDomainName string `yaml:"acme_domain_name"` // for the ACME Let's Encrypt client
 
 	DownloadTaskSleep time.Duration `yaml:"download_task_sleep"`
 
@@ -328,6 +333,7 @@ func LoadConf(filename string) (Conf, error) {
 	c.checkMode(c.Mode)
 	c.checkDatabase()
 	c.checkVariables()
+	c.checkTLS()
 
 	return c, nil
 }
@@ -554,9 +560,14 @@ func (c *Conf) Write(filename string) error {
 	return nil
 }
 
-// HasTLS returns true if both the TLS certificate and key files are configured.
-func (c *Conf) HasTLS() bool {
+// HasCustomTLS returns true if both the TLS certificate and key files are configured.
+func (c *Conf) HasCustomTLS() bool {
 	return c.TLSCert != "" && c.TLSKey != ""
+}
+
+// HasTLS returns true if either a custom certificate or ACME/Let's Encrypt is used.
+func (c *Conf) HasTLS() bool {
+	return c.ACMEDomainName != "" || c.HasCustomTLS()
 }
 
 // OverrideMode checks the mode parameter for validity and logs that it's being overridden.
@@ -585,6 +596,26 @@ func (c *Conf) checkMode(mode string) {
 			"current_value": mode,
 		}).Fatal("bad value for 'mode' configuration parameter")
 	}
+}
+
+func (c *Conf) checkTLS() {
+	hasTLS := c.HasCustomTLS()
+
+	if hasTLS && c.ListenHTTPS == "" {
+		c.ListenHTTPS = c.Listen
+		c.Listen = ""
+	}
+
+	if !hasTLS || c.ACMEDomainName == "" {
+		return
+	}
+
+	log.WithFields(log.Fields{
+		"tlscert":          c.TLSCert,
+		"tlskey":           c.TLSKey,
+		"acme_domain_name": c.ACMEDomainName,
+	}).Warning("ACME/Let's Encrypt will not be used because custom certificate is specified")
+	c.ACMEDomainName = ""
 }
 
 func (c *Conf) parseURLs() {

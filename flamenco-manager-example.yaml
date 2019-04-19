@@ -15,8 +15,18 @@ database_url:
 task_logs_path: /tmp/flamenco/logs
 
 # Flamenco Manager listens to incoming connections from workers on this address.
-# Set to '0.0.0.0:8083' if your system does not support IPv6 but only IPv4.
-listen: '[::0]:8083'
+listen: ':8080'
+
+# Listen to HTTPS traffic.
+#listen_https: ":8443"
+#
+# Enables Let's Encrypt / ACME to automatically obtain TLS certificates. Do not use in combination
+# with tlskey/tlscert (either you provide your own or you let Let's Encrypt do the work).
+#acme_domain_name: yourhost.yourdomain.nl
+#
+# TLS keys for the built-in HTTP server.
+#tlskey: tls/privkey.pem
+#tlscert: tls/cert.pem
 
 # The URL where the workers can reach this Flamenco Manager.
 own_url: http://192.168.3.108:8083/
@@ -24,11 +34,6 @@ own_url: http://192.168.3.108:8083/
 flamenco: https://cloud.blender.org/
 manager_id: 1234567899876543212345678
 manager_secret: theworldistheworld
-
-# Optional TLS keys for the built-in HTTP server. When given,
-# own_url will be rewritten to https://...
-#tlskey: tls/privkey.pem
-#tlscert: tls/cert.pem
 
 # Enables auto-discovery via UPnP/SSDP. Make sure the device UUID is unique.
 ssdp_discovery: true
