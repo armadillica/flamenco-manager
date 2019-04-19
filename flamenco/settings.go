@@ -188,7 +188,7 @@ type Base struct {
 	DatabasePath  string   `yaml:"database_path"`
 	TaskLogsPath  string   `yaml:"task_logs_path"`
 	Listen        string   `yaml:"listen"`
-	OwnURL        string   `yaml:"own_url"`
+	OwnURL        string   `yaml:"own_url"` // sent to workers via SSDP/UPnP
 	FlamencoStr   string   `yaml:"flamenco"`
 	Flamenco      *url.URL `yaml:"-"`
 	ManagerID     string   `yaml:"manager_id"`
