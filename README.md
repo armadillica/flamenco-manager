@@ -64,8 +64,8 @@ Flamenco Manager accepts the following CLI arguments:
 
 - `-setup`: Start in *setup mode*, which will enable the web-based setup on the `/setup` URL.
 - `-debug`: Enable debug-level logging
-- `-verbose`: Enable info-level logging (no-op if `-debug` is also given). This is automatically
-  enabled in setup mode.
+- `-quiet`: Disable info-level logging (no-op if `-debug` is also given), so that only warnings
+  and errors are logged.
 - `-json`: Log in JSON format, instead of plain text
 - `-cleanslate`: Start with a clean slate; erases all cached tasks from the local MongoDB,
   then exits Flamenco Manager. This can be run while another Flamenco Manager is
