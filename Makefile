@@ -5,6 +5,7 @@ PKG_LIST := $(shell go list ${PKG}/... | grep -v /vendor/)
 STATIC_OUT := ${OUT}-static-${VERSION}
 PACKAGE_PATH := dist/${OUT}-$(VERSION:v%=%)
 MONGO_BUNDLES := dist
+BUILDOPTS :=
 
 DEPLOYHOST := biflamanager
 DEPLOYPATH := /home/flamanager
@@ -13,7 +14,7 @@ SSH := ssh -o ClearAllForwardings=yes
 
 
 server:
-	go build -i -v -o ${OUT} -ldflags="-X main.applicationVersion=${VERSION}" ${PKG}
+	go build -i -v -o ${OUT} -ldflags="-X main.applicationVersion=${VERSION}" ${BUILDOPTS} ${PKG}
 
 version:
 	@echo "Package: ${PKG}"
@@ -40,7 +41,7 @@ clean:
 	rm -f ${OUT}-static-*
 
 static: vet lint
-	go build -i -v -o ${STATIC_OUT} -tags netgo -ldflags="-extldflags \"-static\" -w -s -X main.applicationVersion=${VERSION}" ${PKG}
+	go build -i -v -o ${STATIC_OUT} -tags netgo -ldflags="-extldflags \"-static\" -w -s -X main.applicationVersion=${VERSION}" ${BUILDOPTS} ${PKG}
 
 package:
 	@$(MAKE) _prepare_package
