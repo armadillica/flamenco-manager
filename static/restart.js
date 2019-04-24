@@ -7,11 +7,7 @@ function restart(restartURL) {
     toastr.remove();
     toastr.info("Requesting restart");
 
-    $.jwtAjax({
-        method: 'POST',
-        url: restartURL
-    })
-    .then(info => {
+    function restartOK() {
         toastr.options.progressBar = true;
         toastr.options.hideDuration = 200;
         toastr.options.onHidden = function() {
@@ -19,8 +15,19 @@ function restart(restartURL) {
         }
         toastr.remove();
         toastr.success("Flamenco Server is restarting", "Restarting", {timeOut: 2500});
+    }
+
+    $.jwtAjax({
+        method: 'POST',
+        url: restartURL
     })
+    .then(restartOK)
     .catch(error => {
+        if (error.status == 0) {
+            // Likely this is due to the Flamenco server already restarting.
+            restartOK();
+            return;
+        }
         toastr.error(error.responseText, "Error " + error.status + " requesting a restart");
     })
     ;
