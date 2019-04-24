@@ -428,8 +428,7 @@ func (dash *Dashboard) restartToWebSetup(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	fmt.Fprintf(w, "Restart request confirmed")
-
+	w.WriteHeader(http.StatusNoContent)
 	logger.Warning("Restarting Flamenco Manager by request of the dashboard.")
 	dash.RestartFunction()
 }
