@@ -1,18 +1,4 @@
-html, body {
-    font-family: Noto, Ubuntu, sans-serif;
-    font-size: 14px;
-    color: white;
-    background-color: #496977;
-    text-shadow: 0.2ex 0.2ex 0.1ex rgba(0, 0, 0, 0.2);
-    margin-top: 1mm;
-}
 
-a, a:link { color: #aef0ff; }
-a:visited { color: #e6fff2; }
-a:hover { color: #d0f7eb; }
-a:active { color: #f7d0d2; }
-
-a.btn-default { color: black; }
 .btn-sm {
     padding-top: 0.05ex;
     padding-bottom: 0.1ex;

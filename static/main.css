@@ -1,0 +1,42 @@
+:root {
+    /* Own variables. */
+    --font-size: 12px;
+    --font-size-small: 11px;
+    --gray-darker: #222;
+
+    --padding-sm: 5px;
+
+    /* Bootstrap overrides. */
+}
+
+html, body {
+    font-family: var(--font-family-monospace);
+    font-size: var(--font-size);
+    color: var(--light);
+    background-color: var(--gray-dark);
+}
+
+a, a:link, a:visited {
+    color: var(--light);
+}
+
+a:hover, a:active {
+    color: var(--primary);
+}
+
+/*
+ * Extra utility classes.
+ * Follow Bootstrap 4 naming style as much as possible.
+ */
+.bg-darker {
+    background-color: var(--gray-darker);
+}
+
+.img-icon {
+    height: 16px;
+    width: 16px;
+}
+
+.text-small {
+    font-size: var(--font-size-small);
+}
