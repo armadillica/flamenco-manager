@@ -39,21 +39,21 @@ var load_workers_timeout_handle;
  */
 WORKER_ACTIONS = Object.freeze({
     offline_lazy: {
-        label: '✝ Shut Down (after task is finished)',
+        label: 'Shut Down (after task is finished)',
         icon: '✝',
         title: 'Shut down the worker after the current task finishes. The worker may automatically restart.',
         payload: { action: 'shutdown', lazy: true },
         available(worker_status) { return worker_status != 'offline'; },
     },
     offline_immediate: {
-        label: '✝! Shut Down (immediately)',
+        label: 'Shut Down (immediately)',
         icon: '✝!',
         title: 'Immediately shut down the worker. It may automatically restart.',
         payload: { action: 'shutdown', lazy: false },
         available(worker_status) { return false },
     },
     asleep_lazy: {
-        label: '😴 Send to Sleep (after task is finished)',
+        label: 'Send to Sleep (after task is finished)',
         icon: '😴',
         title: 'Let the worker sleep after finishing this task.',
         payload: { action: 'set-status', status: 'asleep', lazy: true },
@@ -62,7 +62,7 @@ WORKER_ACTIONS = Object.freeze({
         },
     },
     asleep_immediate: {
-        label: '😴! Send to Sleep (immediately)',
+        label: 'Send to Sleep (immediately)',
         icon: '😴!',
         title: 'Let the worker sleep immediately.',
         payload: { action: 'set-status', status: 'asleep', lazy: false },
@@ -71,7 +71,7 @@ WORKER_ACTIONS = Object.freeze({
         },
     },
     wakeup: {
-        label: '😃 Wake Up',
+        label: 'Wake Up',
         icon: '😃',
         title: 'Wake the worker up. A sleeping worker can take a minute to respond.',
         payload: { action: 'set-status', status: 'awake' },
@@ -80,13 +80,13 @@ WORKER_ACTIONS = Object.freeze({
         },
     },
     ack_timeout: {
-        label: '✓ Acknowledge Timeout',
+        label: 'Acknowledge Timeout',
         icon: '✓',
         payload: { action: 'ack-timeout' },
         available(worker_status) { return worker_status == 'timeout'; },
     },
     testjob: {
-        label: '🎥 Send a Test Job',
+        label: 'Send a Test Job',
         icon: 'T',
         title: 'Requires the worker to be in test mode.',
         payload: { action: 'send-test-job' },
