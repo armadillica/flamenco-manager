@@ -2,10 +2,18 @@
 
 <!-- template for the 'header' Vue.js component -->
 <script type='text/x-template' id='template_header'>
-    <header class='pageheader'><h1><img src='/static/flamenco.png' alt='Flamenco logo'> {{ serverinfo.manager_name }}
-        <span id='runmode' v-if="serverinfo.manager_mode != 'production'">({{ serverinfo.manager_mode }} mode)</span>
-        <span id='managerversion'>{{ serverinfo.version }}</span>
-    </h1></header>
+    <header class="d-flex align-items-center p-1 bg-darker text-small">
+        <img class="img-icon mx-2" src='/static/flamenco.png' alt='Flamenco logo'>
+        <span>
+            {{ serverinfo.manager_name }}
+        </span>
+        <span id='runmode' v-if="serverinfo.manager_mode != 'production'">
+            ({{ serverinfo.manager_mode }} mode)
+        </span>
+        <span class="ml-auto px-2 text-secondary" id='managerversion'>
+            {{ serverinfo.version }}
+        </span>
+    </header>
 </script>
 
 
