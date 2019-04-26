@@ -107,18 +107,15 @@ Flamenco Manager accepts the following CLI arguments:
 `$FM` denotes the directory containing a checkout of Flamenco Manager, that is, the absolute path
 of this `flamenco-manager` directory.
 
-0. Make sure you have MongoDB up and running (on localhost)
-1. Install Go 1.12 or newer and GNU Make.
-2. `export GOPATH=/path/to/your/workspace/for/go`
+1. Make sure you have MongoDB up and running (on localhost)
+2. Install Go 1.12 or newer and GNU Make.
 3. `cd $FM`
-4. Install "dep" with `go get -u github.com/golang/dep/cmd/dep`
-5. Download all dependencies with `dep ensure`
-6. Download Flamenco test dependencies with `go get -t ./...`
-7. Run the unittests with `make test`
-8. Build your first Flamenco Manager with `make`; this will create an executable
-   `flamenco-manager` in the current directory.
-9. Configure Flamenco Manager by starting it in *setup mode* (`./flamenco-manager -setup`, see above).
-10. Run the Manager with `./flamenco-manager`.
+4. Run `make` to download the dependencies and build Flamenco Manager. This will create an
+   executable `flamenco-manager` in the current directory.
+
+- Run the unittests with `make test`
+- Configure Flamenco Manager by starting it in *setup mode* (`./flamenco-manager -setup`, see above).
+- Run the Manager with `./flamenco-manager`.
 
 
 ### Testing
