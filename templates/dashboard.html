@@ -6,53 +6,40 @@
     {{ .VueTemplates }}
 {{end}}
 {{define "body"}}
-<div class="container theme-showcase" role="main" id='vue_app'>
+<div role="main" id='vue_app'>
     <page-header :serverinfo="serverinfo"></page-header>
-
-    <section class="row">
-        <div class='col-md-5'>
-            <div class="card">
-                <div class="card-header" id='statusheading'>
-                    <h3 class="card-title">Status</h3>
-                    <div id='statusactions'>
-                        <button id='downloadkick' class='btn btn-sm btn-outline-light'>Kick task downloader</button>
-                        <a id='restart' class='btn btn-sm btn-outline-light' href="/restart-to-websetup">Setup</a>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <status id='status'
-                        :serverinfo="serverinfo"
-                        :idle_workers="idle_workers"
-                        :errormsg="errormsg">
-                    </status>
-                </div>
+    <div class="container-fluid">
+        <section class="row">
+            <div class='col-xl-6 col-lg-12'>
+                <section class="table-responsive">
+                    <worker-table
+                        :workers="current_workers"
+                        :server="serverinfo.server"
+                        :selected_worker_ids="selected_worker_ids"
+                        :all_workers_selected="all_workers_selected"
+                        @worker-selected="onWorkerSelected"
+                        @toggle-all-workers-selected="toggleSelectAllWorkers"
+                    ></worker-table>
+                </section>
             </div>
-        </div>
-        <div class='col-md-7'>
-            <div class="card">
-                <div class="card-header"><h3 class="card-title">Last rendered image</h3></div>
-                <div class="card-body imageholder">
-                    <a href='/latest-image'>
+            <div class='col-xl-6 col-lg-12 py-3'>
+                <a href='/latest-image' title="Last-rendered image">
                     <img id='last_rendered_image'
-                         class='small-last-rendered-image'
-                         alt='Last-rendered image'
-                         src='/static/latest-image.jpg'>
-                     </a>
-                </div>
-            </div>
-        </div>
-    </section>
+                        class=' img-fluid'
+                        alt='Last-rendered image'
+                        src='/static/latest-image.jpg'>
+                </a>
 
-    <section class="row table-responsive">
-        <worker-table
-            :workers="current_workers"
-            :server="serverinfo.server"
-            :selected_worker_ids="selected_worker_ids"
-            :all_workers_selected="all_workers_selected"
-            @worker-selected="onWorkerSelected"
-            @toggle-all-workers-selected="toggleSelectAllWorkers"
-        ></worker-table>
-    </section>
+                <hr/>
+
+                <status id='status'
+                    :serverinfo="serverinfo"
+                    :idle_workers="idle_workers"
+                    :errormsg="errormsg">
+                </status>
+            </div>
+        </section>
+    </div>
 </div>
 
 <script src="/static/dashboard.js"></script>
