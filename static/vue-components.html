@@ -80,13 +80,16 @@
         <table class="table table-condensed worker">
             <thead>
                 <tr>
-                    <td><label><input
+                    <td class='p-2 d-flex justify-content-center align-items-center'>
+                        <input
+                        title="Select All"
                         type="checkbox"
                         value="all"
                         :checked="all_workers_selected"
                         @input="$emit('toggle-all-workers-selected')"
-                        > Select All</label></td>
-                    <th>Nickname</th>
+                        >
+                    </td>
+                    <th>Name</th>
                     <th>Status</th>
                     <th>Scheduled</th>
                     <template v-if="show_schedule">
@@ -96,9 +99,9 @@
                         <th></th>
                     </template>
                     <template v-else>
-                        <th>Cur/last Task</th>
+                        <th title="Current/Last Task">Task</th>
                         <th>Task Log</th>
-                        <th>Last Seen</th>
+                        <th>Seen</th>
                         <th>Software</th>
                     </template>
                 </tr>
