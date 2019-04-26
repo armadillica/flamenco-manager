@@ -167,22 +167,26 @@
 <!-- template for the 'worker-row' Vue.js component -->
 <script type='text/x-template' id='template_worker_row'>
     <tr :id="worker._id" class="worker-row">
-        <td class='col-narrow'><label><input
+        <td class='p-2 d-flex justify-content-center align-items-center'>
+            <input
             type="checkbox"
             :id="checkbox_id"
             :value="worker._id"
             :checked="is_checked"
             @input="$emit('worker-selected', $event.target.checked)"
-            ></label>
-            <action-button v-for="action_key in actions_for_worker"
+            >
+            <!-- <action-button v-for="action_key in actions_for_worker"
                 :key="action_key"
                 :action_key="action_key"
                 :worker_id="worker._id"
                 @worker-action="performWorkerAction"
-                ></action-button>
+                ></action-button> -->
         </td>
-        <td class='col-narrow'><label :for="checkbox_id">{{ worker.nickname }}</label></td>
-        <td class='col-narrow'>{{ worker.status || '-none-' }}
+        <td class='table-cell-nickname'>
+            <span :class='"status-indicator status-" + worker.status'></span>
+            <label :for="checkbox_id">{{ worker.nickname }}</label>
+        </td>
+        <td class='table-cell-status'>{{ worker.status || '-none-' }}
             <span v-if="worker.status_requested">
                 <span v-if="worker.lazy_status_request" title="Status change queued for after current task is finished.">⇢</span>
                 <span v-else title="Immediate status change is requested.">→</span>
@@ -191,7 +195,7 @@
 
         <template v-if="mode != 'edit_schedule'">
             <td class='col-sched-edit-active'>
-                <button v-if="worker.sleep_schedule.schedule_active" class='btn btn-sm btn-schedule-active' @click="scheduleSetActive(false)">✓</button>
+                <button v-if="worker.sleep_schedule.schedule_active" class='btn btn-sm btn-outline-success' @click="scheduleSetActive(false)">✓</button>
                 <button v-else class='btn btn-sm btn-schedule-inactive' @click="scheduleSetActive(true)">✗</button>
             </td>
         </template>
@@ -201,10 +205,10 @@
             <td :class="worker.sleep_schedule.time_start ? '' : 'implied'">{{ worker.sleep_schedule.time_start || '00:00'}}</td>
             <td :class="worker.sleep_schedule.time_end ? '' : 'implied'">{{ worker.sleep_schedule.time_end || '24:00'}}</td>
             <td class='col-sched-edit-actions'>
-                <button class='btn btn-sm' @click="scheduleEditMode()" title='Edit'>✎</button>
-                <button class='btn btn-sm' @click="$emit('copy-schedule', worker.sleep_schedule)"
+                <button class='btn btn-sm btn-link' @click="scheduleEditMode()" title='Edit schedule'>Edit</button>
+                <button class='btn btn-sm btn-link' @click="$emit('copy-schedule', worker.sleep_schedule)"
                     :disabled="selected_worker_ids.length == 0 || is_checked"
-                    title='Copy this schedule to all selected workers.'>⎘</button>
+                    title='Copy this schedule to all selected workers.'>Copy</button>
             </td>
         </template>
         <template v-else-if="mode == 'edit_schedule'">
@@ -249,8 +253,8 @@
                     class='btn btn-link btn-sm' style='float: right'
                     title="Toggle Worker Details"
                     @click.prevent="$emit('toggle-details')">
-                    <template v-if="show_details">▼</template>
-                    <template v-else>▶</template>
+                    <template v-if="show_details">Collapse</template>
+                    <template v-else>Details</template>
                 </button>
                 {{ worker_software }}
             </td>
