@@ -276,24 +276,26 @@
 
 <!-- template for the 'action-bar' Vue.js component -->
 <script type='text/x-template' id='template_action_bar'>
-    <form class='container'>
-        <div class="action-bar row">
+    <form>
+        <div class="action-bar py-3 mb-3 border-bottom d-flex align-items-center">
             <select
-                class="form-control form-control-sm col-md-3"
+                class="form-control form-control-sm w-25"
                 :disabled="selected_worker_ids.length == 0"
                 v-model="selected_action"
                 >
-                <option value="" selected><template v-if="selected_worker_ids.length == 0">select workers and </template>choose an action</option>
+                <option value="" selected><template v-if="selected_worker_ids.length == 0">Select workers</template><template v-else>Choose an action</template></option>
                 <option v-for="(action, key) in actions" :value="key">{{ action.label }}</option>
             </select>
             <button
                 type="button"
                 :disabled="selected_worker_ids.length == 0 || !selected_action"
-                class="btn btn-primary btn-sm"
+                :class="[(selected_worker_ids.length == 0 || !selected_action) ? 'btn-outline-secondary' : 'btn-primary']"
+                class="btn btn-sm ml-2"
                 @click.prevent="performWorkerAction"
-                >Apply to {{ selected_worker_ids.length }} worker<template v-if="selected_worker_ids.length != 1">s</template></button>
+                >Apply Action</button>
+                <span v-if="selected_worker_ids.length > 0" class="text-muted ml-2">{{ selected_worker_ids.length }} worker<template v-if="selected_worker_ids.length != 1">s</template> selected</span>
                 <button
-                    class='btn btn-primary btn-sm ml-auto'
+                    class='btn btn-secondary btn-sm ml-auto'
                     @click.prevent="$emit('toggle-schedule')">Show <template v-if="show_schedule">Status</template><template v-else>Schedule</template></button>
 
         </div>
