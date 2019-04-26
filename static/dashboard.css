@@ -1,31 +1,4 @@
 
-.btn-sm {
-    padding-top: 0.05ex;
-    padding-bottom: 0.1ex;
-}
-
-h1 img {
-    width: auto;
-    height: 1.1em;
-    float: left;
-    padding-right: 0.5ex;
-}
-
-#managerversion, #runmode {
-    font-size: small;
-    vertical-align: top;
-    float: right;
-    margin-left: 1mm;
-}
-#runmode {
-    color: #e4a7a7;
-}
-
-input {
-    color: black;
-}
-
-
 .error {
     color: #a92a2a;
     background-color: #ffeaea;
@@ -35,9 +8,6 @@ input {
     text-shadow: none;
 }
 
-.card-body { padding: 5px; }
-.card { background-color: inherit; }
-.card-title { margin-bottom: 0; }
 dl.row dd { margin-bottom: 0 }
 
 table.worker>tbody:nth-of-type(odd) { background-color: #578498; }
@@ -63,11 +33,6 @@ tbody:nth-of-type(odd).status-testing tr:first-child td, tbody:nth-of-type(odd).
 tbody.status-error tr:first-child td, tbody.status-error tr:first-child th { background-color: #9b5555; }
 tbody:nth-of-type(odd).status-error tr:first-child td, tbody:nth-of-type(odd).status-error tr:first-child th { background-color: #925959; }
 
-.small-last-rendered-image {
-    max-width: 100%;
-    max-height: 365px;
-}
-
 .imageholder {
     text-align: center;
 }
@@ -83,16 +48,6 @@ a[title] {
     cursor: pointer;
 }
 
-#statusheading {
-    position: relative;
-}
-#statusactions {
-    position: absolute;
-    top: 0.75ex;
-    right: 1ex;
-    z-index: 10;
-}
-
 .click-to-copy {
     cursor: pointer;
     border-bottom: none;
@@ -105,15 +60,6 @@ a[title] {
 
 .worker-action {
     cursor: pointer;
-    font-size: 150%;
-    margin-right: 15px;
-    border-bottom: none;
-}
-
-.worker-action:hover {
-    text-shadow:
-        0 0 1px black,
-        0 0 3px fuchsia;
 }
 
 .worker-action.forget-worker, .worker-action.forget-blacklist-entry {
@@ -144,17 +90,6 @@ a[title] {
 	transition: all 0.2s ease-out;
 }
 
-td.col-narrow, td.col-sched-edit-active, td.col-sched-edit-actions {
-    white-space: nowrap;
-    width: 0;  /* make it as narrow as possible */
-}
-td.col-sched-edit-active {
-    text-align: center;
-}
-td.col-sched-edit-active input[type='checkbox'] {
-    margin-left: auto;
-    margin-right: auto;
-}
 td.col-sched-edit-actions {
     text-align: right;
 }
