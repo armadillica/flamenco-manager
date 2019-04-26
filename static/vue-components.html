@@ -7,10 +7,21 @@
         <span>
             {{ serverinfo.manager_name }}
         </span>
-        <span id='runmode' v-if="serverinfo.manager_mode != 'production'">
+        <span class="text-warning pl-2" v-if="serverinfo.manager_mode != 'production'">
             ({{ serverinfo.manager_mode }} mode)
         </span>
-        <span class="ml-auto px-2 text-secondary" id='managerversion'>
+        <span class="ml-auto px-2 text-secondary">
+            <button id='downloadkick' class='btn btn-sm btn-link py-0 text-secondary'>
+                Kick task downloader
+            </button>
+            <a href="/restart-to-websetup" class='btn btn-sm btn-link py-0 text-secondary'>
+                Setup
+            </a>
+            |
+            <a title="Server" :href="serverinfo.server.url" class="text-secondary">
+                {{ serverinfo.server.name }}
+            </a>
+            |
             {{ serverinfo.version }}
         </span>
     </header>
