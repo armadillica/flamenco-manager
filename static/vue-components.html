@@ -33,16 +33,14 @@
     <div id='status'>
         <p v-if='errormsg' class='error'>{{ errormsg }}</p>
         <dl v-else class="row">
-            <dt class='col-md-5'>Nr. of workers</dt>
-            <dd class='col-md-7'>{{ serverinfo.nr_of_workers }}</dd>
-            <dt class='col-md-5' title="Number of tasks in database. Probably not all queued.">Nr. of tasks</dt>
-            <dd class='col-md-7'>{{ serverinfo.nr_of_tasks }}</dd>
-            <dt class='col-md-5' title="Number of task updates queued for sending to Flamenco Server.">Upstream Queue</dt>
-            <dd class='col-md-7'>{{ serverinfo.upstream_queue_size }}</dd>
-            <dt class='col-md-5'>Server</dt>
-            <dd class='col-md-7'><a :href="serverinfo.server.url">{{ serverinfo.server.name }}</a></dd>
-            <dt class='col-md-5' title="Workers not seen in a long time.">Old workers</dt>
-            <dd class='col-md-7'>
+            <dt class='col-md-6'>Nr. of workers</dt>
+            <dd class='col-md-6'>{{ serverinfo.nr_of_workers }}</dd>
+            <dt class='col-md-6' title="Number of tasks in database. Probably not all queued.">Nr. of tasks</dt>
+            <dd class='col-md-6'>{{ serverinfo.nr_of_tasks }}</dd>
+            <dt class='col-md-6' title="Number of task updates queued for sending to Flamenco Server.">Upstream Queue</dt>
+            <dd class='col-md-6'>{{ serverinfo.upstream_queue_size }}</dd>
+            <dt class='col-md-6' title="Workers not seen in a long time.">Old workers</dt>
+            <dd class='col-md-6'>
                 <idle-worker
                     v-for="worker in idle_workers"
                     :key="worker._id"
