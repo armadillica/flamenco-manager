@@ -1,12 +1,24 @@
 :root {
     /* Own variables. */
+    --body-color: var(--light);
+    --gray-darker: #222;
+
     --font-size: 12px;
     --font-size-small: 11px;
-    --gray-darker: #222;
 
     --padding-sm: 5px;
 
+    --status-awake: var(--success);
+    --status-timeout: var(--info);
+    --status-offline: var(--gray);
+    --status-testing: var(--warning);
+    --status-error: var(--danger);
+
+    --table-row-background: var(--gray-dark);
+    --table-row-odd-background: #393939;
+
     /* Bootstrap overrides. */
+    --gray-dark: #333;
 }
 
 html, body {
@@ -16,13 +28,45 @@ html, body {
     background-color: var(--gray-dark);
 }
 
-a, a:link, a:visited {
-    color: var(--light);
+select, input, button {
+    font-family: var(--font-family-sans-serif);
+    font-size: initial;
 }
 
-a:hover, a:active {
-    color: var(--primary);
+a, a:link, a:visited { color: var(--light);}
+a:hover, a:active { color: var(--primary);}
+
+/* Status Indicators. Small circle with the color of the status. */
+.status-indicator {
+    background-color: var(--gray);
+    border-radius: 50%;
+    display: inline-block;
+    height: 10px;
+    width: 10px;
 }
+
+.status-indicator.status-awake { background-color: var(--status-awake); }
+.status-indicator.status-timeout { background-color: var(--status-timeout); }
+.status-indicator.status-offline { background-color: var(--status-offline); }
+.status-indicator.status-testing { background-color: var(--status-testing); }
+.status-indicator.status-error { background-color: var(--status-error); }
+
+/* Table Row Statuses. */
+tbody.status-timeout .table-cell-status { color: var(--status-timeout); }
+tbody.status-offline { color: var(--status-offline); }
+tbody.status-testing .table-cell-status { color: var(--status-testing); }
+tbody.status-error .table-cell-status { color: var(--status-error); }
+
+
+/* Bootstrap overrides. */
+.table { color: var(--body-color);}
+.table td, .table th { vertical-align: middle; }
+
+.border-bottom, .border-top, .border-left, .border-right { border-color: var(--gray) !important;}
+
+/* .bg-dark {
+    background-color: var(--gray-dark);
+} */
 
 /*
  * Extra utility classes.

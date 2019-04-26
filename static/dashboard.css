@@ -1,3 +1,4 @@
+/* The 'db' prefix stands for Dashboard. */
 
 .error {
     color: #a92a2a;
@@ -10,7 +11,10 @@
 
 dl.row dd { margin-bottom: 0 }
 
-table.worker>tbody:nth-of-type(odd) { background-color: #578498; }
+table>tbody:nth-of-type(odd) {
+    background-color: var(--table-row-odd-background);
+}
+
 table.worker>thead, table.worker>tbody {
     border: none;
 }
@@ -23,15 +27,6 @@ table.worker td label {
     margin: 2px;
 }
 
-tbody.status-awake tr:first-child td, tbody.status-awake tr:first-child th { background-color: #3f9465; }
-tbody:nth-of-type(odd).status-awake tr:first-child td, tbody:nth-of-type(odd).status-awake tr:first-child th { background-color: #3faa6e; }
-tbody.status-timeout tr:first-child td, tbody.status-timeout tr:first-child th { background-color: #a77239; }
-tbody:nth-of-type(odd).status-timeout tr:first-child td, tbody:nth-of-type(odd).status-timeout tr:first-child th { background-color: #d09c4a; }
-tbody.status-offline tr:first-child td, tbody.status-offline tr:first-child th { color: #bbb; }
-tbody.status-testing tr:first-child td, tbody.status-testing tr:first-child th { background-color: #b56b8d; }
-tbody:nth-of-type(odd).status-testing tr:first-child td, tbody:nth-of-type(odd).status-testing tr:first-child th { background-color: #ce92ae; }
-tbody.status-error tr:first-child td, tbody.status-error tr:first-child th { background-color: #9b5555; }
-tbody:nth-of-type(odd).status-error tr:first-child td, tbody:nth-of-type(odd).status-error tr:first-child th { background-color: #925959; }
 
 .imageholder {
     text-align: center;
@@ -96,13 +91,11 @@ td.col-sched-edit-actions {
 
 .btn-schedule-active {
     color: #fff;
-    background-color: #28a745;
     border-color: #28a745;
 }
 .btn-schedule-inactive {
-    color: #adadad;
-    background-color: #19692c;
-    border-color: #19692c;
+    color: var(--light);
+    border-color:  var(--gray);
 }
 
 .worker-row .implied::before {
