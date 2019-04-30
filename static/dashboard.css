@@ -1,5 +1,14 @@
 /* The 'db' prefix stands for Dashboard. */
 
+.dashboard {
+    font-family: var(--font-family-dashboard);
+    font-size: var(--font-size-dashboard);
+}
+
+.dashboard .btn-link {
+    font-family: var(--font-family-dashboard);
+}
+
 .error {
     color: #a92a2a;
     background-color: #ffeaea;
