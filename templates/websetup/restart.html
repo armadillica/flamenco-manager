@@ -1,18 +1,17 @@
 {{template "layout" .}}
 {{define "simplepage"}}
-<div id='restart'>
-    <h2>Restart Flamenco Manager</h2>
+<div id='restart' class="py-4">
+    <h1>Restart Manager</h1>
     <p>Are you sure you want to restart Flamenco Manager? This will disable the web setup and start
     normal Flamenco Manager operations. You can always restart setup mode by running
-    "flamenco-manager -setup" or choosing "Setup" on the Dashboard.</p>
+    "flamenco-manager -setup" or clicking "Setup" on the Dashboard header.</p>
 
-    <p><em>NOTE</em>: unsaved changes will be lost! If you want to save your changes, first
-    <a href='javascript:history.back()'>go back and save them</a>.</p>
+    <p class="text-danger"><strong>Note: unsaved changes will be lost! Make sure you saved first.</strong></p>
 
     <form method="POST">
-        <div class='row' style='margin: 2em'>
-            <div class='col-md-4'><a href="/setup">« Back to web setup</a></div>
-            <div class='col-md-offset-4 col-md-4' style='text-align: right'><button type="submit" class='btn btn-success'>Restart to Normal Operation</button></div>
+        <div class='d-flex py-3'>
+            <a href="/setup" class='btn btn-outline-secondary mr-3 px-5'>« Back to Setup</a>
+            <button type="submit" class='btn btn-primary px-5'>Restart to Normal Operation</button>
         </div>
     </form>
 </div>
