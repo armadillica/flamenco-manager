@@ -199,8 +199,8 @@
         <td class='table-cell-status'>
             {{ worker.status || '-none-' }}
             <span v-if="worker.status_requested">
-                <span v-if="worker.lazy_status_request" title="Status change queued for after current task is finished.">⇢</span>
-                <span v-else title="Immediate status change is requested." class="font-weight-bold text-secondary arrow">➔</span>
+                <span v-if="worker.lazy_status_request" title="Status change queued for after current task is finished." class="font-weight-bold text-secondary arrow">➔</span>
+                <span v-else title="Immediate status change is requested." class="font-weight-bold text-white arrow">↠</span>
                 <span :class="'status-requested status-' + worker.status_requested">{{ worker.status_requested}}</span>
             </span>
         </td>
