@@ -40,7 +40,8 @@ a, a:link, a:visited { color: var(--light);}
 a:hover, a:active { color: var(--primary);}
 
 .btn {white-space: nowrap}
-.btn-link.btn-sm { font-size: var(--font-size-small);}
+.btn-link.btn-sm,
+.form-control-sm { font-size: var(--font-size-small);}
 
 /* Status Indicators. Small circle with the color of the status. */
 .status-indicator {
@@ -71,6 +72,32 @@ hr { border-color: var(--gray);}
 .text-secondary { color: var(--secondary) !important; }
 .btn-outline-secondary { border-color: var(--secondary) !important; color: var(--secondary) !important; }
 .border-bottom, .border-top, .border-left, .border-right { border-color: var(--gray) !important;}
+.form-control,
+.form-control:focus,
+.form-control:disabled,
+.form-control[readonly],
+.input-group-text {
+    background-color: var(--gray-darker);
+    border: none;
+    color: var(--body-color);
+}
+
+.form-control:disabled, .form-control[readonly] {
+    opacity: .5;
+}
+
+.form-control {
+    border-radius: 6px;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 2px var(--primary);
+}
+
+.input-group-append .input-group-text {color: var(--gray); cursor: pointer; padding: initial;}
+.input-group-append .input-group-text:hover {color: var(--white);}
+
+.input-icon {font-size: 1.3rem;}
 
 /*
  * Extra utility classes.

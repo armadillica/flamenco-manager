@@ -136,15 +136,20 @@
 <script type="text/x-template" id="template_input_field">
     <div class="form-group">
         <label :for="id_input" class="font-weight-bold">{{ label }}</label>
-        <input :id="id_input" class="form-control" :name="id_input" :placeholder="placeholder"
+        <div class="input-group">
+            <input :id="id_input" class="form-control" :name="id_input" :placeholder="placeholder"
             v-bind:value="value"
             v-on:input="$emit('input', $event.target.value)">
+            <div class="input-group-append" v-if="original_value != value">
+                <div class="input-group-text px-3"
+                    @click="$emit('input', original_value)"
+                    :title="restore_title">
+                    <span class="input-icon">↻</span>
+                </div>
+            </div>
+        </div>
         <small class="d-block py-2 text-secondary" v-if="help" v-html="help"></small>
         <slot></slot>
-        <button type="button" class="btn btn-outline-light btn-sm mt-2"
-            v-if="original_value != value"
-            @click="$emit('input', original_value)"
-            :title="restore_title">Reset to Default Value</button>
     </div>
 </script>
 
