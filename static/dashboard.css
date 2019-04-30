@@ -9,6 +9,12 @@
     font-family: var(--font-family-dashboard);
 }
 
+.table-cell-status .arrow {
+    font-size: 1.1rem;
+    position: relative;
+    top: 2px;
+}
+
 .error {
     color: #a92a2a;
     background-color: #ffeaea;
