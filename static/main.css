@@ -43,8 +43,11 @@ a, a:link, a:visited { color: var(--light);}
 a:hover, a:active { color: var(--primary);}
 
 .btn {white-space: nowrap}
-.btn-link.btn-sm,
-.form-control-sm { font-size: var(--font-size-small);}
+.btn-sm,
+.form-control-sm,
+.btn-link.btn-sm { font-size: var(--font-size-small);}
+
+.btn-disabled {opacity: 0.33 !important;}
 
 /* Status Indicators. Small circle with the color of the status. */
 .status-indicator {

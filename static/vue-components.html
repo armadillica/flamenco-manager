@@ -298,9 +298,9 @@
 <!-- template for the 'action-bar' Vue.js component -->
 <script type='text/x-template' id='template_action_bar'>
     <form>
-        <div class="action-bar py-3 mb-3 border-bottom d-flex align-items-center">
+        <div class="action-bar pt-3 pb-2 mb-2 border-bottom d-flex align-items-center">
             <select
-                class="form-control w-25"
+                class="form-control form-control-sm w-25 ml-1"
                 :disabled="selected_worker_ids.length == 0"
                 v-model="selected_action"
                 >
@@ -310,13 +310,13 @@
             <button
                 type="button"
                 :disabled="selected_worker_ids.length == 0 || !selected_action"
-                :class="[(selected_worker_ids.length == 0 || !selected_action) ? 'btn-outline-secondary' : 'btn-primary']"
-                class="btn btn-sm ml-2"
+                :class="[(selected_worker_ids.length == 0 || !selected_action) ? 'btn-outline-secondary btn-disabled' : 'btn-primary']"
+                class="btn btn-sm ml-3 px-3 font-weight-bold"
                 @click.prevent="performWorkerAction"
-                >Apply Action</button>
-                <span v-if="selected_worker_ids.length > 0" class="text-muted ml-2">{{ selected_worker_ids.length }} worker<template v-if="selected_worker_ids.length != 1">s</template> selected</span>
+                >Apply</button>
+                <span v-if="selected_worker_ids.length > 0" class="text-muted ml-3">{{ selected_worker_ids.length }} worker<template v-if="selected_worker_ids.length != 1">s</template> selected</span>
                 <button
-                    class='btn btn-outline-secondary btn-sm ml-auto px-4'
+                    class='btn btn-outline-secondary btn-sm ml-auto px-4 font-weight-bold'
                     @click.prevent="$emit('toggle-schedule')"><template v-if="show_schedule">Status</template><template v-else>Schedule</template></button>
 
         </div>
