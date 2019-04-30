@@ -24,8 +24,6 @@
     text-shadow: none;
 }
 
-dl.row dd { margin-bottom: 0 }
-
 table>tbody:nth-of-type(odd) {
     background-color: var(--table-row-odd-background);
 }
