@@ -17,6 +17,7 @@
     --status-offline: var(--gray);
     --status-testing: var(--warning);
     --status-error: var(--danger);
+    --status-asleep: var(--gray);
 
     --table-row-background: var(--gray-dark);
     --table-row-odd-background: #363636;
@@ -65,11 +66,12 @@ a:hover, a:active { color: var(--primary);}
 .status-indicator.status-error { background-color: var(--status-error); }
 
 /* Table Row Statuses. */
-tbody.status-timeout .table-cell-status { color: var(--status-timeout); }
-tbody.status-offline { color: var(--status-offline); }
-tbody.status-testing .table-cell-status { color: var(--status-testing); }
-tbody.status-error .table-cell-status { color: var(--status-error); }
-
+.status-requested.status-awake { color: var(--status-awake); }
+.status-requested.status-asleep { color: var(--status-asleep); }
+.status-requested.status-timeout, tbody.status-timeout .table-cell-status { color: var(--status-timeout); }
+.status-requested.status-offline, tbody.status-offline { color: var(--status-offline); }
+.status-requested.status-testing, tbody.status-testing .table-cell-status { color: var(--status-testing); }
+.status-requested.status-error, tbody.status-error .table-cell-status { color: var(--status-error); }
 
 /* Bootstrap overrides. */
 hr { border-color: var(--border-separator); border-width: 2px;}
