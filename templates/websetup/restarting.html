@@ -1,11 +1,17 @@
 {{template "layout" .}}
 {{define "simplepage"}}
-<div id='restarting'>
-    <h2>Restarting Flamenco Manager</h2>
+<div id='restarting' class="py-4">
+    <h1>Restarting Manager...</h1>
     <p>Flamenco Manager will come back online soon. If that doesn't happen, please see the
     console/log output.</p>
 
-    <p>Once restart is complete, visit the <a href='/'>Flamenco Manager Dashboard</a>.</p>
+    <p>Once restart is complete, you will be taken to the <a href='/'>Dashboard</a>.</p>
+
+    <div class="d-flex align-items-center justify-content-center py-4">
+        <div class="spinner-border" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
 
     <div id='progressbar'><div></div></div>
 </div>
