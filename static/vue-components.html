@@ -142,17 +142,16 @@
         ></worker-row>
         <template v-if="show_details && !show_schedule">
             <tr class='details'>
-                <td colspan='3'></td>
-                <th>Details:</th>
-                <th colspan='2'>Worker ID</th>
-                <th colspan='2'>Address</th>
+                <th colspan='2'></th>
+                <th colspan='1'>Worker ID</th>
+                <th colspan='6'>Address</th>
             </tr>
             <tr class='details'>
-                <td colspan='4'></td>
-                <td colspan='2' class="click-to-copy worker-id" :data-clipboard-text="worker._id">
+                <td colspan='2'></td>
+                <td colspan='1' class="click-to-copy worker-id" :data-clipboard-text="worker._id">
                     {{ worker._id }}
                 </td>
-                <td colspan='2' class="click-to-copy worker-address" :data-clipboard-text="worker.address">
+                <td colspan='6' class="click-to-copy worker-address" :data-clipboard-text="worker.address">
                     {{ worker.address }}
                 </td>
             </tr>
