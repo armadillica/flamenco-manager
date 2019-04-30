@@ -63,7 +63,7 @@
 
                 <button v-for="urlInfo in own_urls"
                     type="button"
-                    :class='"own-url-suggestion btn btn-sm " + (urlInfo.is_used_for_setup ? "btn-info" : "btn-outline-light")'
+                    :class='"own-url-suggestion btn btn-sm mr-2 px-3 " + (urlInfo.is_used_for_setup ? "btn-primary" : "btn-outline-secondary")'
                     :title='urlInfo.is_used_for_setup ? "You are using this URL now" : ""'
                     @click="config.own_url = urlInfo.url">
                     {{ urlInfo.url }}
