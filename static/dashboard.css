@@ -39,8 +39,10 @@ table.worker>tbody input {
 }
 
 table.worker>thead {
-    border-bottom: 2px solid var(--gray-darker);
-    margin-bottom: 15px;
+    border-bottom: 2px solid var(--gray-dark);
+    background-color: var(--gray-darker);
+    color: var(--secondary);
+    font-weight: initial;
 }
 
 table.worker>thead th {
