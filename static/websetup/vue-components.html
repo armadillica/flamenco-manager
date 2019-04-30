@@ -1,13 +1,13 @@
 <script type="text/x-template" id="template_setup_form">
     <div id='config'>
-        <h2>Flamenco Manager Configuration</h2>
+        <h2>Manager</h2>
         <p>This web interface allows you to set up the most important settings for Flamenco Server.
         There are more settings to tweak in the configuration file flamenco-manager.yaml.
         Configuration changes will not be taken into account immediately; restart Flamenco Manager for
         that.</p>
 
-        <section>
-            <h3>Core Settings</h3>
+        <section class="pt-4">
+            <h3 class="pb-3">Core Settings</h3>
 
             <input-field id_input="manager_name" placeholder="Flamenco Manager"
                 label="Name of this Manager"
@@ -83,10 +83,12 @@
             </checkbox-field>
         </section>
 
-        <section>
-            <h3>Shaman File Storage</h3>
+        <hr/>
 
-            <p>Shaman is a file storage server built into Flamenco Manager. It accepts uploaded files via HTTP,
+        <section class="pt-3">
+            <h3>File Storage</h3>
+
+            <p><em>Shaman</em> is a file storage server built into Flamenco Manager. It accepts uploaded files via HTTP,
             and stores them based on their SHA256-sum and their file length. It can recreate directory structures
             by symlinking those files. Effectively it ensures that, when you create a new render job, you only
             have to upload those files that are new or have changed.</p>
