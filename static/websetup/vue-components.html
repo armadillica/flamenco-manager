@@ -14,21 +14,19 @@
                 v-model="config.manager_name" :original_value="original_config.manager_name"
                 help="This name is purely cosmetic, and is shown only on the dashboard. It can help you distinguish between different Managers."></input-field>
 
-            <div class="form-group row">
-                <label class="col-sm-2 col-form-label" for="mongo_choice">Database Choice</label>
-                <div class="col-sm-9">
-                    <div class=" form-check">
-                        <input type="radio" class="form-check-input" id="mongo_choice_bundled" name="mongo_choice"
-                            value="bundled" :checked="mongo_choice == 'bundled'"
-                            @input="$emit('mongo_choice', $event.target.value)">
-                        <label class="form-check-label" for="mongo_choice_bundled">Bundled - easiest to set up</label>
-                    </div>
-                    <div class=" form-check">
-                        <input type="radio" class="form-check-input" id="mongo_choice_external" name="mongo_choice"
-                            value="external" :checked="mongo_choice == 'external'"
-                            @input="$emit('mongo_choice', $event.target.value)">
-                        <label class="form-check-label" for="mongo_choice_external">External - if you already have MongoDB installed</label>
-                    </div>
+            <div class="form-group">
+                <label for="mongo_choice" class="font-weight-bold">Database Choice</label>
+                <div class=" form-check">
+                    <input type="radio" class="form-check-input" id="mongo_choice_bundled" name="mongo_choice"
+                        value="bundled" :checked="mongo_choice == 'bundled'"
+                        @input="$emit('mongo_choice', $event.target.value)">
+                    <label class="form-check-label" for="mongo_choice_bundled">Bundled - easiest to set up</label>
+                </div>
+                <div class=" form-check">
+                    <input type="radio" class="form-check-input" id="mongo_choice_external" name="mongo_choice"
+                        value="external" :checked="mongo_choice == 'external'"
+                        @input="$emit('mongo_choice', $event.target.value)">
+                    <label class="form-check-label" for="mongo_choice_external">External - if you already have MongoDB installed</label>
                 </div>
             </div>
 
