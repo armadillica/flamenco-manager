@@ -1,6 +1,8 @@
 :root {
     /* Own variables. */
     --body-color: var(--light);
+    --body-background: var(--gray-dark);
+    --border-separator: #404040;
     --gray-darker: #222;
 
     --font-size-small: 11px;
@@ -19,16 +21,17 @@
     --table-row-background: var(--gray-dark);
     --table-row-odd-background: #393939;
 
+
     /* Bootstrap overrides. */
     --font-family-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, Helvetica, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-    --gray-dark: #333;
+    --gray-dark: #303030;
     --secondary: #bbb;
 }
 
 html, body {
     font-family: var(--font-family-sans-serif);
     color: var(--light);
-    background-color: var(--gray-dark);
+    background-color: var(--body-background);
 }
 
 select, input, button {
@@ -66,12 +69,13 @@ tbody.status-error .table-cell-status { color: var(--status-error); }
 
 
 /* Bootstrap overrides. */
-hr { border-color: var(--gray);}
+hr { border-color: var(--border-separator); border-width: 2px;}
 .table { color: var(--body-color);}
 .table td, .table th { vertical-align: middle; }
 .text-secondary { color: var(--secondary) !important; }
 .btn-outline-secondary { border-color: var(--secondary) !important; color: var(--secondary) !important; }
-.border-bottom, .border-top, .border-left, .border-right { border-color: var(--gray) !important;}
+.border-bottom, .border-top, .border-left, .border-right { border-color: var(--border-separator) !important; border-width: 2px !important;}
+
 .form-control,
 .form-control:focus,
 .form-control:disabled,
@@ -114,4 +118,8 @@ hr { border-color: var(--gray);}
 
 .text-small {
     font-size: var(--font-size-small);
+}
+
+.white-space-nowrap {
+    white-space: nowrap;
 }
