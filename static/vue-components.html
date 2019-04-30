@@ -30,25 +30,33 @@
 
 <!-- template for the 'status' Vue.js component -->
 <script type='text/x-template' id='template_status'>
-    <div id='status'>
+    <div id='status' class="text-secondary">
         <p v-if='errormsg' class='error'>{{ errormsg }}</p>
-        <dl v-else class="row">
-            <dt class='col-md-6'>Nr. of workers</dt>
-            <dd class='col-md-6'>{{ serverinfo.nr_of_workers }}</dd>
-            <dt class='col-md-6' title="Number of tasks in database. Probably not all queued.">Nr. of tasks</dt>
-            <dd class='col-md-6'>{{ serverinfo.nr_of_tasks }}</dd>
-            <dt class='col-md-6' title="Number of task updates queued for sending to Flamenco Server.">Upstream Queue</dt>
-            <dd class='col-md-6'>{{ serverinfo.upstream_queue_size }}</dd>
-            <dt class='col-md-6' title="Workers not seen in a long time.">Old workers</dt>
-            <dd class='col-md-6'>
-                <idle-worker
-                    v-for="worker in idle_workers"
-                    :key="worker._id"
-                    :worker="worker"
-                    @forget-worker="forgetWorker(worker)">
-                </idle-worker>
-            </dd>
-        </dl>
+        <div v-else class="row white-space-nowrap">
+            <div class="col-md-6">
+                <dl class="row ">
+                    <dt class='col-md-4'>Workers</dt>
+                    <dd class='col-md-6'>{{ serverinfo.nr_of_workers }}</dd>
+                    <dt class='col-md-4' title="Number of tasks in database. Probably not all queued.">Tasks</dt>
+                    <dd class='col-md-6'>{{ serverinfo.nr_of_tasks }}</dd>
+                </dl>
+            </div>
+            <div class="col-md-6">
+                <dl class="row">
+                    <dt class='col-md-4' title="Number of task updates queued for sending to Flamenco Server.">Upstream Queue</dt>
+                    <dd class='col-md-6 pl-4'>{{ serverinfo.upstream_queue_size }}</dd>
+                    <dt class='col-md-4' title="Workers not seen in a long time.">Old Workers</dt>
+                    <dd class='col-md-6 pl-4'>
+                        <idle-worker
+                            v-for="worker in idle_workers"
+                            :key="worker._id"
+                            :worker="worker"
+                            @forget-worker="forgetWorker(worker)">
+                        </idle-worker>
+                    </dd>
+                </dl>
+            </div>
+        </div>
     </div>
 </script>
 
@@ -56,7 +64,7 @@
 <script type='text/x-template' id='template_idle_worker'>
     <span>
         <span class="idle-worker-name" :title="worker._id">{{ worker.nickname }}</span>
-        <span @click="$emit('forget-worker', worker)" class="forget-worker worker-action" title="click to forget worker">x</span>
+        <span @click="$emit('forget-worker', worker)" class="text-danger" title="click to forget worker">(forget)</span>
     </span>
 </script>
 
