@@ -91,7 +91,7 @@
             <p><em>Shaman</em> is a file storage server built into Flamenco Manager. It accepts uploaded files via HTTP,
             and stores them based on their SHA256-sum and their file length. It can recreate directory structures
             by symlinking those files. Effectively it ensures that, when you create a new render job, you only
-            have to upload those files that are new or have changed.</p>
+            have to upload files that are new or have changed.</p>
 
             <input-field id_input="shaman_fileStorePath" v-model="config.fileStorePath" :original_value="original_config.fileStorePath"
                 placeholder="/mnt/shared-filesystem/flamenco-file-store"
