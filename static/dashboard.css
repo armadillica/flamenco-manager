@@ -24,21 +24,46 @@ table>tbody:nth-of-type(odd) {
     background-color: var(--table-row-odd-background);
 }
 
-table.worker>thead, table.worker>tbody {
+table.worker>tbody {
     border: none;
 }
+
+table.worker>tbody input {
+    height: unset;
+}
+
+table.worker>thead {
+    border-bottom: 2px solid var(--gray-darker);
+    margin-bottom: 15px;
+}
+
+table.worker>thead th {
+    padding-bottom: 5px;
+}
+
+table.worker tr.details{
+    color: var(--body-color);
+    background-color: rgba(0,0,0,0.2)
+}
+
+table.worker tr.details:last-child {
+    border-bottom: 2px solid var(--gray-darker);
+}
+
+table.worker tr.details td,
+table.worker tr.details th {
+    padding-bottom: 5px;
+    padding-top: 5px;
+}
+
 table.worker td, table.worker th {
     padding-top: 0;
     padding-bottom: 0;
     border: none;
 }
+
 table.worker td label {
-    margin: 2px;
-}
-
-
-.imageholder {
-    text-align: center;
+    margin: initial;
 }
 
 span.idle-worker-name:not(:first-child)::before {
@@ -47,9 +72,6 @@ span.idle-worker-name:not(:first-child)::before {
 
 *[title] {
     cursor: help;
-}
-a[title] {
-    cursor: pointer;
 }
 
 .click-to-copy {
@@ -66,21 +88,12 @@ a[title] {
     cursor: pointer;
 }
 
-.worker-action.forget-worker, .worker-action.forget-blacklist-entry {
-    font-size: 85%;
-    vertical-align: super;
-    color: #f66;
-    padding: 3px;
-    margin-right: 5px;
-}
-
 .worker-action.forget-blacklist-entry {
     float: right;
 }
 
 .worker .btn-link {
-    color: inherit;
-    float: right;
+    color: currentColor;
 }
 
 .flash-on {
