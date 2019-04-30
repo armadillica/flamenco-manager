@@ -106,6 +106,12 @@ function showLinkButton() {
     $('#relink-action').hide();
 }
 
+function hideLinkButton() {
+    $('#link-button').hide();
+    $('#link-form').hide();
+    $('#relink-action').show();
+}
+
 function saveDataTables() {
     var variables = $('#variables-table').dataTable();
     var path_variables = $('#path-variables-table').dataTable();
