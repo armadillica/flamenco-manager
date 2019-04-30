@@ -1,15 +1,14 @@
 {{template "layout" .}}
 
 {{define "simplepage"}}
-<div id='restart'>
-    <h2>Restart Flamenco Manager to Web Setup</h2>
-    <p>Are you sure you want to restart Flamenco Manager into setup mode?
-    This will disable normal Flamenco Manager operations and enable the web setup.</p>
+<div id='restart' class="py-4">
+    <h1>Setup</h1>
+    <p>Flamenco Manager needs to be restarted to enter Setup mode.</p>
+    <p>This will disable normal Flamenco Manager operations.<p>
 
-    <div class='row' style='margin: 2em'>
-        <div class='col-md-4'><a href="/" class='btn btn-success'>« Back to dashboard</a></div>
-        <div class='col-md-offset-4 col-md-4' style='text-align: right'><button class='btn btn-danger'
-            onclick="restart(window.location.href)">Restart to Web Setup</button></div>
+    <div class='d-flex py-3'>
+        <a href="/" class='btn btn-outline-secondary mr-3 px-5'>« Back to Dashboard</a>
+        <button class='btn btn-primary px-5' onclick="restart(window.location.href)">Restart to Setup</button>
     </div>
 </div>
 {{end}}
