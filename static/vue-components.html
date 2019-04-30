@@ -99,7 +99,7 @@
                     </td>
                     <th>Name</th>
                     <th>Status</th>
-                    <th>Scheduled</th>
+                    <th class="text-center">Scheduled</th>
                     <template v-if="show_schedule">
                         <th>Sleep Days</th>
                         <th>Sleep Start</th>
@@ -204,9 +204,9 @@
         </td>
 
         <template v-if="mode != 'edit_schedule'">
-            <td class='col-sched-edit-active'>
-                <button v-if="worker.sleep_schedule.schedule_active" class='btn btn-sm btn-outline-success' @click="scheduleSetActive(false)">✓</button>
-                <button v-else class='btn btn-sm btn-schedule-inactive' @click="scheduleSetActive(true)">✗</button>
+            <td class='col-sched-edit-active text-center'>
+                <button v-if="worker.sleep_schedule.schedule_active" class='btn btn-sm btn-link' @click="scheduleSetActive(false)">Yes</button>
+                <button v-else class='btn btn-sm btn-link text-secondary' @click="scheduleSetActive(true)">No</button>
             </td>
         </template>
         <template v-if="mode == 'show_schedule'">
@@ -215,22 +215,29 @@
             <td :class="worker.sleep_schedule.time_start ? '' : 'implied'">{{ worker.sleep_schedule.time_start || '00:00'}}</td>
             <td :class="worker.sleep_schedule.time_end ? '' : 'implied'">{{ worker.sleep_schedule.time_end || '24:00'}}</td>
             <td class='col-sched-edit-actions'>
-                <button class='btn btn-sm btn-link' @click="scheduleEditMode()" title='Edit schedule'>Edit</button>
                 <button class='btn btn-sm btn-link' @click="$emit('copy-schedule', worker.sleep_schedule)"
-                    :disabled="selected_worker_ids.length == 0 || is_checked"
-                    title='Copy this schedule to all selected workers.'>Copy</button>
+                :disabled="selected_worker_ids.length == 0 || is_checked"
+                title='Copy this schedule to all selected workers.'>Copy</button>
+                <button class='btn btn-sm btn-link px-3' @click="scheduleEditMode()" title='Edit schedule'>Edit</button>
             </td>
         </template>
         <template v-else-if="mode == 'edit_schedule'">
             <!-- Worker Schedule editing template -->
-            <td class='col-sched-edit-active'><input class='form-check-input' type='checkbox' v-model="edit_schedule.schedule_active"></td>
-            <td><input class='form-control form-control-sm' type='text' @keyup.enter="scheduleSave()" v-model="edit_schedule.days_of_week"
-                title="Space-separated list of day names. The first two letters of each day are enough."></td>
-            <td><input class='form-control form-control-sm' type='text' @keyup.enter="scheduleSave()" v-model="edit_schedule.time_start"></td>
-            <td><input class='form-control form-control-sm' type='text' @keyup.enter="scheduleSave()" v-model="edit_schedule.time_end"></td>
+            <td class='col-sched-edit-active text-center'>
+                <input type='checkbox' v-model="edit_schedule.schedule_active" class="mt-1">
+            </td>
+            <td>
+                <input class='form-control form-control-sm' type='text' @keyup.enter="scheduleSave()" v-model="edit_schedule.days_of_week"
+                title="Space-separated list of day names. The first two letters of each day are enough." placeholder='e.g. "mo tu we th fr"'></td>
+            <td>
+                <input class='form-control form-control-sm' type='text' @keyup.enter="scheduleSave()" v-model="edit_schedule.time_start" placeholder='e.g. "00:00"'>
+            </td>
+            <td>
+                <input class='form-control form-control-sm' type='text' @keyup.enter="scheduleSave()" v-model="edit_schedule.time_end" placeholder='e.g. "24:00"'>
+            </td>
             <td class='col-sched-edit-actions'>
-                <button class='btn btn-sm' @click="scheduleSave()" title='Save Schedule'>💾</button>
-                <button class='btn btn-sm' @click="scheduleEditCancel()" title='Cancel Editing'>✖</button>
+                <button class='btn btn-sm btn-link text-success' @click="scheduleSave()" title='Save Schedule'>Save</button>
+                <button class='btn btn-sm btn-link' @click="scheduleEditCancel()" title='Cancel Editing'>Cancel</button>
             </td>
         </template>
         <template v-else>
@@ -293,7 +300,7 @@
     <form>
         <div class="action-bar py-3 mb-3 border-bottom d-flex align-items-center">
             <select
-                class="form-control form-control-sm w-25"
+                class="form-control w-25"
                 :disabled="selected_worker_ids.length == 0"
                 v-model="selected_action"
                 >
@@ -309,8 +316,8 @@
                 >Apply Action</button>
                 <span v-if="selected_worker_ids.length > 0" class="text-muted ml-2">{{ selected_worker_ids.length }} worker<template v-if="selected_worker_ids.length != 1">s</template> selected</span>
                 <button
-                    class='btn btn-secondary btn-sm ml-auto'
-                    @click.prevent="$emit('toggle-schedule')">Show <template v-if="show_schedule">Status</template><template v-else>Schedule</template></button>
+                    class='btn btn-outline-secondary btn-sm ml-auto px-4'
+                    @click.prevent="$emit('toggle-schedule')"><template v-if="show_schedule">Status</template><template v-else>Schedule</template></button>
 
         </div>
     </form>
