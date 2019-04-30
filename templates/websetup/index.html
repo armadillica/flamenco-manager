@@ -12,25 +12,35 @@
 {{end}}
 
 {{define "simplepage"}}
-<div id='linking'>
-    <h2>Link to Flamenco Server</h2>
-    <div id='link-check-in-progress'>Link check in progress, please wait…</div>
+<div id='linking' class="py-4 border-bottom mb-5">
+    <h1 class="border-bottom pb-4 mb-4">Flamenco Setup</h1>
+
+    <h2>Server</h2>
+    <div id='link-check-in-progress'>Link check in progress, hold on tight…</div>
     <div id='link-check-result'></div>
+
     <form id='link-form' style='display: none' onsubmit='linkButtonClicked(); return false;'>
-        <div class="form-group">
+        <div class="form-group pt-3">
             <label for='link-server-url'>URL of Flamenco Server to connect to:</label>
-            <input id='link-server-url' class="form-control" name='server' placeholder='Server URL to link to' value='{{.Config.FlamencoStr}}'>
+
+            <div class="d-flex">
+                <input id='link-server-url' class="form-control w-50" name='server' placeholder='Server URL to link to' value='{{.Config.FlamencoStr}}'>
+                <button id='link-button' style='display: none' class='btn btn-primary ml-3' type='submit'>Link to Server</button>
+            </div>
         </div>
-        <button id='link-button' style='display: none' class='btn btn-primary' type='submit'>Link to this Flamenco Server</button>
+
         <div id='link-start-result'></div>
     </form>
-    <p id='relink-action' style='display: none'><a href='javascript:showLinkButton()'>Link to another server</a></p>
+
+    <p id='relink-action' style='display: none' class="pt-3">
+        <a href='javascript:showLinkButton()' class="btn btn-outline-secondary">Link to Different Server</a>
+    </p>
 </div>
 
 <div id='loading-settings' class='loader'></div>
 
 <div id='vueApp'>
-    <button id='appModeSwitch' type='button' class='btn btn-sm btn-primary'
+    <button id='appModeSwitch' type='button' class='btn btn-sm btn-outline-light mt-1'
         @click="switchAppMode()">{{`{{ appModeButtonText }}`}}</button>
 
     <setup-form v-if="vueAppMode == 'form'"
