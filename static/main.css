@@ -3,8 +3,10 @@
     --body-color: var(--light);
     --gray-darker: #222;
 
-    --font-size: 12px;
     --font-size-small: 11px;
+
+    --font-family-dashboard: var(--font-family-monospace);
+    --font-size-dashboard: 12px;
 
     --padding-sm: 5px;
 
@@ -18,12 +20,13 @@
     --table-row-odd-background: #393939;
 
     /* Bootstrap overrides. */
+    --font-family-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, Helvetica, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     --gray-dark: #333;
+    --secondary: #bbb;
 }
 
 html, body {
-    font-family: var(--font-family-monospace);
-    font-size: var(--font-size);
+    font-family: var(--font-family-sans-serif);
     color: var(--light);
     background-color: var(--gray-dark);
 }
@@ -35,6 +38,9 @@ select, input, button {
 
 a, a:link, a:visited { color: var(--light);}
 a:hover, a:active { color: var(--primary);}
+
+.btn {white-space: nowrap}
+.btn-link.btn-sm { font-size: var(--font-size-small);}
 
 /* Status Indicators. Small circle with the color of the status. */
 .status-indicator {
@@ -59,14 +65,12 @@ tbody.status-error .table-cell-status { color: var(--status-error); }
 
 
 /* Bootstrap overrides. */
+hr { border-color: var(--gray);}
 .table { color: var(--body-color);}
 .table td, .table th { vertical-align: middle; }
-
+.text-secondary { color: var(--secondary) !important; }
+.btn-outline-secondary { border-color: var(--secondary) !important; color: var(--secondary) !important; }
 .border-bottom, .border-top, .border-left, .border-right { border-color: var(--gray) !important;}
-
-/* .bg-dark {
-    background-color: var(--gray-dark);
-} */
 
 /*
  * Extra utility classes.
