@@ -16,3 +16,5 @@
 /dist/mongodb-osx-*
 /dist/mongodb-windows-*
 /task-logs/
+
+/azure_credentials.json

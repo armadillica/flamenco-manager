@@ -55,7 +55,7 @@ func (s *DashboardTestSuite) SetUpSuite(c *check.C) {
 func (s *DashboardTestSuite) SetUpTest(c *check.C) {
 	s.sleeper = CreateSleepScheduler(s.session)
 	blacklist := CreateWorkerBlackList(&s.config, s.session)
-	s.dashboard = CreateDashboard(&s.config, s.session, s.sleeper, blacklist, "unittest-1.0")
+	s.dashboard = CreateDashboard(&s.config, s.session, s.sleeper, blacklist, nil, "unittest-1.0")
 	s.worker = Worker{
 		Platform:           "linux",
 		SupportedTaskTypes: []string{"sleeping"},

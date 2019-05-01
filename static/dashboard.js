@@ -100,7 +100,7 @@ Vue.component('page-header', {
 });
 
 Vue.component('status', {
-    props: ['serverinfo', 'errormsg', 'idle_workers'],
+    props: ['serverinfo', 'errormsg', 'idle_workers', 'dynamic_pools'],
     template: '#template_status',
     methods: {
         forgetWorker(worker) {
@@ -111,6 +111,96 @@ Vue.component('status', {
         },
     },
 })
+
+Vue.component('dynamic-pool-platforms', {
+    props: {
+        dynamic_pool_platform: Object,
+    },
+    template: '#template_dynamic_pool_platform',
+})
+
+Vue.component('dynamic-pool-platform', {
+    props: {
+        name: String,
+        pools: Object,
+    },
+    template: '#template_dynamic_pool_platform',
+    methods: {
+        currentNodeCount(pool) {
+            return pool.currentSize.dedicatedNodes + pool.currentSize.lowPriorityNodes;
+        },
+        desiredNodeCount(pool) {
+            return pool.desiredSize.dedicatedNodes + pool.desiredSize.lowPriorityNodes;
+        },
+        nodeCountExplicit(poolSize) {
+            return poolSize.dedicatedNodes + ' dedicated + ' + poolSize.lowPriorityNodes + ' low-priority nodes'
+        },
+
+        onResizeButtonClick(event, pool) {
+            // 'event.target' here will be 'event.relatedTarget' in the Modal's onShowModal() event handler.
+            event.target.dynamicPool = JSON.parse(JSON.stringify(pool));
+            event.target.dynamicPoolPlatformName = String(this.name);
+        },
+    },
+})
+
+Vue.component('dynamic-pool-resize', {
+    data() { return {
+        platformName: "",
+        poolID: "",
+        allocationState: "",
+        dedicatedNodes: 0,
+        lowPriorityNodes: 0,
+        isProcessing: false,
+    }},
+    template: '#template_dynamic_pool_resize',
+    methods: {
+        closeModal() {
+            $(this.$refs.modal.$el).modal('hide');
+        },
+        onShowModal(event) {
+            let button = event.relatedTarget;
+            let pool = button.dynamicPool;
+
+            this.platformName = button.dynamicPoolPlatformName;
+            this.poolID = pool.ID;
+            this.allocationState = pool.allocationState;
+            this.dedicatedNodes = pool.desiredSize.dedicatedNodes;
+            this.lowPriorityNodes = pool.desiredSize.lowPriorityNodes;
+            this.isProcessing = false;
+        },
+
+        onButtonOK(event) {
+            this.isProcessing = true;
+
+            $.jwtAjax({
+                method: 'POST',
+                url: '/dynamic-pool-resize',
+                data: JSON.stringify({
+                    platformName: this.platformName,
+                    poolID: this.poolID,
+                    desiredSize: {
+                        dedicatedNodes: parseInt(this.dedicatedNodes),
+                        lowPriorityNodes: parseInt(this.lowPriorityNodes),
+                    },
+                }),
+                headers: {'Content-Type': 'application/json'},
+            })
+            .then(() => {
+                this.closeModal();
+                this.$emit("pool-resize-requested");
+            })
+            .catch(error => {
+                toastr.error(error.responseText, "Error " + error.status + " requesting a pool resize");
+            })
+            .then(() => {
+                this.isProcessing = false;
+            })
+            ;
+        },
+    },
+});
+
 
 Vue.component('idle-worker', {
     props: {
@@ -350,6 +440,37 @@ Vue.component('blacklist-row', {
     },
 });
 
+
+/* Wrapper around Bootstrap Modals. */
+Vue.component('bootstrap-modal', {
+    props: {
+        title: {
+            default: "Modal Title",
+            type: String,
+        },
+        labelOk: {
+            default: "Ok",
+            type: String,
+        },
+        labelCancel: {
+            default: "Cancel",
+            type: String,
+        },
+        isProcessing: Boolean,
+    },
+    template: '#template_bootstrap_modal',
+    mounted() {
+        $(this.$el).on('show.bs.modal', this.onShowModal);
+    },
+    methods: {
+        onShowModal(event) {
+            this.$emit('show-bs-modal', event);
+        },
+    },
+});
+
+
+
 function scheduleSave(worker_id, schedule) {
     // Erase empty time-of-day properties, instead of sending them empty.
     let scheduleCopy = JSON.parse(JSON.stringify(schedule));
@@ -417,6 +538,7 @@ var vueApp = new Vue({
         idle_workers: [],
         current_workers: [],
         selected_worker_ids: loadSelectedWorkers(),
+        dynamic_pools: {},
     },
     computed: {
         all_workers_selected: function() {
@@ -474,6 +596,7 @@ var vueApp = new Vue({
                     }
                     this.idle_workers = idle_workers;
                     this.current_workers = current_workers;
+                    this.dynamic_pools = info.dynamic_pools;
 
                     // Deselect all non-selectable workers. We should be able to iterate over all selected
                     // workers later, and not worry about them not existing any more.

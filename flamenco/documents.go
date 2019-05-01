@@ -25,6 +25,7 @@ package flamenco
 import (
 	"time"
 
+	"github.com/armadillica/flamenco-manager/dynamicpool"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -254,6 +255,28 @@ type StatusReport struct {
 		Name string `json:"name"`
 		URL  string `json:"url"`
 	} `json:"server"`
+
+	DynamicPools *DynamicPoolsStatus `json:"dynamic_pools,omitempty"`
+}
+
+// DynamicPoolsStatus is part of a StatusReport and contains the status of the dynamic worker pools.
+type DynamicPoolsStatus struct {
+	IsRefreshing bool `json:"is_refreshing"`
+
+	Platforms []DynamicPoolsPlatforms `json:"platforms"`
+}
+
+// DynamicPoolsPlatforms contains per-platform pool information
+type DynamicPoolsPlatforms struct {
+	Name  string                     `json:"name"` // platform name, like "Azure"
+	Pools dynamicpool.PlatformStatus `json:"pools"`
+}
+
+// DynamicPoolResizeRequest is sent by the Dashboard to request a pool resize.
+type DynamicPoolResizeRequest struct {
+	PlatformName string               `json:"platformName"`
+	PoolID       dynamicpool.PoolID   `json:"poolID"`
+	DesiredSize  dynamicpool.PoolSize `json:"desiredSize"`
 }
 
 // FileProduced is sent by the worker whenever it produces (e.g. renders)

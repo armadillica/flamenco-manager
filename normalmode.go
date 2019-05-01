@@ -28,6 +28,7 @@ import (
 	"strings"
 
 	auth "github.com/abbot/go-http-auth"
+	"github.com/armadillica/flamenco-manager/dynamicpool/dppoller"
 	"github.com/armadillica/flamenco-manager/flamenco"
 	"github.com/armadillica/flamenco-manager/flamenco/bundledmongo"
 	"github.com/armadillica/flamenco-manager/jwtauth"
@@ -90,7 +91,8 @@ func normalMode() (*mux.Router, error) {
 	taskScheduler = flamenco.CreateTaskScheduler(&config, upstream, session, taskUpdateQueue, blacklist, taskUpdatePusher)
 	timeoutChecker = flamenco.CreateTimeoutChecker(&config, session, taskUpdateQueue, taskScheduler)
 	taskCleaner = flamenco.CreateTaskCleaner(&config, session)
-	dashboard = flamenco.CreateDashboard(&config, session, sleeper, blacklist, applicationVersion)
+	dynamicPoolPoller = dppoller.NewPoller(config.DynamicPoolPlatforms)
+	dashboard = flamenco.CreateDashboard(&config, session, sleeper, blacklist, dynamicPoolPoller, applicationVersion)
 	latestImageSystem = flamenco.CreateLatestImageSystem(config.WatchForLatestImage)
 	workerRemover = flamenco.CreateWorkerRemover(&config, session, taskScheduler)
 	jwtRedirector := jwtauth.NewRedirector(config.ManagerID, config.ManagerSecret, config.Flamenco, "/")
@@ -122,6 +124,7 @@ func normalMode() (*mux.Router, error) {
 		workerRemover.Go()
 	}
 	shamanServer.Go()
+	dynamicPoolPoller.Go()
 
 	if !config.JWT.DisableSecurity {
 		jwtauth.GoDownloadLoop()

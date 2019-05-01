@@ -35,12 +35,15 @@
                 <status id='status'
                     :serverinfo="serverinfo"
                     :idle_workers="idle_workers"
-                    :errormsg="errormsg">
+                    :errormsg="errormsg"
+                    :dynamic_pools="dynamic_pools">
                 </status>
             </div>
         </section>
     </div>
-</div>
 
+    <!-- Bootstrap modals -->
+    <dynamic-pool-resize @pool-resize-requested="loadWorkersSoon"></dynamic-pool-resize>
+</div>
 <script src="/static/dashboard.js"></script>
 {{end}}

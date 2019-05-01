@@ -33,9 +33,12 @@ import (
 	"path"
 	"strings"
 
+	"github.com/armadillica/flamenco-manager/dynamicpool/azurebatch"
+	"github.com/armadillica/flamenco-manager/dynamicpool/dppoller"
 	"github.com/armadillica/flamenco-manager/jwtauth"
 
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -43,10 +46,12 @@ import (
 
 // Dashboard can show HTML and JSON reports.
 type Dashboard struct {
-	session         *mgo.Session
-	config          *Conf
-	sleeper         *SleepScheduler
-	blacklist       *WorkerBlacklist
+	session           *mgo.Session
+	config            *Conf
+	sleeper           *SleepScheduler
+	blacklist         *WorkerBlacklist
+	dynamicPoolPoller *dppoller.Poller
+
 	flamencoVersion string
 	serverName      string
 	serverURL       string
@@ -61,6 +66,7 @@ func CreateDashboard(config *Conf,
 	session *mgo.Session,
 	sleeper *SleepScheduler,
 	blacklist *WorkerBlacklist,
+	dynamicPoolPoller *dppoller.Poller,
 	flamencoVersion string,
 ) *Dashboard {
 	serverURL, err := url.Parse(config.FlamencoStr)
@@ -74,6 +80,7 @@ func CreateDashboard(config *Conf,
 		config,
 		sleeper,
 		blacklist,
+		dynamicPoolPoller,
 		flamencoVersion,
 		serverURL.Host,
 		serverURL.String(),
@@ -90,6 +97,7 @@ func (dash *Dashboard) AddRoutes(router *mux.Router, auther jwtauth.Authenticato
 	router.Handle("/set-sleep-schedule/{worker-id}", auther.WrapFunc(dash.setSleepSchedule)).Methods("POST")
 	router.Handle("/static/latest-image.jpg", auther.WrapFunc(dash.serveLatestImage)).Methods("GET")
 	router.Handle("/worker-action/{worker-id}", auther.WrapFunc(dash.workerAction)).Methods("POST")
+	router.Handle("/dynamic-pool-resize", auther.WrapFunc(dash.dynamicPoolResize)).Methods("POST")
 
 	// Unprotected, treat as accessible to the world:
 	router.HandleFunc("/", dash.showStatusPage).Methods("GET")
@@ -267,6 +275,18 @@ func (dash *Dashboard) sendStatusReport(w http.ResponseWriter, r *http.Request) 
 	statusreport.Server.Name = dash.serverName
 	statusreport.Server.URL = dash.serverURL
 
+	// Only include the dynamic pool status if dynamic pools are actually in use.
+	if dash.dynamicPoolPoller.IsActive() {
+		statusreport.DynamicPools = &DynamicPoolsStatus{
+			IsRefreshing: dash.dynamicPoolPoller.IsRefreshing(),
+			Platforms: []DynamicPoolsPlatforms{{
+				// TODO: merge getting the name + the pools into the poller.
+				Name:  "Azure",
+				Pools: dash.dynamicPoolPoller.AzureStatus(),
+			}},
+		}
+	}
+
 	encoder := json.NewEncoder(w)
 	if err := encoder.Encode(statusreport); err != nil {
 		// This is probably fine; broken connections are bound to happen.
@@ -435,4 +455,64 @@ func (dash *Dashboard) restartToWebSetup(w http.ResponseWriter, r *http.Request)
 
 func (dash *Dashboard) redirectToDashboard(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+}
+
+func (dash *Dashboard) dynamicPoolResize(w http.ResponseWriter, r *http.Request) {
+	logger := jwtauth.RequestLogger(r)
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "Expecting application/json content type", http.StatusBadRequest)
+		return
+	}
+
+	request := DynamicPoolResizeRequest{}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&request); err != nil {
+		logger.WithError(err).Error("unable to parse JSON in dynamic pool resize request")
+		http.Error(w, "unable to parse JSON", http.StatusBadRequest)
+		return
+	}
+
+	logger = logger.WithFields(logrus.Fields{
+		"platformName":            request.PlatformName,
+		"poolID":                  request.PoolID,
+		"desiredDedicatedNodes":   request.DesiredSize.DedicatedNodes,
+		"desiredLowPriorityNodes": request.DesiredSize.LowPriorityNodes,
+	})
+
+	// TODO: properly handle multiple platforms.
+	if request.PlatformName != "Azure" {
+		logger.Warning("resize request of dynamic pool for unsupported platform")
+		http.Error(w, "No support for this platform", http.StatusNotImplemented)
+		return
+	}
+	if dash.config.DynamicPoolPlatforms == nil || dash.config.DynamicPoolPlatforms.Azure == nil {
+		logger.Warning("resize request of dynamic pool for unconfigured platform")
+		http.Error(w, "No configuration for this platform", http.StatusNotImplemented)
+		return
+	}
+
+	logger.Info("dynamic pool resize requested")
+	platform, err := azurebatch.NewPlatform(*dash.config.DynamicPoolPlatforms.Azure)
+	if err != nil {
+		logger.WithError(err).Error("unable to create Azure platform interface")
+		http.Error(w, "unable to create Azure platform interface", http.StatusInternalServerError)
+		return
+	}
+	pool, err := platform.GetPool(request.PoolID)
+	if err != nil {
+		logger.WithError(err).Error("unable to create Azure pool interface")
+		http.Error(w, "unable to create Azure pool interface", http.StatusInternalServerError)
+		return
+	}
+	err = pool.ScaleTo(r.Context(), request.DesiredSize)
+	if err != nil {
+		logger.WithError(err).Error("unable to request Azure pool resize")
+		http.Error(w, fmt.Sprintf("unable to request Azure pool resize: %s", err.Error()), http.StatusConflict)
+		return
+	}
+	logger.Info("dynamic pool resize request handled")
+
+	go dash.dynamicPoolPoller.RefreshNow()
+
+	http.Error(w, "", http.StatusNoContent)
 }

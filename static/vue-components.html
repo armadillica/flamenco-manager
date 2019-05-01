@@ -32,36 +32,115 @@
 <script type='text/x-template' id='template_status'>
     <div id='status' class="text-secondary">
         <p v-if='errormsg' class='error'>{{ errormsg }}</p>
-        <div v-else class="row white-space-nowrap">
-            <div class="col-md-6">
-                <dl class="row ">
-                    <dt class='col-md-4'>Workers</dt>
-                    <dd class='col-md-6'>{{ serverinfo.nr_of_workers }}</dd>
-                    <dt class='col-md-4' title="Number of tasks in database. Probably not all queued.">Tasks</dt>
-                    <dd class='col-md-6'>{{ serverinfo.nr_of_tasks }}</dd>
-                </dl>
-            </div>
-            <div class="col-md-6">
-                <dl class="row">
-                    <dt class='col-md-4' title="Number of task updates queued for sending to Flamenco Server.">Upstream Queue</dt>
-                    <dd class='col-md-6 pl-4'>{{ serverinfo.upstream_queue_size }}</dd>
+        <div v-else>
+            <div class="row white-space-nowrap">
+                <div class="col-md-6">
+                    <dl class="row ">
+                        <dt class='col-md-4'>Workers</dt>
+                        <dd class='col-md-6'>{{ serverinfo.nr_of_workers }}</dd>
+                        <dt class='col-md-4' title="Number of tasks in database. Probably not all queued.">Tasks</dt>
+                        <dd class='col-md-6'>{{ serverinfo.nr_of_tasks }}</dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <dl class="row">
+                        <dt class='col-md-4' title="Number of task updates queued for sending to Flamenco Server.">Upstream Queue</dt>
+                        <dd class='col-md-6 pl-4'>{{ serverinfo.upstream_queue_size }}</dd>
 
-                    <template v-if="idle_workers.length">
-                    <dt class='col-md-4' title="Workers not seen in a long time.">Old Workers</dt>
-                    <dd class='col-md-6 pl-4'>
-                        <idle-worker
-                            v-for="worker in idle_workers"
-                            :key="worker._id"
-                            :worker="worker"
-                            @forget-worker="forgetWorker(worker)">
-                        </idle-worker>
-                    </dd>
-                    </template>
-                </dl>
+                        <template v-if="idle_workers.length">
+                        <dt class='col-md-4' title="Workers not seen in a long time.">Old Workers</dt>
+                        <dd class='col-md-6 pl-4'>
+                            <idle-worker
+                                v-for="worker in idle_workers"
+                                :key="worker._id"
+                                :worker="worker"
+                                @forget-worker="forgetWorker(worker)">
+                            </idle-worker>
+                        </dd>
+                        </template>
+                    </dl>
+                </div>
+            </div>
+            <div v-if="dynamic_pools">
+                <div v-if="dynamic_pools.is_refreshing" class="spinner-border spinner-border-sm float-right" role="status"
+                    title="Refreshing dynamic pool information">
+                    <span class="sr-only">Refreshing</span>
+                </div>
+                <h3>Dynamic Pools</h3>
+                <dynamic-pool-platform
+                    v-if="dynamic_pools.platforms.length"
+                    v-for="platform of dynamic_pools.platforms"
+                    :key="platform.name"
+                    :name="platform.name"
+                    :pools="platform.pools"
+                ></dynamic-pool-platform>
             </div>
         </div>
     </div>
 </script>
+
+<!-- template for the 'dynamic-pool-platform' Vue.js component -->
+<script type='text/x-template' id='template_dynamic_pool_platform'>
+    <div>
+        <h6>{{ name }}</h6>
+        <ul>
+            <li v-for="pool in pools" :key="pool.ID" :title="pool.allocationState">{{ pool.ID }}
+                <span v-if="pool.allocationState == 'steady'" :title="nodeCountExplicit(pool.currentSize)">({{ currentNodeCount(pool) }})</span>
+                <span v-else-if="pool.allocationState == 'resizing'"
+                    :title="'Resizing from ' + nodeCountExplicit(pool.currentSize) + ' to ' + nodeCountExplicit(pool.desiredSize)"
+                    >({{ currentNodeCount(pool) }} → {{ desiredNodeCount(pool) }})</span>
+                <span v-else>{{ pool.allocationState }}</span>
+                <button type="button" class="btn btn-link btn-sm" data-toggle="modal"
+                    v-if="pool.allocationState == 'steady'"
+                    @click="onResizeButtonClick($event, pool)"
+                    data-target="#modal_dynamic_pool_resize">
+                    Resize
+                </button>
+                <span v-if="pool.resizeError" class="text-danger">{{ pool.resizeError }}</span>
+            </li>
+        </ul>
+    </div>
+</script>
+
+<!-- template for the 'dynamic-pool-resize' Vue.js component -->
+<script type='text/x-template' id='template_dynamic_pool_resize'>
+    <bootstrap-modal
+        ref="modal"
+        title="Resize Dynamic Pool"
+        label-ok="Resize"
+        label-cancel="Close"
+        id='modal_dynamic_pool_resize'
+        :isProcessing="isProcessing"
+        @show-bs-modal='onShowModal'
+        @button-ok='onButtonOK'
+    >
+        <div class="row">
+            <div class="col-md-5">
+                <dl class="row">
+                    <dt class="col-md-6">Platform</dt>
+                    <dd class="col-md-6">{{ platformName }}</dd>
+                    <dt class="col-md-6">Pool ID</dt>
+                    <dd class="col-md-6">{{ poolID }}</dd>
+                    <dt class="col-md-6">Allocation State</dt>
+                    <dd class="col-md-6">{{ allocationState }}</dd>
+                </dl>
+            </div>
+            <div class="col-md-7">
+                <dl class="row">
+                    <dt class="col-md-5">Dedicated</dt>
+                    <dd class="col-md-7">
+                        <input class="form-control form-control-sm" type="number" min="0" name="dedicatedNodes" v-model="dedicatedNodes">
+                    </dd>
+                    <dt class="col-md-5">Low-Priority</dt>
+                    <dd class="col-md-7">
+                        <input class="form-control form-control-sm" type="number" min="0" name="lowPriorityNodes" v-model="lowPriorityNodes">
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </bootstrap-modal>
+</script>
+
 
 <!-- template for the 'idle-worker' Vue.js component -->
 <script type='text/x-template' id='template_idle_worker'>
@@ -326,4 +405,30 @@
 
         </div>
     </form>
+</script>
+
+<!-- template for the 'bootstrap-modal' Vue.js component -->
+<script type='text/x-template' id='template_bootstrap_modal'>
+    <div class="modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ title }}</h5>
+                <div v-if="isProcessing" class="spinner-border spinner-border-sm float-right" role="status">
+                    <span class="sr-only">Processing</span>
+                </div>
+                <button v-else type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <slot></slot>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" @click="$emit('button-ok')" :disabled="isProcessing">{{ labelOk }}</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ labelCancel }}</button>
+            </div>
+            </div>
+        </div>
+    </div>
 </script>
