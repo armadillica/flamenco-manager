@@ -1,4 +1,4 @@
-*.pem
+/jwtkeys/**/*.pem
 *.last-modified
 /db/
 /mongodb-logs/
