@@ -34,18 +34,24 @@ import (
 type pool struct {
 	batchURL string
 	poolID   dynamicpool.PoolID
+	isFake   bool
 }
 
 // newPool constructs a Pool manager for interacting with a particular pool.
-func newPool(batchURL string, poolID dynamicpool.PoolID) dynamicpool.Pool {
+func newPool(batchURL string, poolID dynamicpool.PoolID, isFake bool) dynamicpool.Pool {
 	return &pool{
 		batchURL: batchURL,
 		poolID:   poolID,
+		isFake:   isFake,
 	}
 }
 
 // CurrentStatus returns the last-known pool status.
 func (pool *pool) CurrentStatus(ctx context.Context) (dynamicpool.PoolStatus, error) {
+	if pool.isFake {
+		return fakePools[pool.poolID], nil
+	}
+
 	client, err := getPoolClient(pool.batchURL)
 	if err != nil {
 		return dynamicpool.PoolStatus{}, err
@@ -95,6 +101,14 @@ func (pool *pool) CurrentStatus(ctx context.Context) (dynamicpool.PoolStatus, er
 
 // ScaleTo attempts to scale the pool to the indicated pool size.
 func (pool *pool) ScaleTo(ctx context.Context, poolSize dynamicpool.PoolSize) error {
+	if pool.isFake {
+		fakePool := fakePools[pool.poolID]
+		fakePool.DesiredSize = poolSize
+		fakePool.AllocationState = "resizing"
+		fakePools[pool.poolID] = fakePool
+		return nil
+	}
+
 	client, err := getPoolClient(pool.batchURL)
 	if err != nil {
 		return err

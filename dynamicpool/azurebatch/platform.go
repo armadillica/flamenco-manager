@@ -79,6 +79,13 @@ func (ap *platform) Name() string {
 func (ap *platform) ListPoolIDs(ctx context.Context) (poolIDs []dynamicpool.PoolID) {
 	poolIDs = []dynamicpool.PoolID{}
 
+	if ap.config.Fake {
+		for poolID := range fakePools {
+			poolIDs = append(poolIDs, poolID)
+		}
+		return
+	}
+
 	poolClient, err := getPoolClient(ap.config.BatchURL())
 	if err != nil {
 		logrus.WithError(err).Error("unable to construct Azure Batch pool client")
@@ -103,13 +110,14 @@ func (ap *platform) ListPoolIDs(ctx context.Context) (poolIDs []dynamicpool.Pool
 			return
 		}
 	}
+
 	logrus.WithField("poolCount", len(poolIDs)).Debug("done listing Azure Batch pools")
 	return
 }
 
 // GetPool constructs a pool manager for interacting with a particular pool.
 func (ap *platform) GetPool(poolID dynamicpool.PoolID) (dynamicpool.Pool, error) {
-	return newPool(ap.config.BatchURL(), poolID), nil
+	return newPool(ap.config.BatchURL(), poolID, ap.config.Fake), nil
 }
 
 func getPoolClient(batchURL string) (batch.PoolClient, error) {

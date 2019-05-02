@@ -32,6 +32,9 @@ type AZConfig struct {
 
 	// Name of the Azure Batch account that contains the Flamenco Worker VM pool.
 	BatchAccountName string `yaml:"batch_account_name,omitempty"`
+
+	// Whether to send fake data so Pablo can do UI design better.
+	Fake bool `yaml:"fake,omitempty"`
 }
 
 // BatchURL returns the URL we need for interacting with the Azure Batch account.
