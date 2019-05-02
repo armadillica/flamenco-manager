@@ -261,10 +261,7 @@
                     <a :href="task_server_url"><u>{{ task_id_text }}</u></a>
                     <template v-if="worker.current_task_status">
                         ({{ worker.current_task_status }}
-                        <template v-if="worker.current_task_updated">
-                            {{ current_task_updated() }}
-                        </template>
-                        )
+                        <template v-if="worker.current_task_updated">{{ current_task_updated() }}</template>)
                     </template>
                 </span>
                 <template v-else>-none-</template>
