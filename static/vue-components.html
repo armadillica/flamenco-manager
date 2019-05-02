@@ -12,17 +12,25 @@
         </span>
         <span class="ml-auto px-2 text-secondary">
             <button id='downloadkick' class='btn btn-sm btn-link py-0 text-secondary'>
-                Kick task downloader
+                Kick Task Downloader
             </button>
-            <a href="/restart-to-websetup" class='btn btn-sm btn-link py-0 text-secondary'>
-                Setup
-            </a>
-            |
-            <a title="Server" :href="serverinfo.server.url" class="text-secondary">
+            <span class="text-muted">|</span>
+            {{ serverinfo.nr_of_workers }} Workers
+            <span class="text-muted">|</span>
+            {{ serverinfo.nr_of_tasks }} Tasks
+            <span class="text-muted">|</span>
+            <span title="Number of task updates queued for sending to Flamenco Server.">
+                {{ serverinfo.upstream_queue_size }} Upstream Queue
+            </span>
+            <span class="text-muted">|</span>
+            <a title="Server" :href="serverinfo.server.url" class="text-secondary d-md-none d-lg-inline-block">
                 {{ serverinfo.server.name }}
             </a>
-            |
-            {{ serverinfo.version }}
+            <span class="text-muted">|</span>
+            <a href="/restart-to-websetup" class='btn btn-sm btn-link py-0 text-secondary'>Setup</a>
+            <span class="text-muted">
+                | {{ serverinfo.version }}
+            </span>
         </span>
     </header>
 </script>
@@ -33,18 +41,8 @@
     <div id='status' class="text-secondary">
         <p v-if='errormsg' class='error'>{{ errormsg }}</p>
         <div v-else class="row white-space-nowrap">
-            <div class="col-md-6">
-                <dl class="row ">
-                    <dt class='col-md-4'>Workers</dt>
-                    <dd class='col-md-6'>{{ serverinfo.nr_of_workers }}</dd>
-                    <dt class='col-md-4' title="Number of tasks in database. Probably not all queued.">Tasks</dt>
-                    <dd class='col-md-6'>{{ serverinfo.nr_of_tasks }}</dd>
-                </dl>
-            </div>
-            <div class="col-md-6">
+            <div class="col-md-12">
                 <dl class="row">
-                    <dt class='col-md-4' title="Number of task updates queued for sending to Flamenco Server.">Upstream Queue</dt>
-                    <dd class='col-md-6 pl-4'>{{ serverinfo.upstream_queue_size }}</dd>
                     <dt class='col-md-4' title="Workers not seen in a long time.">Old Workers</dt>
                     <dd class='col-md-6 pl-4'>
                         <idle-worker
