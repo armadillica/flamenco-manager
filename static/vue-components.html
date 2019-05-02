@@ -146,10 +146,16 @@
             </tr>
             <tr class='details'>
                 <td colspan='2'></td>
-                <td colspan='1' class="click-to-copy worker-id" :data-clipboard-text="worker._id">
+                <td colspan='1'
+                    class="click-to-copy worker-id"
+                    onclick="toastr.success('Copied to clipboard.')"
+                    :data-clipboard-text="worker._id">
                     {{ worker._id }}
                 </td>
-                <td colspan='6' class="click-to-copy worker-address" :data-clipboard-text="worker.address">
+                <td colspan='6'
+                    class="click-to-copy worker-address"
+                    onclick="toastr.success('Copied to clipboard.')"
+                    :data-clipboard-text="worker.address">
                     {{ worker.address }}
                 </td>
             </tr>
