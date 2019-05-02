@@ -3,6 +3,7 @@
     --body-color: var(--light);
     --body-background: var(--gray-dark);
     --border-separator: #404040;
+    --border-radius: 6px;
     --gray-darker: #222;
 
     --font-size-small: 11px;
@@ -14,14 +15,15 @@
 
     --status-awake: var(--success);
     --status-timeout: var(--info);
-    --status-offline: var(--gray);
+    --status-offline: #888;
     --status-testing: var(--warning);
     --status-error: var(--danger);
-    --status-asleep: var(--gray);
+    --status-asleep: var(--status-offline);
 
     --table-row-background: var(--gray-dark);
-    --table-row-odd-background: #363636;
+    --table-row-background-odd: #363636;
 
+    --table-row-background-selected: #226abb;
 
     /* Bootstrap overrides. */
     --font-family-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, Helvetica, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
@@ -43,7 +45,7 @@ select, input, button {
 a, a:link, a:visited { color: var(--light);}
 a:hover, a:active { color: var(--primary);}
 
-.btn {white-space: nowrap}
+.btn {white-space: nowrap; border-radius: var(--border-radius)}
 .btn-sm,
 .form-control-sm,
 .btn-link.btn-sm { font-size: var(--font-size-small);}
@@ -96,7 +98,7 @@ hr { border-color: var(--border-separator); border-width: 2px;}
 }
 
 .form-control {
-    border-radius: 6px;
+    border-radius: var(--border-radius);
 }
 
 .form-control:focus {
@@ -107,6 +109,8 @@ hr { border-color: var(--border-separator); border-width: 2px;}
 .input-group-append .input-group-text:hover {color: var(--white);}
 
 .input-icon {font-size: 1.3rem;}
+
+#toast-container > div, #toast-container:hover > div { box-shadow: none; }
 
 /*
  * Extra utility classes.
@@ -119,5 +123,100 @@ hr { border-color: var(--border-separator); border-width: 2px;}
 
 .bg-darker {background-color: var(--gray-darker)}
 .text-small {font-size: var(--font-size-small)}
-.white-space-nowrap {white-space: nowrap}
 .cursor-pointer {cursor: pointer}
+
+.icon {
+    /* background-color: white; */
+    border-radius: 2px;
+    display: inline-block;
+    height: 12px;
+    margin: 0 5px;
+    position: relative;
+    top: 1px;
+    transition: transform ease-in-out 150ms;
+    width: 12px;
+}
+
+.icon:hover {
+    transform: scale(1.1);
+}
+
+.icon.i-asleep_immediate::after,
+.icon.i-offline_immediate::after {
+    content: '!';
+    font-style: normal;
+    font-weight: bold;
+    font-size: 1.2em;
+    right: -15px;
+    position: absolute;
+    top: -3px;
+}
+
+.icon.i-wakeup {
+    border: 7px solid transparent;
+    border-left: 12px solid white;
+    background-color: transparent;
+    left: 5px;
+}
+
+.icon.i-offline_lazy,
+.icon.i-offline_immediate {
+    border: 10px solid white;
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+}
+
+.icon.i-asleep_lazy,
+.icon.i-asleep_immediate {
+    background-color: white;
+    top: 3px;
+}
+
+.separator { color: var(--border-separator);}
+
+/* Used for example when copying content to clipboard. */
+.flash-on {
+    color: var(--primary) !important;
+    transition: color 100ms ease-in-out;
+}
+
+.flash-off {
+	transition: color 500ms ease-out;
+}
+
+.chevron::before {
+	border-style: solid;
+	border-width: 0.15em 0.15em 0 0;
+	content: '';
+	display: inline-block;
+	height: 0.5em;
+	left: 0.15em;
+	position: relative;
+	top: 0.15em;
+	transform: rotate(-45deg);
+	width: 0.5em;
+}
+
+.chevron.right:before {
+	left: 0;
+	transform: rotate(45deg);
+}
+
+.chevron.bottom:before {
+	top: 0;
+	transform: rotate(135deg);
+}
+
+.chevron.left:before {
+	left: 0.15em;
+	transform: rotate(-135deg);
+}
+
+@keyframes pulse {
+    0% {
+      opacity: 0.5;
+    }
+    100% {
+      opacity: 1.0;
+    }
+}

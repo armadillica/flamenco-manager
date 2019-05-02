@@ -10,9 +10,36 @@
 }
 
 .table-cell-status .arrow {
-    font-size: 1.1rem;
+    color: var(--gray) !important;
+    font-size: 1.2rem;
     position: relative;
-    top: 2px;
+    top: 3px;
+}
+
+.table-cell-status .arrow.immediate {
+    color: var(--white) !important;
+}
+
+.worker-row {
+    transition: background-color 75ms ease-in-out, color 75ms ease-in-out;
+}
+
+.worker-row:hover {
+    background-color: rgba(255,255,255,0.1);
+}
+
+.worker-row.is-selected,
+table.worker .is-selected+tr.details,
+table.worker .is-selected+tr.details+tr.details {
+    background-color: var(--table-row-background-selected);
+}
+
+.worker-row.is-selected * {color: white !important;}
+
+/* Style when a status change is requested. */
+.worker-row.is-status-requested .icon {
+    animation: pulse 2s infinite alternate;
+    color: white;
 }
 
 .error {
@@ -25,7 +52,7 @@
 }
 
 table>tbody:nth-of-type(odd) {
-    background-color: var(--table-row-odd-background);
+    background-color: var(--table-row-background-odd);
 }
 
 table.worker>tbody {
@@ -47,7 +74,7 @@ table.worker>thead th {
     padding-bottom: 5px;
 }
 
-table.worker tr.details{
+table.worker tr.details {
     color: var(--body-color);
     background-color: rgba(0,0,0,0.2)
 }
@@ -70,6 +97,9 @@ table.worker td, table.worker th {
 
 table.worker td label {
     margin: initial;
+    vertical-align: baseline-middle;
+    vertical-align: -moz-baseline-middle;
+    vertical-align: -webkit-baseline-middle;
 }
 
 span.idle-worker-name:not(:first-child)::before {
@@ -102,17 +132,6 @@ span.idle-worker-name:not(:first-child)::before {
     color: currentColor;
 }
 
-.flash-on {
-	background-color: #b8f7d3 !important;
-	border-color: #b8f7d3 !important;
-    color: #3f9465 !important;
-    transition: all 0.05s ease-in;
-}
-
-.flash-off {
-	transition: all 0.2s ease-out;
-}
-
 td.col-sched-edit-actions {
     text-align: right;
 }
@@ -126,9 +145,10 @@ td.col-sched-edit-actions {
     border-color:  var(--gray);
 }
 
-.worker-row .implied::before {
-    content: '(';
+.worker-row .implied,
+.worker-row .no-task {
+    color: var(--gray);
 }
-.worker-row .implied::after {
-    content: ')';
-}
+
+.worker-row .implied::before {content: '['; position: relative; top: -1px;}
+.worker-row .implied::after {content: ']'; position: relative; top: -1px;}
