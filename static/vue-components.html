@@ -179,7 +179,7 @@
 
 <!-- template for the 'worker-row' Vue.js component -->
 <script type='text/x-template' id='template_worker_row'>
-    <tr :id="worker._id" class="worker-row">
+    <tr :id="worker._id" :class="{'worker-row': true, 'is-selected': is_checked}">
         <td class='p-2 d-flex justify-content-center align-items-center'>
             <input
             type="checkbox"
