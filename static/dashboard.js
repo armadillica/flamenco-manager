@@ -43,7 +43,7 @@ WORKER_ACTIONS = Object.freeze({
         icon: '✝',
         title: 'Shut down the worker after the current task finishes. The worker may automatically restart.',
         payload: { action: 'shutdown', lazy: true },
-        available(worker_status) { return worker_status != 'offline'; },
+        available(worker_status) { return false },
     },
     offline_immediate: {
         label: 'Shut Down (immediately)',
@@ -57,8 +57,8 @@ WORKER_ACTIONS = Object.freeze({
         icon: '😴',
         title: 'Let the worker sleep after finishing this task.',
         payload: { action: 'set-status', status: 'asleep', lazy: true },
-        available(worker_status) {
-            return worker_status != 'timeout' && worker_status != 'asleep';
+        available(worker_status, requested_status) {
+            return worker_status != 'timeout' && worker_status != 'asleep' && requested_status != 'asleep';
         },
     },
     asleep_immediate: {
@@ -66,8 +66,8 @@ WORKER_ACTIONS = Object.freeze({
         icon: '😴!',
         title: 'Let the worker sleep immediately.',
         payload: { action: 'set-status', status: 'asleep', lazy: false },
-        available(worker_status) {
-            return worker_status != 'timeout' && worker_status != 'asleep';
+        available(worker_status, requested_status) {
+            return requested_status == 'asleep' && requested_status != worker_status && worker_status != 'asleep';
         },
     },
     wakeup: {
@@ -76,7 +76,7 @@ WORKER_ACTIONS = Object.freeze({
         title: 'Wake the worker up. A sleeping worker can take a minute to respond.',
         payload: { action: 'set-status', status: 'awake' },
         available(worker_status, requested_status) {
-            return worker_status == 'asleep' || requested_status == 'asleep';
+            return worker_status == 'asleep' || requested_status == 'asleep_immediate' || requested_status == 'asleep_lazy';
         },
     },
     ack_timeout: {
