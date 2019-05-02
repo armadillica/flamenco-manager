@@ -45,12 +45,14 @@
                 <dl class="row">
                     <dt class='col-md-4' title="Workers not seen in a long time.">Old Workers</dt>
                     <dd class='col-md-6 pl-4'>
-                        <idle-worker
-                            v-for="worker in idle_workers"
-                            :key="worker._id"
-                            :worker="worker"
-                            @forget-worker="forgetWorker(worker)">
-                        </idle-worker>
+                        <ul class="list-unstyled">
+                            <idle-worker
+                                v-for="worker in idle_workers"
+                                :key="worker._id"
+                                :worker="worker"
+                                @forget-worker="forgetWorker(worker)">
+                            </idle-worker>
+                        </ul>
                     </dd>
                 </dl>
             </div>
@@ -60,10 +62,10 @@
 
 <!-- template for the 'idle-worker' Vue.js component -->
 <script type='text/x-template' id='template_idle_worker'>
-    <span>
+    <li class="d-inline-block mr-4">
         <span class="idle-worker-name" :title="worker._id">{{ worker.nickname }}</span>
-        <span @click="$emit('forget-worker', worker)" class="text-danger" title="click to forget worker">(forget)</span>
-    </span>
+        <span @click="$emit('forget-worker', worker)" class="text-danger pr-1" title="click to forget worker">x</span>
+    </li>
 </script>
 
 <!-- template for the 'action-button' Vue.js component -->
