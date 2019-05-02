@@ -97,7 +97,7 @@
                     </td>
                     <th>Name</th>
                     <th>Status</th>
-                    <th class="text-center">Scheduled</th>
+                    <th class="text-center d-none d-xl-table-cell">Scheduled</th>
                     <template v-if="show_schedule">
                         <th>Sleep Days</th>
                         <th>Sleep Start</th>
@@ -108,7 +108,7 @@
                         <th title="Current/Last Task">Task</th>
                         <th>Task Log</th>
                         <th>Seen</th>
-                        <th>Software</th>
+                        <th class="d-none d-xl-table-cell">Software</th>
                     </template>
                 </tr>
             </thead>
@@ -210,7 +210,7 @@
         </td>
 
         <template v-if="mode != 'edit_schedule'">
-            <td class='col-sched-edit-active text-center'>
+            <td class='col-sched-edit-active text-center d-none d-xl-table-cell'>
                 <button v-if="worker.sleep_schedule.schedule_active" class='btn btn-sm btn-link' @click="scheduleSetActive(false)">Yes</button>
                 <button v-else class='btn btn-sm btn-link text-secondary' @click="scheduleSetActive(true)">No</button>
             </td>
@@ -271,6 +271,9 @@
                 </template>
             </td>
             <td :title="last_activity_abs">{{ last_activity_rel() }}</td>
+            <td class="d-none d-xl-table-cell">
+                {{ worker_software }}
+            </td>
             <td>
                 <button
                     class='btn btn-link btn-sm' style='float: right'
@@ -279,7 +282,6 @@
                     <span class="chevron top" v-if="show_details"></span>
                     <span class="chevron bottom" v-else></template>
                 </button>
-                {{ worker_software }}
             </td>
         </template>
     </tr>
