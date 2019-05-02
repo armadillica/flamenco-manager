@@ -112,19 +112,12 @@ hr { border-color: var(--border-separator); border-width: 2px;}
  * Extra utility classes.
  * Follow Bootstrap 4 naming style as much as possible.
  */
-.bg-darker {
-    background-color: var(--gray-darker);
-}
-
 .img-icon {
     height: 16px;
     width: 16px;
 }
 
-.text-small {
-    font-size: var(--font-size-small);
-}
-
-.white-space-nowrap {
-    white-space: nowrap;
-}
+.bg-darker {background-color: var(--gray-darker)}
+.text-small {font-size: var(--font-size-small)}
+.white-space-nowrap {white-space: nowrap}
+.cursor-pointer {cursor: pointer}
