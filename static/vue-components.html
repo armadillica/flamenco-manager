@@ -210,11 +210,11 @@
             </label>
         </td>
         <td class='table-cell-status'>
-            {{ worker.status || '-none-' }}
+            {{ worker.status || '[none]' }}
             <span v-if="worker.status_requested">
-                <span v-if="worker.lazy_status_request" title="Status change queued for after current task is finished." class="font-weight-bold text-secondary arrow">➔</span>
-                <span v-else title="Immediate status change is requested." class="font-weight-bold text-white arrow">↠</span>
-                <span :class="'status-requested status-' + worker.status_requested">{{ worker.status_requested}}</span>
+                <span v-if="worker.lazy_status_request" title="Status change queued for after current task is finished." class="font-weight-bold text-secondary arrow">⇢</span>
+                <span v-else title="Immediate status change is requested." class="font-weight-bold text-white arrow immediate">➔</span>
+                <span :class="'status-requested status-' + worker.status_requested">{{ worker.status_requested }}</span>
             </span>
         </td>
 
@@ -265,8 +265,9 @@
                         <template v-if="worker.current_task_updated">{{ current_task_updated() }}</template>)
                     </template>
                 </span>
-                <template v-else>-none-</template>
-            </td><td>
+                <span v-else class="no-task">[none]</span>
+            </td>
+            <td>
                 <template v-if="worker.current_task && worker.current_job">
                     <a :href="task_log_url" target="_blank"
                         title="View the head &amp; tail of this log file">view</a> |
