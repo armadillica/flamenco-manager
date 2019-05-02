@@ -270,8 +270,8 @@
                     class='btn btn-link btn-sm' style='float: right'
                     title="Toggle Worker Details"
                     @click.prevent="$emit('toggle-details')">
-                    <template v-if="show_details">Collapse</template>
-                    <template v-else>Details</template>
+                    <span class="chevron top" v-if="show_details"></span>
+                    <span class="chevron bottom" v-else></template>
                 </button>
                 {{ worker_software }}
             </td>
