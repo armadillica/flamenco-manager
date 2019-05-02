@@ -241,7 +241,7 @@ type SettingsInMongo struct {
 	DepsgraphLastModified *string `bson:"depsgraph_last_modified"`
 }
 
-// StatusReport is sent in response to a query on the / URL.
+// StatusReport is periodically requested by the Dashboard JS.
 type StatusReport struct {
 	NrOfWorkers       int      `json:"nr_of_workers"`
 	NrOfTasks         int      `json:"nr_of_tasks"`
