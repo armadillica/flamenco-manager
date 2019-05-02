@@ -269,9 +269,9 @@
             </td>
             <td>
                 <template v-if="worker.current_task && worker.current_job">
-                    <a :href="task_log_url" target="_blank"
-                        title="View the head &amp; tail of this log file">view</a> |
-                    <button class="btn btn-primary btn-sm click-to-copy"
+                    <a :href="task_log_url" target="_blank" class="btn btn-link btn-sm px-0"
+                        title="View the head &amp; tail of this log file">view</a>
+                    <button class="btn btn-link btn-sm click-to-copy px-0"
                         :data-clipboard-text="task_log_curl_command"
                         onclick="toastr.success('Copied Curl command to your clipboard')"
                         title="Click to copy a Curl command that downloads this entire task log file">curl</button>
