@@ -73,7 +73,7 @@
     <a class='worker-action'
         :title="action.title"
         @click="$emit('worker-action', worker_id, action_key)"
-    >{{action.icon}}</a>
+    ><i :class="'icon i-' + action_key"></i></a>
 </script>
 
 <!-- template for the 'worker-table' Vue.js component -->
@@ -193,12 +193,14 @@
             :checked="is_checked"
             @input="$emit('worker-selected', $event.target.checked)"
             >
-            <!-- <action-button v-for="action_key in actions_for_worker"
-                :key="action_key"
-                :action_key="action_key"
-                :worker_id="worker._id"
-                @worker-action="performWorkerAction"
-                ></action-button> -->
+        </td>
+        <td class='table-cell-nickname px-0 text-center'>
+            <action-button v-for="action_key in actions_for_worker"
+            :key="action_key"
+            :action_key="action_key"
+            :worker_id="worker._id"
+            @worker-action="performWorkerAction"
+            ></action-button>
         </td>
         <td class='table-cell-nickname'>
             <span :class='"status-indicator status-" + worker.status'></span>
