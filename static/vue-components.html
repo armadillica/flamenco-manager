@@ -45,6 +45,8 @@
                 <dl class="row">
                     <dt class='col-md-4' title="Number of task updates queued for sending to Flamenco Server.">Upstream Queue</dt>
                     <dd class='col-md-6 pl-4'>{{ serverinfo.upstream_queue_size }}</dd>
+
+                    <template v-if="idle_workers.length">
                     <dt class='col-md-4' title="Workers not seen in a long time.">Old Workers</dt>
                     <dd class='col-md-6 pl-4'>
                         <idle-worker
@@ -54,6 +56,7 @@
                             @forget-worker="forgetWorker(worker)">
                         </idle-worker>
                     </dd>
+                    </template>
                 </dl>
             </div>
         </div>
