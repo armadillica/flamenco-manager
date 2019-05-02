@@ -163,12 +163,12 @@
                     {{ worker.address }}
                 </td>
             </tr>
-            <tr class='blacklist' v-if="worker.blacklist">
+            <tr class='blacklist border-top' v-if="worker.blacklist">
                 <td colspan='3'></td>
-                <th>Blacklist:</th>
-                <th>Job</th>
-                <th>Task Type</th>
-                <th colspan='2'>Blacklisted On</th>
+                <th class="pt-2">Blacklist:</th>
+                <th class="pt-2">Job</th>
+                <th class="pt-2">Task Type</th>
+                <th colspan='4' class="pt-2">Blacklisted On</th>
             </tr>
             <blacklist-row
                 v-for="listitem in worker.blacklist"
@@ -299,14 +299,14 @@
 <!-- template for the 'blacklist-row' Vue.js component -->
 <script type='text/x-template' id='template_blacklist_row'>
     <tr>
-        <td colspan='4'></td>
-        <td><a :href="job_id_url" :title="'Open on ' + server.name" target='_blank'>{{ job_id_text }}</a></td>
-        <td>{{ listitem.task_type }}</td>
-        <td colspan='2'>
+        <td colspan='4' class="pb-2"></td>
+        <td class="pb-2"><a :href="job_id_url" :title="'Open on ' + server.name" target='_blank'>{{ job_id_text }}</a></td>
+        <td class="pb-2">{{ listitem.task_type }}</td>
+        <td colspan='4' class="pb-2">
             <span
                 @click="forget_blacklist_entry()"
-                class="forget-blacklist-entry worker-action"
-                title="click to forget this blacklist entry">x</span>
+                class="float-right worker-action text-danger font-weight-bold px-2"
+                title="click to forget this blacklist entry">forget</span>
             {{ created() }}
         </td>
     </tr>
