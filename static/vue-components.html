@@ -97,6 +97,7 @@
                         @input="$emit('toggle-all-workers-selected')"
                         >
                     </td>
+                    <th></th>
                     <th>Name</th>
                     <th>Status</th>
                     <th class="text-center d-none d-xl-table-cell">Scheduled</th>
@@ -111,6 +112,7 @@
                         <th>Task Log</th>
                         <th>Seen</th>
                         <th class="d-none d-xl-table-cell">Software</th>
+                        <th></th>
                     </template>
                 </tr>
             </thead>
@@ -142,12 +144,12 @@
         ></worker-row>
         <template v-if="show_details && !show_schedule">
             <tr class='details'>
-                <th colspan='2'></th>
+                <th colspan='3'></th>
                 <th colspan='1'>Worker ID</th>
                 <th colspan='6'>Address</th>
             </tr>
             <tr class='details'>
-                <td colspan='2'></td>
+                <td colspan='3'></td>
                 <td colspan='1'
                     class="click-to-copy worker-id"
                     onclick="toastr.success('Copied to clipboard.')"
