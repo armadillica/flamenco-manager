@@ -30,7 +30,9 @@
 
 .worker-row.is-selected,
 table.worker .is-selected+tr.details,
-table.worker .is-selected+tr.details+tr.details {
+table.worker .is-selected+tr.details+tr.details,
+table.worker .is-selected+tr.details+tr.details+tr.blacklist,
+table.worker .is-selected+tr.details+tr.details+tr.blacklist+tr.blacklist {
     background-color: var(--table-row-background-selected);
 }
 
@@ -74,12 +76,14 @@ table.worker>thead th {
     padding-bottom: 5px;
 }
 
-table.worker tr.details {
+table.worker tr.details,
+table.worker tr.blacklist {
     color: var(--body-color);
     background-color: rgba(0,0,0,0.2)
 }
 
-table.worker tr.details:last-child {
+table.worker tr.details:last-child,
+table.worker tr.blacklist:last-child {
     border-bottom: 2px solid var(--gray-darker);
 }
 
@@ -122,10 +126,6 @@ span.idle-worker-name:not(:first-child)::before {
 
 .worker-action {
     cursor: pointer;
-}
-
-.worker-action.forget-blacklist-entry {
-    float: right;
 }
 
 .worker .btn-link {
