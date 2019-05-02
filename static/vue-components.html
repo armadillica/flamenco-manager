@@ -40,7 +40,7 @@
 <script type='text/x-template' id='template_status'>
     <div id='status' class="text-secondary">
         <p v-if='errormsg' class='error'>{{ errormsg }}</p>
-        <div v-else class="row white-space-nowrap">
+        <div v-else class="row text-nowrap">
             <div class="col-md-12">
                 <dl class="row">
                     <dt class='col-md-4' title="Workers not seen in a long time.">Old Workers</dt>
@@ -203,8 +203,10 @@
             ></action-button>
         </td>
         <td class='table-cell-nickname'>
-            <span :class='"status-indicator status-" + worker.status'></span>
-            <label :for="checkbox_id">{{ worker.nickname }}</label>
+            <label :for="checkbox_id" class="cursor-pointer text-truncate">
+                <span :class='"status-indicator status-" + worker.status'></span>
+                {{ worker.nickname }}
+            </label>
         </td>
         <td class='table-cell-status'>
             {{ worker.status || '-none-' }}
@@ -255,7 +257,7 @@
         <template v-else>
             <!-- Worker Info template -->
             <td>
-                <template v-if="worker.current_task">
+                <span v-if="worker.current_task" class="text-truncate">
                     <a :href="task_server_url">{{ task_id_text }}</a>
                     <template v-if="worker.current_task_status">
                         ({{ worker.current_task_status }}
@@ -264,7 +266,7 @@
                         </template>
                         )
                     </template>
-                </template>
+                </span>
                 <template v-else>-none-</template>
             </td><td>
                 <template v-if="worker.current_task && worker.current_job">
@@ -276,7 +278,9 @@
                         title="Click to copy a Curl command that downloads this entire task log file">curl</button>
                 </template>
             </td>
-            <td :title="last_activity_abs">{{ last_activity_rel() }}</td>
+            <td :title="last_activity_abs">
+                <span class="text-truncate">{{ last_activity_rel() }}</span>
+            </td>
             <td class="d-none d-xl-table-cell">
                 {{ worker_software }}
             </td>
