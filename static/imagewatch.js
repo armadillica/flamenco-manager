@@ -25,7 +25,7 @@
  */
 
 function loadLatestImage(filename) {
-    let url = '/static/' + filename + '?' + new Date().getTime();
+    let url = '/' + filename + '?' + new Date().getTime();
     $('#last_rendered_image').attr('src', url);
     $('body.imageviewer').css('background-image', 'url(' + url + ')');
 }

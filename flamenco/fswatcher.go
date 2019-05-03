@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -38,6 +39,7 @@ import (
 	auth "github.com/abbot/go-http-auth"
 	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -46,6 +48,15 @@ var imageExtensions = map[string]bool{
 	".jpg": true,
 	".png": true,
 }
+
+// LatestImageLocation is the path where the latest-produced image will be saved (after conversion).
+const LatestImageLocation = "latest-image/latest-image.jpg"
+
+// URLs used for redirecting to when we don't have / can't read the latest image.
+const (
+	imageURLDefault = "/static/latest-image.jpg"
+	imageURLError   = "/static/latest-image-error.jpg"
+)
 
 // If a file hasn't been written to in this amount of time,
 // it's considered "old enough" to be considered "written".
@@ -104,7 +115,16 @@ func CreateLatestImageSystem(watchPath string) *LatestImageSystem {
 		lis.imageCreated = make(chan string, imageQueueSize)
 	}
 
-	middleware := ConvertAndForward(lis.imageCreated, "static")
+	imageDir := path.Dir(LatestImageLocation)
+	err := os.MkdirAll(imageDir, 0777)
+	if err != nil && !os.IsExist(err) {
+		logrus.WithFields(logrus.Fields{
+			logrus.ErrorKey: err,
+			"directory":     imageDir,
+		}).Fatal("unable to create directory for latest image")
+	}
+
+	middleware := ConvertAndForward(lis.imageCreated)
 	lis.broadcaster = chantools.NewOneToManyChan(middleware)
 
 	return lis
@@ -117,6 +137,7 @@ func (lis *LatestImageSystem) AddRoutes(
 	userAuth jwtauth.Authenticator,
 ) {
 	router.Handle("/imagewatch", userAuth.WrapFunc(lis.serverSideEvents)).Methods("GET")
+	router.Handle("/latest-image.jpg", userAuth.WrapFunc(lis.serveLatestImage)).Methods("GET")
 	router.HandleFunc("/output-produced", workerAuth.Wrap(lis.outputProduced)).Methods("POST")
 
 	// Just for logging stuff, nothing special.
@@ -126,7 +147,7 @@ func (lis *LatestImageSystem) AddRoutes(
 		defer lis.broadcaster.RemoveOutputChan(pathChannel)
 
 		for path := range pathChannel {
-			log.Infof("New image rendered: %s", path)
+			log.WithField("path", path).Info("new image rendered")
 		}
 	}()
 }
@@ -174,6 +195,21 @@ func (lis *LatestImageSystem) outputProduced(w http.ResponseWriter, r *auth.Auth
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// Serve the latest image, or the standard image if it cannot be found.
+func (lis *LatestImageSystem) serveLatestImage(w http.ResponseWriter, r *http.Request) {
+	_, err := os.Stat(LatestImageLocation)
+	if err != nil {
+		if os.IsNotExist(err) {
+			http.Redirect(w, r, imageURLDefault, http.StatusTemporaryRedirect)
+		} else {
+			http.Redirect(w, r, imageURLError, http.StatusTemporaryRedirect)
+		}
+		return
+	}
+
+	http.ServeFile(w, r, LatestImageLocation)
 }
 
 // Go starts the image watcher, if the path to watch isn't empty.
