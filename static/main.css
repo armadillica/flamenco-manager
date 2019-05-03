@@ -111,8 +111,12 @@ hr { border-color: var(--border-separator); border-width: 2px;}
 
 .input-group-append .input-group-text {color: var(--gray); cursor: pointer; padding: initial;}
 .input-group-append .input-group-text:hover {color: var(--white);}
-
 .input-icon {font-size: 1.3rem;}
+
+.modal-header,
+.modal-footer {
+    border-color: var(--border-separator);
+}
 
 #toast-container > div, #toast-container:hover > div { box-shadow: none; }
 
