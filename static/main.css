@@ -177,6 +177,7 @@ hr { border-color: var(--border-separator); border-width: 2px;}
 .icon.i-asleep_lazy,
 .icon.i-asleep_immediate {
     background-color: white;
+    border-radius: 0;
     top: 3px;
 }
 
