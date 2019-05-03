@@ -29,6 +29,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/armadillica/flamenco-manager/dynamicpool/dppoller"
 	"github.com/armadillica/flamenco-manager/flamenco"
 	"github.com/armadillica/flamenco-manager/flamenco/bundledmongo"
 	"github.com/armadillica/flamenco-manager/httpserver"
@@ -60,7 +61,8 @@ var (
 	upstreamNotifier  *flamenco.UpstreamNotifier
 	workerRemover     *flamenco.WorkerRemover
 
-	shamanServer *shaman.Server
+	shamanServer      *shaman.Server
+	dynamicPoolPoller *dppoller.Poller
 )
 
 var shutdownComplete chan struct{}
@@ -120,6 +122,9 @@ func shutdown(signum os.Signal) {
 		}
 		if session != nil {
 			session.Close()
+		}
+		if dynamicPoolPoller != nil {
+			dynamicPoolPoller.Close()
 		}
 
 		shutdownDone <- true

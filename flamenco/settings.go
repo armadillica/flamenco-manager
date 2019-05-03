@@ -36,6 +36,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/armadillica/flamenco-manager/dynamicpool/dppoller"
 	"github.com/armadillica/flamenco-manager/jwtauth"
 	shamanconfig "github.com/armadillica/flamenco-manager/shaman/config"
 	yaml "gopkg.in/yaml.v2"
@@ -241,6 +242,9 @@ type Base struct {
 	// Authentication settings.
 	JWT                      jwtauth.Config `yaml:"user_authentication"`
 	WorkerRegistrationSecret string         `yaml:"worker_registration_secret"`
+
+	// Dynamic worker pools (Azure Batch, Google Compute, AWS, that sort).
+	DynamicPoolPlatforms *dppoller.Config `yaml:"dynamic_pool_platforms,omitempty"`
 }
 
 // Conf is the latest version of the configuration.

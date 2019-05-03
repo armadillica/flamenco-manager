@@ -26,6 +26,7 @@ Changelog for Flamenco Manager
 - Added setting `listen_https` which is used for serving HTTPS traffic (default `:8443`). If you are
   using the `tlskey`/`tlscert` settings, you need to move `listen` to `listen_https`.
 - Changed the default value for `listen` to `:8080` (was `:8083`).
+- Support for dynamic pools of workers, with a first implementation for Azure Batch.
 
 
 ## Version 2.4.3 (2019-04-18)

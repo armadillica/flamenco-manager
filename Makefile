@@ -16,6 +16,9 @@ SSH := ssh -o ClearAllForwardings=yes
 server:
 	go build -i -v -o ${OUT} -ldflags="-X main.applicationVersion=${VERSION}" ${BUILDOPTS} ${PKG}
 
+vendor:
+	GO111MODULE=on go mod vendor
+
 version:
 	@echo "Package: ${PKG}"
 	@echo "Version: ${VERSION}"
@@ -116,4 +119,4 @@ publish_online: package
 	rsync ${PACKAGE_PATH}.sha256 ${PACKAGE_PATH}-linux.tar.gz ${PACKAGE_PATH}-windows.zip ${PACKAGE_PATH}-darwin.zip \
 		armadillica@flamenco.io:flamenco.io/download/ -va
 
-.PHONY: run server version static vet lint deploy package _prepare_package _package _package_linux _package_windows _package_darwin _finish_package publish_online
+.PHONY: run server version static vet lint deploy package _prepare_package _package _package_linux _package_windows _package_darwin _finish_package publish_online vendor

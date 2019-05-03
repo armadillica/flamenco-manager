@@ -82,6 +82,8 @@ hr { border-color: var(--border-separator); border-width: 2px;}
 .text-secondary { color: var(--secondary) !important; }
 .btn-outline-secondary { border-color: var(--secondary) !important; color: var(--secondary) !important; }
 .border-bottom, .border-top, .border-left, .border-right { border-color: var(--border-separator) !important; border-width: 2px !important;}
+.modal-content { background-color: var(--body-background); color: var(--body-color); }
+.modal-dialog button.close { color: var(--body-color); }
 
 .form-control,
 .form-control:focus,
