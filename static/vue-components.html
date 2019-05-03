@@ -41,27 +41,12 @@
     <div id='status' class="text-secondary">
         <p v-if='errormsg' class='error'>{{ errormsg }}</p>
         <div v-else class="row text-nowrap">
-            <div class="col-md-12">
-                <dl class="row" v-if="idle_workers.length">
-                    <dt class='col-md-3' title="Workers not seen in a long time.">Old Workers</dt>
-                    <dd class='col-md-9'>
-                        <ul class="list-unstyled">
-                            <idle-worker
-                                v-for="worker in idle_workers"
-                                :key="worker._id"
-                                :worker="worker"
-                                @forget-worker="forgetWorker(worker)">
-                            </idle-worker>
-                        </ul>
-                    </dd>
-                </dl>
-            </div>
-            <div v-if="dynamic_pools">
+            <section v-if="dynamic_pools" class="col-md-12">
+                <strong>DYNAMIC POOLS</strong>
                 <div v-if="dynamic_pools.is_refreshing" class="spinner-border spinner-border-sm float-right" role="status"
                     title="Refreshing dynamic pool information">
                     <span class="sr-only">Refreshing</span>
                 </div>
-                <h3>Dynamic Pools</h3>
                 <dynamic-pool-platform
                     v-if="dynamic_pools.platforms.length"
                     v-for="platform of dynamic_pools.platforms"
@@ -69,7 +54,19 @@
                     :name="platform.name"
                     :pools="platform.pools"
                 ></dynamic-pool-platform>
-            </div>
+                <hr/>
+            </section>
+            <section class="col-md-12" v-if="idle_workers.length">
+                <strong title="Workers not seen in a long time">OLD WORKERS</strong>
+                <ul class="list-unstyled pt-2">
+                    <idle-worker
+                        v-for="worker in idle_workers"
+                        :key="worker._id"
+                        :worker="worker"
+                        @forget-worker="forgetWorker(worker)">
+                    </idle-worker>
+                </ul>
+            </section>
         </div>
     </div>
 </script>
