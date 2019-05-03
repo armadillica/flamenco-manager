@@ -73,25 +73,36 @@
 
 <!-- template for the 'dynamic-pool-platform' Vue.js component -->
 <script type='text/x-template' id='template_dynamic_pool_platform'>
-    <div>
-        <h6>{{ name }}</h6>
-        <ul>
-            <li v-for="pool in pools" :key="pool.ID" :title="pool.allocationState">{{ pool.ID }}
-                <span v-if="pool.allocationState == 'steady'" :title="nodeCountExplicit(pool.currentSize)">({{ currentNodeCount(pool) }})</span>
-                <span v-else-if="pool.allocationState == 'resizing'"
-                    :title="'Resizing from ' + nodeCountExplicit(pool.currentSize) + ' to ' + nodeCountExplicit(pool.desiredSize)"
-                    >({{ currentNodeCount(pool) }} → {{ desiredNodeCount(pool) }})</span>
-                <span v-else>{{ pool.allocationState }}</span>
-                <button type="button" class="btn btn-link btn-sm" data-toggle="modal"
-                    v-if="pool.allocationState == 'steady'"
-                    @click="onResizeButtonClick($event, pool)"
-                    data-target="#modal_dynamic_pool_resize">
-                    Resize
-                </button>
-                <span v-if="pool.resizeError" class="text-danger">{{ pool.resizeError }}</span>
-            </li>
-        </ul>
-    </div>
+    <dl class="row mt-2">
+        <dt class="col-xl-2 col-lg-1">{{ name }}</dt>
+        <dd class="col-xl-10 col-lg-11 m-0">
+            <ul class="list-unstyled m-0">
+                <li v-for="pool in pools" :key="pool.ID" :title="pool.allocationState">
+                    <dl class="row m-0">
+                        <dt class="col-xl-4 col-sm-3 col-xs-3 text-wrap font-weight-normal">{{ pool.ID }}</dt>
+
+                        <dd class="col-xl-8 col-sm-9 col-xs-9">
+                            <span v-if="pool.allocationState == 'steady'" :title="nodeCountExplicit(pool.currentSize)">({{ currentNodeCount(pool) }})</span>
+
+                            <span v-else-if="pool.allocationState == 'resizing'"
+                                :title="'Resizing from ' + nodeCountExplicit(pool.currentSize) + ' to ' + nodeCountExplicit(pool.desiredSize)"
+                                >({{ currentNodeCount(pool) }} → {{ desiredNodeCount(pool) }})</span>
+                            <span v-else>{{ pool.allocationState }}</span>
+
+                            <button type="button" class="btn btn-link btn-sm text-white py-0 px-3" data-toggle="modal"
+                                v-if="pool.allocationState == 'steady'"
+                                @click="onResizeButtonClick($event, pool)"
+                                data-target="#modal_dynamic_pool_resize">
+                                Resize
+                            </button>
+
+                            <div v-if="pool.resizeError" class="text-danger text-wrap py-2">{{ pool.resizeError }}</div>
+                        </dd>
+                    </dl>
+                </li>
+            </ul>
+        </dd>
+    </dl>
 </script>
 
 <!-- template for the 'dynamic-pool-resize' Vue.js component -->
