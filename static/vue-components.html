@@ -432,8 +432,8 @@
                 <slot></slot>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-primary" @click="$emit('button-ok')" :disabled="isProcessing">{{ labelOk }}</button>
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ labelCancel }}</button>
+                <button type="button" class="btn btn-secondary px-3" data-dismiss="modal">{{ labelCancel }}</button>
+                <button type="button" class="btn btn-primary px-5 ml-auto" @click="$emit('button-ok')" :disabled="isProcessing">{{ labelOk }}</button>
             </div>
             </div>
         </div>
