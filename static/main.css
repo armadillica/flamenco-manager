@@ -35,6 +35,8 @@ html, body {
     font-family: var(--font-family-sans-serif);
     color: var(--light);
     background-color: var(--body-background);
+
+    height: 100%;
 }
 
 select, input, button {

@@ -6,10 +6,10 @@
     {{ .VueTemplates }}
 {{end}}
 {{define "body"}}
-<div role="main" id='vue_app' class="dashboard">
+<div role="main" id='vue_app' class="dashboard pt-4 h-100">
     <page-header :serverinfo="serverinfo"></page-header>
-    <div class="container-fluid">
-        <section class="row">
+    <div class="container-fluid h-100">
+        <section class="row h-100">
             <div class='col-xl-8 col-lg-12'>
                 <section class="table-responsive">
                     <worker-table
