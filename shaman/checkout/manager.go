@@ -34,6 +34,7 @@ import (
 
 	"github.com/armadillica/flamenco-manager/shaman/config"
 	"github.com/armadillica/flamenco-manager/shaman/filestore"
+	"github.com/armadillica/flamenco-manager/shaman/touch"
 )
 
 // Manager creates checkouts and provides info about missing files.
@@ -200,15 +201,15 @@ func (m *Manager) SymlinkToCheckout(blobPath, checkoutPath, symlinkRelativePath 
 	// Change the modification time of the blob to mark it as 'referenced' just now.
 	m.wg.Add(1)
 	go func() {
-		touch(blobPath)
+		touchFile(blobPath)
 		m.wg.Done()
 	}()
 
 	return nil
 }
 
-// touch changes the modification time of the blob to mark it as 'referenced' just now.
-func touch(blobPath string) error {
+// touchFile changes the modification time of the blob to mark it as 'referenced' just now.
+func touchFile(blobPath string) error {
 	if blobPath == "" {
 		return os.ErrInvalid
 	}
@@ -217,7 +218,7 @@ func touch(blobPath string) error {
 	logger := logrus.WithField("file", blobPath)
 	logger.Debug("touching")
 
-	err := os.Chtimes(blobPath, now, now)
+	err := touch.Touch(blobPath)
 	logLevel := logrus.DebugLevel
 	if err != nil {
 		logger = logger.WithError(err)

@@ -90,7 +90,7 @@ func (m *Manager) reportRequirements(w http.ResponseWriter, r *http.Request) {
 		case filestore.StatusStored:
 			// We expect this file to be sent soon, though, so we need to
 			// 'touch' it to make sure it won't be GC'd in the mean time.
-			go touch(path)
+			go touchFile(path)
 
 			// Only send a response when the caller needs to do something.
 			continue
