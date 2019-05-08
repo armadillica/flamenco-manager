@@ -7,8 +7,8 @@
         Configuration changes will not be taken into account immediately; restart Flamenco Manager for
         that.</p>
 
-        <section class="pt-4">
-            <h3 class="pb-3">Core Settings</h3>
+        <section>
+            <h3>Core Settings</h3>
 
             <input-field id_input="manager_name" placeholder="Flamenco Manager"
                 label="Name of this Manager"
@@ -90,7 +90,7 @@
 
         <hr/>
 
-        <section class="pt-3" v-if="!hide_infra_settings">
+        <section v-if="!hide_infra_settings">
             <h3>File Storage</h3>
 
             <p><em>Shaman</em> is a file storage server built into Flamenco Manager. It accepts uploaded files via HTTP,

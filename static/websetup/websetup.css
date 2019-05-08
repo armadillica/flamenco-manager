@@ -102,3 +102,10 @@ code {
     /* Firefox warns about the will-change using too much memory to use anyway, so just supress it. */
     will-change: unset;
 }
+
+section {
+    padding-top: 4px;
+}
+section > h3 {
+    padding-bottom: 3px;
+}
