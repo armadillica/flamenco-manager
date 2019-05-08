@@ -537,10 +537,8 @@ func (c *Conf) Overwrite() error {
 
 // Write saves the current in-memory configuration to a YAML file.
 func (c *Conf) Write(filename string) error {
-	// Convert back to string representation.
-	if c.Flamenco == nil {
-		c.FlamencoStr = ""
-	} else {
+	// Convert back to string representation if necessary.
+	if c.Flamenco != nil {
 		c.FlamencoStr = c.Flamenco.String()
 	}
 	data, err := yaml.Marshal(c)
