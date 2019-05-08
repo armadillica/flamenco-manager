@@ -337,8 +337,8 @@
         <template v-else>
             <!-- Worker Info template -->
             <td>
-                <span v-if="worker.current_task" class="text-truncate">
-                    <a :href="task_server_url"><u>{{ task_id_text }}</u></a>
+                <span v-if="worker.current_task" class="text-truncate worker-current-task">
+                    <a :href="task_server_url">{{ task_id_text }}</a>
                     <template v-if="worker.current_task_status">
                         ({{ worker.current_task_status }}
                         <template v-if="worker.current_task_updated">{{ current_task_updated() }}</template>)

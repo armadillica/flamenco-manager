@@ -44,6 +44,10 @@ table.worker .is-selected+tr.details+tr.details+tr.blacklist+tr.blacklist {
     color: white;
 }
 
+.worker-current-task a {
+    text-decoration: underline;
+}
+
 .error {
     color: #a92a2a;
     background-color: #ffeaea;
