@@ -245,6 +245,8 @@ type Base struct {
 
 	// Dynamic worker pools (Azure Batch, Google Compute, AWS, that sort).
 	DynamicPoolPlatforms *dppoller.Config `yaml:"dynamic_pool_platforms,omitempty"`
+
+	Websetup *WebsetupConf `yaml:"websetup,omitempty"`
 }
 
 // Conf is the latest version of the configuration.
@@ -283,6 +285,15 @@ type ConfV2VariableValue struct {
 
 	// The actual value of the variable for this audience+platform.
 	Value string `yaml:"value" json:"value"`
+}
+
+// WebsetupConf are settings used by the web setup mode.
+type WebsetupConf struct {
+	// When true, the websetup will hide certain settings that are infrastructure-specific.
+	// For example, it hides MongoDB choice, port numbers, task log directory, all kind of
+	// hosting-specific things. This is used, for example, by the automated Azure deployment
+	// to avoid messing up settings that are specific to that particular installation.
+	HideInfraSettings bool `yaml:"hide_infra_settings"`
 }
 
 // GetConf parses flamenco-manager.yaml and returns its contents as a Conf object.

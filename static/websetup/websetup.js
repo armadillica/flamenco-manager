@@ -137,6 +137,7 @@ Vue.component('setup-form', {
         config: Object,
         original_config: Object,
         mongo_choice: String,
+        hide_infra_settings: Boolean,
     },
     template: "#template_setup_form",
     methods: {

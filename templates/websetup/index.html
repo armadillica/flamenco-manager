@@ -49,6 +49,7 @@
         :config="config"
         :original_config="original_config"
         :mongo_choice="mongo_choice"
+        :hide_infra_settings="{{ .WebsetupConfig.HideInfraSettings }}"
         @mongo_choice="mongo_choice=$event"
         @configupdated="saveConfig"
         ></setup-form>

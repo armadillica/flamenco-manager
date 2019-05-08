@@ -205,8 +205,15 @@ func (web *Routes) httpSetupIndex(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Avoid having a nil pointer in the template.
+	websetupConfig := web.config.Websetup
+	if websetupConfig == nil {
+		websetupConfig = &flamenco.WebsetupConf{}
+	}
+
 	web.showTemplate("templates/websetup/index.html", w, r, TemplateData{
-		"OwnURLs": urls,
+		"OwnURLs":        urls,
+		"WebsetupConfig": websetupConfig,
 	})
 }
 

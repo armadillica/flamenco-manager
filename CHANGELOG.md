@@ -30,6 +30,9 @@ Changelog for Flamenco Manager
 - Latest Image system no longer writes to the `static` directory, making it possible to run Flamenco
   Manager from a different directory.
 - Complete re-design of the user interface featuring a dark theme and full-width layout for the dashboard.
+- Allow hiding certain infrastructure-specific settings in the web setup by setting
+  `websetup.hide_infra_settings: true`. For example, this hides MongoDB choice, port numbers, task
+  log directory, all kind of infra/hosting-specific things.
 
 
 ## Version 2.4.3 (2019-04-18)

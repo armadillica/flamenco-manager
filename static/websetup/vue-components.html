@@ -15,6 +15,7 @@
                 v-model="config.manager_name" :original_value="original_config.manager_name"
                 help="This name is purely cosmetic, and is shown only on the dashboard. It can help you distinguish between different Managers."></input-field>
 
+            <template v-if="!hide_infra_settings">
             <div class="form-group">
                 <label for="mongo_choice" class="font-weight-bold">Database Choice</label>
                 <div class=" form-check">
@@ -56,6 +57,7 @@
                 label="Worker Registration Secret"
                 help="Secret phrase for Flamenco Workers to register themselves with this Flamenco Manager. Place this phrase in your worker's &lt;code&gt;worker_registration_secret&lt;/code&gt; setting. Leave this empty to allow any machine to register itself as Worker.">
             </input-field>
+            </template>
 
             <input-field id_input="own_url" v-model="config.own_url" :original_value="original_config.own_url"
                 placeholder="http://flamenco-manager:8083/"
@@ -71,6 +73,7 @@
                 </button>
             </input-field>
 
+            <template v-if="!hide_infra_settings">
             <input-field id_input="listen" v-model="config.listen" :original_value="original_config.listen"
                 placeholder="[::]:8083"
                 label="Listen IP and port number"
@@ -82,11 +85,12 @@
                 label2="Enable UPnP/SSDP auto-discovery"
                 help="This allows Workers to automatically find this Manager if they are on the same network. However, it can conflict with other UPnP/SSDP applications (such as Spotify) running on the same machine.">
             </checkbox-field>
+            </template>
         </section>
 
         <hr/>
 
-        <section class="pt-3">
+        <section class="pt-3" v-if="!hide_infra_settings">
             <h3>File Storage</h3>
 
             <p><em>Shaman</em> is a file storage server built into Flamenco Manager. It accepts uploaded files via HTTP,
