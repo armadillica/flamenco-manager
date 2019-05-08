@@ -145,6 +145,7 @@ Vue.component('setup-form', {
             this.$emit('configupdated', {
                 config: this.config,
                 restartAfterSaving: !!restartAfterSaving,
+                restartTo: 'setup',
             });
         },
     },
@@ -199,6 +200,7 @@ Vue.component('yaml-editor', {
             this.$emit('configupdated', {
                 config: config,
                 restartAfterSaving: !!restartAfterSaving,
+                restartTo: 'normal',
             });
         },
         restart(restartURL) {
@@ -315,10 +317,16 @@ var vueApp = new Vue({
                 headers: {'Content-Type': 'application/x-yaml'},
             })
             .then(() => {
-                if (options.restartAfterSaving) {
-                    restart("/setup/restart-to-setup");
-                } else {
+                if (!options.restartAfterSaving) {
                     toastr.success("Restart Flamenco Manager to apply the new settings.", "Configuration saved");
+                    return;
+                }
+                if (typeof options.restartTo == 'undefined' || options.restartTo == 'setup') {
+                    restart("/setup/restart-to-setup");
+                } else if (options.restartTo == 'normal') {
+                    restart("/setup/restart");
+                } else {
+                    console.log("Unknown 'restartTo' option: ", options.restartTo);
                 }
             })
             .catch(error => {
