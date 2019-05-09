@@ -85,8 +85,14 @@ hr { border-color: var(--border-separator); border-width: 2px;}
 .text-secondary { color: var(--secondary) !important; }
 .btn-outline-secondary { border-color: var(--secondary) !important; color: var(--secondary) !important; }
 .border-bottom, .border-top, .border-left, .border-right { border-color: var(--border-separator) !important; border-width: 2px !important;}
-.modal-content { background-color: var(--body-background); color: var(--body-color); }
+.modal-content, .card { background-color: var(--body-background); color: var(--body-color); }
 .modal-dialog button.close { color: var(--body-color); }
+.card { border-color: var(--border-separator); }
+select.custom-select {
+    color: var(--body-color);
+    background-color: var(--gray-darker);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3e%3cpath fill='%23888888' d='M2 0L0 2h4zm0 5L0 3h4z'/%3e%3c/svg%3e");
+}
 
 .form-control,
 .form-control:focus,

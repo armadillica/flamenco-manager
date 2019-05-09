@@ -129,7 +129,6 @@ func (web *Routes) showTemplate(templfname string, w http.ResponseWriter, r *htt
 
 	tmpl, err := tmpl.ParseFiles(
 		web.root+"templates/layout.html",
-		web.root+"templates/websetup/vartable.html",
 		web.root+templfname)
 	if err != nil {
 		log.WithFields(log.Fields{

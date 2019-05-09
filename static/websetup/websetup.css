@@ -109,3 +109,62 @@ section {
 section > h3 {
     padding-bottom: 3px;
 }
+
+button.remove-variable {
+    float: right;
+}
+
+.variable-editor {
+    margin-bottom: 5mm;
+}
+
+.variable-editor .table {
+    font-size: 90%;
+}
+
+.variable-col-audience, .variable-col-platform, .variable-col-operations { white-space: nowrap; }
+.variable-col-audience { width: 11em; }
+.variable-col-platform { width: 8em; }
+.variable-col-operations { width: 0; }
+
+.variable-editor select, .variable-editor input[type='text'] {
+    padding-top: 0;
+    padding-bottom: 0;
+    border: thin solid var(--border-separator);
+}
+.variable-editor .btn-operation {
+    font-weight: bold;
+    font-family: monospace;
+}
+
+/* Two-way-toggle slider extras */
+.two-way-toggle label.toggle-label-left {
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    padding-right: 2px;
+    text-align: right;
+}
+.two-way-toggle .explanation {
+    text-align: center;
+}
+
+
+.two-way-toggle label { color: var(--secondary); }
+.two-way-toggle label.label-active { color: white; }
+
+.two-way-toggle label.toggle-label-right {
+    padding-left: 2px;
+}
+.two-way-toggle .checkbox-slider input + span::before {
+    background: #3498db; /* Colour when slider is at the right position */
+}
+.two-way-toggle .checkbox-slider input:checked + span::before {
+    background: #8f852a; /* Colour when the slider is at the left position */
+}
+.two-way-toggle .explanation {
+    font-size: small;
+    color: var(--secondary);
+}

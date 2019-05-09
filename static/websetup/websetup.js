@@ -24,6 +24,14 @@
  * ***** END MIT LICENCE BLOCK *****
  */
 
+let EMPTY_VARIABLE = Object.freeze({
+    value: '',
+    audience: '',
+    platform: '',
+});
+let SUPPORTED_PLATFORMS = ['linux', 'darwin', 'windows'];
+
+
 function linkRequired() {
     var $result = $('#link-check-result');
 
@@ -131,6 +139,8 @@ function saveDataTables() {
     return true;
 }
 
+let eventBus = new Vue();
+
 Vue.component('setup-form', {
     props: {
         own_urls: Array,
@@ -140,6 +150,12 @@ Vue.component('setup-form', {
         hide_infra_settings: Boolean,
     },
     template: "#template_setup_form",
+    computed: {
+        saveButtonDisabled() {
+            // Unfortunately JavaScript has no proper object comparison operator...
+            return JSON.stringify(this.config) == JSON.stringify(this.original_config);
+        },
+    },
     methods: {
         saveContent(restartAfterSaving) {
             this.$emit('configupdated', {
@@ -244,6 +260,135 @@ Vue.component('checkbox-field', {
     },
 });
 
+// Editor for multiple variables.
+Vue.component('variables-editor', {
+    props: {
+        variables: Object,
+    },
+    template: '#template_variables_editor',
+    methods: {
+        removeVariable(variableName) {
+            console.log("requested removal of variable", variableName);
+            Vue.delete(this.variables, variableName);
+        },
+    },
+});
+
+// Editor for a single variable.
+Vue.component('variable-editor', {
+    props: {
+        varName: String,
+        varDef: Object, // variable definition
+    },
+    data() { return {
+        allAudience: 'all',
+    }},
+    template: '#template_variable_editor',
+    created() {
+        let reducer = (acc, varValue) => { return acc && varValue.audience == 'all' };
+        let isAllAudience = this.varDef.values.reduce(reducer, true);
+        this.allAudience = isAllAudience ? 'all' : 'separate';
+
+        // Before the configuration is saved, we need to clean up some stuff.
+        eventBus.$on('pre-save-config', this.cleanupAudiences);
+    },
+    computed: {
+        showAudienceRow() {
+            return this.allAudience == 'separate';
+        },
+        disableAddValueButton() {
+            return this.propsForNewValue == null;
+        },
+        propsForNewValue() {
+            // Returns some sensible properties for a new variable value, or null if there is none.
+            let isAllAudience = this.allAudience == 'all';
+            let platformsLeft = {
+                users: new Set(SUPPORTED_PLATFORMS),
+                workers: new Set(SUPPORTED_PLATFORMS),
+            };
+
+            // See which platforms and audiences already have values.
+            for (var value of this.varDef.values) {
+                if (isAllAudience || value.audience == "all") {
+                    platformsLeft.workers.delete(value.platform);
+                    platformsLeft.users.delete(value.platform);
+                } else {
+                    platformsLeft[value.audience].delete(value.platform);
+                }
+            }
+
+            // Return the first audience+platform combo that's left.
+            for (audience in platformsLeft) {
+                // There is no Set.prototype.pop() to get any item from the set; the iterator is the only way to access values.
+                for (var platform of platformsLeft[audience].values()) {
+                    return {
+                        audience: isAllAudience ? 'all' : audience,
+                        platform: platform,
+                    }
+                }
+            }
+
+            return null;
+        },
+    },
+    methods: {
+        remove() {
+            this.$emit("removeVariable", this.varName);
+        },
+        removeValue(valueIndex) {
+            // splice() returns the removed item as a one-element array.
+            // We could use this to make a little undo system.
+            this.varDef.values.splice(valueIndex, 1);
+        },
+        addValue() {
+            let newPartialValue = this.propsForNewValue;
+            let newVariableValue = JSON.parse(JSON.stringify(EMPTY_VARIABLE));
+            if (newPartialValue != null) Object.assign(newVariableValue, newPartialValue);
+            this.varDef.values.push(newVariableValue);
+        },
+        cleanupAudiences() {
+            // To allow users to toggle losslessly between "separate" and "all" audiences,
+            // we don't set the variable values' audience immediately. This is done in this
+            // function just before saving.
+            if (this.allAudience == 'separate') return;
+
+            for (var varValue of this.varDef.values) {
+                varValue.audience = 'all';
+            }
+        },
+    },
+});
+
+// Toggle slider with a left-side and right-side label.
+Vue.component('two-way-toggle', {
+    props: {
+        name: String,
+        labelLeft: String,
+        labelRight: String,
+        valueLeft: String,
+        valueRight: String,
+        value: String,
+    },
+    template: '#template_two_way_toggle',
+    computed: {
+        toggleID() {
+            return 'two_way_toggle_' + this.name;
+        },
+        isChecked() {
+            return this.value == this.valueRight;
+        },
+    },
+    methods: {
+        onInput(event) {
+            /* This creates an 'input' event that's caught by the `v-model` attribute
+             * of our parent component. It's that component that changes our `value`
+             * property; we don't have to do that ourselves. */
+            let value = event.target.checked ? this.valueRight : this.valueLeft;
+            this.$emit('input', value);
+        },
+    },
+});
+
 
 var vueApp = new Vue({
     el: '#vueApp',
@@ -284,6 +429,7 @@ var vueApp = new Vue({
 
                 this.own_urls = settings.own_urls;
                 this.setConfig(settings.config);
+                this.markConfigAsOriginal();
             })
             .catch(error => {
                 var title;
@@ -302,13 +448,17 @@ var vueApp = new Vue({
         setConfig(config) {
             this.config = config;
             this.mongo_choice = config.database_url == '' ? 'bundled' : 'external';
-
+        },
+        markConfigAsOriginal() {
             // Keep a deep copy around so that we can go back to unchanged values.
-            this.original_config = JSON.parse(JSON.stringify(config));
+            this.original_config = JSON.parse(JSON.stringify(this.config));
         },
 
         saveConfig(options) {
             this.setConfig(options.config);
+
+            // Allow components to do pre-save cleanup.
+            eventBus.$emit('pre-save-config');
 
             // Get rid of Vue.js specific getters/setters and __ob__ properties.
             // The JSON dumper is less sensitive to this than the YAML dumper.
@@ -321,6 +471,7 @@ var vueApp = new Vue({
                 headers: {'Content-Type': 'application/x-yaml'},
             })
             .then(() => {
+                this.markConfigAsOriginal();
                 if (!options.restartAfterSaving) {
                     toastr.success("Restart Flamenco Manager to apply the new settings.", "Configuration saved");
                     return;

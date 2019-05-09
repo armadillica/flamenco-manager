@@ -88,7 +88,14 @@
             </template>
         </section>
 
-        <hr/>
+        <section>
+            <h3>Variables</h3>
+            <p>Please see the documentation section about
+                <a href="https://www.flamenco.io/docs/user_manual/installation/#manager-configuration" target="_blank">Manager Configuration</a>
+                for a general explanation of these variables.</p>
+
+            <variables-editor :variables="config.variables"></variables-editor>
+        </section>
 
         <section v-if="!hide_infra_settings">
             <h3>File Storage</h3>
@@ -115,7 +122,10 @@
             <a class='btn btn-outline-secondary px-5' href='/setup/restart' title='Does NOT save your configuration. You will have to confirm before the restart happens.'>
                 Restart Manager
             </a>
-            <button class='btn btn-success ml-auto px-5' type="button" @click="saveContent(false)">
+            <button class='btn btn-success ml-auto px-5' type="button"
+                :disabled="saveButtonDisabled"
+                :title="saveButtonDisabled ? 'Configuration has not changed, no need to save.' : false"
+                @click="saveContent(false)">
                 Save Configuration
             </button>
         </section>
@@ -176,5 +186,112 @@
             v-if="original_value != value"
             @click="$emit('input', original_value)"
             :title="restore_title">Reset to Active Value</button>
+    </div>
+</script>
+
+<!-- Vue.js template for component variables-editor -->
+<script type="text/x-template" id="template_variables_editor">
+    <div class="variables-editor">
+        <variable-editor
+            v-for="(varDef, varName) in variables" :key="varName"
+            :varName="varName" :varDef="varDef"
+            @removeVariable="removeVariable"
+        ></variable-editor>
+    </div>
+</script>
+
+<!-- Vue.js template for component variable-editor -->
+<script type="text/x-template" id="template_variable_editor">
+    <div class="variable-editor card">
+        <div class="card-body">
+            <button class="remove-variable btn btn-link btn-sm text-danger" title="Remove this Variable"
+                @click="remove(varName)">remove</button>
+            <h4 class="card-title">{{ varName }}</h4>
+            <!-- <code>{{ varDef }}</code> -->
+
+            <two-way-toggle :name="varName+'Direction'"
+                labelLeft="One-way" labelRight="Two-way" valueLeft="oneway" valueRight="twoway"
+                v-model="varDef.direction">
+                <template slot="leftExplanation">
+                    {{ '{' }}{{varName}}{{ '}' }} will be replaced by its value.
+                </template>
+                <template slot="rightExplanation">
+                    {{ '{' }}{{varName}}{{ '}' }} will be replaced by its value,
+                    and when submitting a job the value will be replaced by {{ '{' }}{{varName}}{{ '}' }}.
+                    This is useful for translating paths from Windows (on your artists' machines) to Linux (on your Workers).
+                </template>
+            </two-way-toggle>
+
+            <two-way-toggle :name="varName+'AllAudience'"
+                labelLeft="Same for Users and Workers" valueLeft="all"
+                labelRight="Different for Users and Workers" valueRight="separate"
+                v-model="allAudience">
+                <template slot="leftExplanation">All Workers and Users use the same values for this variable.</template>
+                <template slot="rightExplanation">Users and Workers use different values for this variable.
+                    This is useful for variables that are only relevant to Workers, or when Workers and Users
+                    are using a different infrastructure.</template>
+            </two-way-toggle>
+
+            <table class="table table-sm table-borderless">
+                <colgroup>
+                    <col class="variable-col-value">
+                    <col v-if="showAudienceRow" class="variable-col-audience">
+                    <col class="variable-col-platform">
+                    <col class="variable-col-operations">
+                </colgroup>
+                <tr>
+                    <th>Value</th>
+                    <th v-if="showAudienceRow">Audience</th>
+                    <th>Platform</th>
+                    <th><button class="btn-operation btn btn-outline-success btn-sm" title="Add a new value"
+                            :disabled="disableAddValueButton"
+                            :title="disableAddValueButton ? 'All platforms and audiences already have a value' : false"
+                            @click="addValue">+</button>
+                    </th>
+                </tr>
+                <tr v-for="(varValue, varIndex) in varDef.values" :key="varIndex">
+                    <td><input class="form-control" type="text" v-model="varValue.value"
+                            placeholder="The value of the variable for this audience and platform"
+                        ></td>
+                    <td v-if="showAudienceRow">
+                        <select v-model="varValue.audience" class="custom-select custom-select-sm">
+                            <option value="all">Workers &amp; Users</option>
+                            <option value="workers">Workers</option>
+                            <option value="users">Users</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select v-model="varValue.platform" class="custom-select custom-select-sm">
+                            <option value="linux">Linux</option>
+                            <option value="darwin">macOS</option>
+                            <option value="windows">Windows</option>
+                        </select>
+                    </td>
+                    <td><button class="btn-operation btn btn-outline-danger btn-sm" title="Delete this value"
+                            @click="removeValue(varIndex)">-</button></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</script>
+
+<!-- Vue.js template for component two-way-toggle -->
+<script type="text/x-template" id="template_two_way_toggle">
+    <div class="two-way-toggle row">
+        <label :for="toggleID" :class="{'col-md-5': true, 'toggle-label-left': true, 'label-active': value == valueLeft}">{{ labelLeft }}</label>
+        <div class="col-md-2">
+            <div class="checkbox-slider">
+                <label class="mx-auto">
+                    <input :id="toggleID" :name="name" type="checkbox" :checked="isChecked" @input="onInput"><span></span>
+                </label>
+            </div>
+        </div>
+        <label :for="toggleID" :class="{'col-md-5': true, 'toggle-label-right': true, 'label-active': value == valueRight}">{{ labelRight }}</label>
+
+        <div class="col-md-12">
+            <slot name="default"></slot>
+            <p class="explanation" v-if="value == valueLeft"><slot name="leftExplanation"></slot></p>
+            <p class="explanation" v-if="value == valueRight"><slot name="rightExplanation"></slot></p>
+        </div>
     </div>
 </script>
