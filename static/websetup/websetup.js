@@ -310,10 +310,14 @@ var vueApp = new Vue({
         saveConfig(options) {
             this.setConfig(options.config);
 
+            // Get rid of Vue.js specific getters/setters and __ob__ properties.
+            // The JSON dumper is less sensitive to this than the YAML dumper.
+            let configToSave = JSON.parse(JSON.stringify(options.config));
+
             $.jwtAjax({
                 method: 'POST',
                 url: '/setup/data',
-                data: jsyaml.safeDump(options.config),
+                data: jsyaml.safeDump(configToSave),
                 headers: {'Content-Type': 'application/x-yaml'},
             })
             .then(() => {
