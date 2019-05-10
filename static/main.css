@@ -44,8 +44,9 @@ select, input, button {
     font-size: initial;
 }
 
-a, a:link, a:visited { color: var(--light);}
-a:hover, a:active { color: var(--primary);}
+a, a:link { color: #809ec0; }
+a:visited { color: #a88fca; }
+a:hover, a:active { color: var(--primary); }
 
 .btn {white-space: nowrap; border-radius: var(--border-radius)}
 .btn-sm,
