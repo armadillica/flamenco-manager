@@ -44,6 +44,12 @@ PREDEFINED_VARIABLES = Object.freeze({
         niceName: 'FFmpeg',
         description: 'Location of the FFmpeg executable on the workers.',
     },
+    shaman: {
+        direction: 'oneway',
+        audience: 'users',
+        niceName: 'Shaman',
+        description: 'Location of the Shaman checkout directory for users.<br>Useful when Flamenco Manager and users are on the same infrasturcture.',
+    }
 });
 
 let EMPTY_VARIABLE = Object.freeze({
