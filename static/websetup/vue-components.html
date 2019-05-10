@@ -206,7 +206,7 @@
         <div class="card-body">
             <h4 class="card-title">
                 <span class="variable-name">{{ niceVariableName }}</span>
-                <span v-if="isPredefined" class="variable-description">{{ variableDescription }}</span>
+                <span v-if="isPredefined" class="variable-description" v-html="variableDescription"></span>
                 <button class="remove-variable btn btn-link btn-sm" title="Remove this Variable"
                     v-if="showRemoveButton" @click="remove(varName)">Remove</button>
             </h4>
