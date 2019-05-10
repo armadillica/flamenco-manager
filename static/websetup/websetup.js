@@ -24,13 +24,34 @@
  * ***** END MIT LICENCE BLOCK *****
  */
 
+/* These variables are used by Flamenco itself, and have a well-defined meaning.
+ * Users are free to define more variables for themselves, but they shouldn't be
+ * able to delete these or change their semantics.
+ *
+ * Freeze to prevent Vue.js from creating getters & setters all over this object.
+ * We don't need it to be tracked, as it won't be changed anyway.
+ */
+PREDEFINED_VARIABLES = Object.freeze({
+    blender: {
+        direction: 'oneway',
+        audience: 'workers',
+        niceName: 'Blender',
+        description: 'Location of the Blender executable on the workers.',
+    },
+    ffmpeg: {
+        direction: 'oneway',
+        audience: 'workers',
+        niceName: 'FFmpeg',
+        description: 'Location of the FFmpeg executable on the workers.',
+    },
+});
+
 let EMPTY_VARIABLE = Object.freeze({
     value: '',
     audience: '',
     platform: '',
 });
 let SUPPORTED_PLATFORMS = ['linux', 'darwin', 'windows'];
-
 
 function linkRequired() {
     var $result = $('#link-check-result');
@@ -268,8 +289,8 @@ Vue.component('variables-editor', {
     template: '#template_variables_editor',
     methods: {
         removeVariable(variableName) {
-            console.log("requested removal of variable", variableName);
             Vue.delete(this.variables, variableName);
+            toastr.info("Deleted variable " + variableName);
         },
     },
 });
@@ -298,6 +319,20 @@ Vue.component('variable-editor', {
         },
         disableAddValueButton() {
             return this.propsForNewValue == null;
+        },
+        isPredefined() {
+            return PREDEFINED_VARIABLES.hasOwnProperty(this.varName);
+        },
+        showRemoveButton() {
+            // Only show the remove button for custom (e.g. non-predefined) variables.
+            return !this.isPredefined;
+        },
+        niceVariableName() {
+            if (this.isPredefined) return PREDEFINED_VARIABLES[this.varName].niceName;
+            return this.varName.replace('_', ' ');
+        },
+        variableDescription() {
+            return this.isPredefined ? PREDEFINED_VARIABLES[this.varName].description : '';
         },
         propsForNewValue() {
             // Returns some sensible properties for a new variable value, or null if there is none.

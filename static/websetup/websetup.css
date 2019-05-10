@@ -110,10 +110,6 @@ section > h3 {
     padding-bottom: 3px;
 }
 
-button.remove-variable {
-    float: right;
-}
-
 .variable-editor {
     margin-bottom: 5mm;
 }
@@ -136,6 +132,25 @@ button.remove-variable {
     font-weight: bold;
     font-family: monospace;
 }
+.variable-editor .card-title {
+    display: flex;
+    align-items: end;
+    border-bottom: thin solid var(--border-separator);
+}
+.variable-editor .card-title .variable-name {
+    text-transform: capitalize;
+}
+.variable-editor .variable-description {
+    font-size: var(--font-size-dashboard);
+    margin-left: auto;
+    font-style: italic;
+    color: var(--secondary);
+}
+.variable-editor button.remove-variable {
+    margin-left: auto;
+    color: var(--danger);
+}
+
 
 /* Two-way-toggle slider extras */
 .two-way-toggle label.toggle-label-left {
