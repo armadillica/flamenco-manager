@@ -1,7 +1,7 @@
 Changelog for Flamenco Manager
 ==============================
 
-## Version 2.5 (in development)
+## Version 2.5 (2019-05-28)
 
 - Requires Flamenco Server 2.3+
 - Go to web setup mode automatically when Flamenco Manager is not yet linked to a Flamenco Server.
