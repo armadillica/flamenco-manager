@@ -66,7 +66,6 @@ var (
 
 	// Valid values for the "audience" tag of a ConfV2 variable.
 	validAudiences = map[string]bool{
-		"":        true,
 		"all":     true,
 		"workers": true,
 		"users":   true,
@@ -504,8 +503,19 @@ func (c *Conf) checkVariables() error {
 				}).Warning("variable has a both 'platform' and 'platforms' set")
 				value.Platforms = append(value.Platforms, value.Platform)
 				value.Platform = ""
-				variable.Values[valueIndex] = value
 			}
+
+			if value.Audience == "" {
+				value.Audience = "all"
+			} else if !validAudiences[value.Audience] {
+				log.WithFields(log.Fields{
+					"name":     name,
+					"value":    value,
+					"audience": value.Audience,
+				}).Error("variable invalid audience")
+			}
+
+			variable.Values[valueIndex] = value
 		}
 	}
 
