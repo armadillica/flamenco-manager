@@ -354,6 +354,10 @@ Vue.component('variable-editor', {
                     platformsLeft.workers.delete(value.platform);
                     platformsLeft.users.delete(value.platform);
                 } else {
+                    if (typeof platformsLeft[value.audience] === 'undefined') {
+                        console.log('Warning, audience ', value.audience, ' of variable ', this.varName, ' is unknown');
+                        continue;
+                    }
                     platformsLeft[value.audience].delete(value.platform);
                 }
             }
