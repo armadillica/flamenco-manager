@@ -1,6 +1,11 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.6 (in development)
+
+- Compatibility fix for certain SMB filesystems.
+
+
 ## Version 2.5 (2019-05-28)
 
 - Requires Flamenco Server 2.3+

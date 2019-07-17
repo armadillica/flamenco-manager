@@ -86,6 +86,8 @@ func copyFileContents(src, dst string) (err error) {
 	if _, err = io.Copy(out, in); err != nil {
 		return
 	}
-	err = out.Sync()
+
+	// Ignore syncing errors; not every filesystem supports this (like SMB).
+	out.Sync()
 	return
 }
