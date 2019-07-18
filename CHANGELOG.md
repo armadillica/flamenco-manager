@@ -1,9 +1,10 @@
 Changelog for Flamenco Manager
 ==============================
 
-## Version 2.6 (in development)
+## Version 2.5.1 (2019-07-18)
 
 - Compatibility fix for certain SMB filesystems.
+- Increased HTTP read timeout from 15 to 600 seconds.
 
 
 ## Version 2.5 (2019-05-28)

@@ -13,7 +13,8 @@ import (
 
 // Constants for the HTTP servers.
 const (
-	ReadTimeout = 15 * time.Second
+	ReadHeaderTimeout = 15 * time.Second
+	ReadTimeout       = 600 * time.Second
 )
 
 // Server acts as a http.Server
@@ -51,9 +52,10 @@ func New(config flamenco.Conf, handler http.Handler) Server {
 			"listen_https": config.ListenHTTPS,
 		}).Info("creating HTTPS-enabled server")
 		server.httpsServer = &http.Server{
-			Addr:        config.ListenHTTPS,
-			Handler:     handler,
-			ReadTimeout: ReadTimeout,
+			Addr:              config.ListenHTTPS,
+			Handler:           handler,
+			ReadTimeout:       ReadTimeout,
+			ReadHeaderTimeout: ReadHeaderTimeout,
 		}
 		server.tlsKey = config.TLSKey
 		server.tlsCert = config.TLSCert
@@ -76,18 +78,20 @@ func New(config flamenco.Conf, handler http.Handler) Server {
 		}
 
 		server.httpsServer = &http.Server{
-			Addr:        config.ListenHTTPS,
-			Handler:     handler,
-			ReadTimeout: ReadTimeout,
-			TLSConfig:   mgr.TLSConfig(),
+			Addr:              config.ListenHTTPS,
+			Handler:           handler,
+			ReadTimeout:       ReadTimeout,
+			ReadHeaderTimeout: ReadHeaderTimeout,
+			TLSConfig:         mgr.TLSConfig(),
 		}
 
 	default:
 		logrus.WithField("listen", config.Listen).Info("creating insecure server")
 		server.httpServer = &http.Server{
-			Addr:        config.Listen,
-			Handler:     handler,
-			ReadTimeout: ReadTimeout,
+			Addr:              config.Listen,
+			Handler:           handler,
+			ReadTimeout:       ReadTimeout,
+			ReadHeaderTimeout: ReadHeaderTimeout,
 		}
 	}
 
