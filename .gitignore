@@ -4,6 +4,7 @@
 /db/
 /mongodb-logs/
 /vendor/
+/dist/
 /flamenco-manager
 /flamenco-manager-static*
 /flamenco-manager.yaml*
