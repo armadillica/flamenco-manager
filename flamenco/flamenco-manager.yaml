@@ -29,15 +29,15 @@ variables:
 
 path_replacement:
     render:
-        windows: r:/
-        linux: /render
-        darwin: /Volume/render
+        windows: s:/flamenco/render
+        linux: /shared/flamenco/render
+        darwin: /Volume/shared/flamenco/render
     render_long:
-        windows: r:/long
-        linux: /render/long
-        darwin: /Volume/render/long
+        windows: s:/flamenco/render/long
+        linux: /shared/flamenco/render/long
+        darwin: /Volume/shared/flamenco/render/long
     job_storage:
-        windows: s:/
-        linux: /shared/
-        darwin: /Volume/shared/
+        windows: s:/flamenco/jobs
+        linux: /shared/flamenco/jobs
+        darwin: /Volume/shared/flamenco/jobs
         autumn: hey

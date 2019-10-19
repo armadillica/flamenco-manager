@@ -50,13 +50,13 @@ func (s *VarReplTestSuite) SetUpTest(c *check.C) {
 			Command{
 				"blender_render",
 				bson.M{
-					"filepath":      "{job_storage}/_flamenco/storage/sybren/2017-06-08-181223.625800-sybren-flamenco-test.flamenco/flamenco-test.flamenco.blend",
+					"filepath":      "{job_storage}/sybren/2017-06-08-181223.625800-sybren-flamenco-test.flamenco/flamenco-test.flamenco.blend",
 					"otherpath":     "{hey}/haha",
 					"format":        "EXR",
 					"frames":        "47",
 					"cycles_chunk":  1.0,
 					"blender_cmd":   "{blender}",
-					"render_output": "{render_long}/_flamenco/output/sybren/blender-cloud-addon/flamenco-test__intermediate/render-smpl-0001-0084-frm-######",
+					"render_output": "{render_long}/sybren/blender-cloud-addon/flamenco-test__intermediate/render-smpl-0001-0084-frm-######",
 				},
 			},
 		},
@@ -87,11 +87,11 @@ func (s *VarReplTestSuite) TestReplacePathsLinux(t *check.C) {
 	ReplaceVariables(&s.config, &s.task, &worker)
 
 	assert.Equal(t,
-		"/shared/_flamenco/storage/sybren/2017-06-08-181223.625800-sybren-flamenco-test.flamenco/flamenco-test.flamenco.blend",
+		"/shared/flamenco/jobs/sybren/2017-06-08-181223.625800-sybren-flamenco-test.flamenco/flamenco-test.flamenco.blend",
 		s.task.Commands[2].Settings["filepath"],
 	)
 	assert.Equal(t,
-		"/render/long/_flamenco/output/sybren/blender-cloud-addon/flamenco-test__intermediate/render-smpl-0001-0084-frm-######",
+		"/shared/flamenco/render/long/sybren/blender-cloud-addon/flamenco-test__intermediate/render-smpl-0001-0084-frm-######",
 		s.task.Commands[2].Settings["render_output"],
 	)
 	assert.Equal(t, "{hey}/haha", s.task.Commands[2].Settings["otherpath"])
@@ -102,11 +102,11 @@ func (s *VarReplTestSuite) TestReplacePathsWindows(t *check.C) {
 	ReplaceVariables(&s.config, &s.task, &worker)
 
 	assert.Equal(t,
-		"s:/_flamenco/storage/sybren/2017-06-08-181223.625800-sybren-flamenco-test.flamenco/flamenco-test.flamenco.blend",
+		"s:/flamenco/jobs/sybren/2017-06-08-181223.625800-sybren-flamenco-test.flamenco/flamenco-test.flamenco.blend",
 		s.task.Commands[2].Settings["filepath"],
 	)
 	assert.Equal(t,
-		"r:/long/_flamenco/output/sybren/blender-cloud-addon/flamenco-test__intermediate/render-smpl-0001-0084-frm-######",
+		"s:/flamenco/render/long/sybren/blender-cloud-addon/flamenco-test__intermediate/render-smpl-0001-0084-frm-######",
 		s.task.Commands[2].Settings["render_output"],
 	)
 	assert.Equal(t, "{hey}/haha", s.task.Commands[2].Settings["otherpath"])
@@ -117,11 +117,11 @@ func (s *VarReplTestSuite) TestReplacePathsMacOS(t *check.C) {
 	ReplaceVariables(&s.config, &s.task, &worker)
 
 	assert.Equal(t,
-		"/Volume/shared/_flamenco/storage/sybren/2017-06-08-181223.625800-sybren-flamenco-test.flamenco/flamenco-test.flamenco.blend",
+		"/Volume/shared/flamenco/jobs/sybren/2017-06-08-181223.625800-sybren-flamenco-test.flamenco/flamenco-test.flamenco.blend",
 		s.task.Commands[2].Settings["filepath"],
 	)
 	assert.Equal(t,
-		"/Volume/render/long/_flamenco/output/sybren/blender-cloud-addon/flamenco-test__intermediate/render-smpl-0001-0084-frm-######",
+		"/Volume/shared/flamenco/render/long/sybren/blender-cloud-addon/flamenco-test__intermediate/render-smpl-0001-0084-frm-######",
 		s.task.Commands[2].Settings["render_output"],
 	)
 	assert.Equal(t, "{hey}/haha", s.task.Commands[2].Settings["otherpath"])
@@ -132,11 +132,11 @@ func (s *VarReplTestSuite) TestReplacePathsUnknownOS(t *check.C) {
 	ReplaceVariables(&s.config, &s.task, &worker)
 
 	assert.Equal(t,
-		"hey/_flamenco/storage/sybren/2017-06-08-181223.625800-sybren-flamenco-test.flamenco/flamenco-test.flamenco.blend",
+		"hey/sybren/2017-06-08-181223.625800-sybren-flamenco-test.flamenco/flamenco-test.flamenco.blend",
 		s.task.Commands[2].Settings["filepath"],
 	)
 	assert.Equal(t,
-		"{render_long}/_flamenco/output/sybren/blender-cloud-addon/flamenco-test__intermediate/render-smpl-0001-0084-frm-######",
+		"{render_long}/sybren/blender-cloud-addon/flamenco-test__intermediate/render-smpl-0001-0084-frm-######",
 		s.task.Commands[2].Settings["render_output"],
 	)
 	assert.Equal(t, "{hey}/haha", s.task.Commands[2].Settings["otherpath"])
@@ -148,9 +148,9 @@ func (s *VarReplTestSuite) TestReplaceLocal(t *check.C) {
 	assert.Equal(t, "{unknown}", ReplaceLocal("{unknown}", &s.config))
 
 	expected, ok := map[string]string{
-		"windows": "r:/here",
-		"linux":   "/render/here",
-		"darwin":  "/Volume/render/here",
+		"windows": "s:/here",
+		"linux":   "/shared/flamenco/render/here",
+		"darwin":  "/Volume//shared/flamenco/render/here",
 	}[runtime.GOOS]
 	if !ok {
 		panic("unknown runtime OS '" + runtime.GOOS + "'")

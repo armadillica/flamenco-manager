@@ -49,11 +49,11 @@ func (s *SettingsTestSuite) TestDefaultSettings(t *check.C) {
 
 	linuxPVars, ok := config.VariablesLookup["workers"]["linux"]
 	assert.True(t, ok, "workers/linux should have variables: %v", config.VariablesLookup)
-	assert.Equal(t, "/shared/flamenco-jobs", linuxPVars["job_storage"])
+	assert.Equal(t, "/shared/flamenco/jobs", linuxPVars["job_storage"])
 
 	winPVars, ok := config.VariablesLookup["users"]["windows"]
 	assert.True(t, ok)
-	assert.Equal(t, "S:", winPVars["job_storage"])
+	assert.Equal(t, "S:/flamenco/jobs", winPVars["job_storage"])
 }
 
 func (s *SettingsTestSuite) TestVariableValidation(t *check.C) {
