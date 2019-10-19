@@ -32,6 +32,8 @@ type Config struct {
 	// directory created for this test is located.
 	TestTempDir string `yaml:"-"`
 
+	Enabled bool `yaml:"enabled"`
+
 	FileStorePath string `yaml:"fileStorePath"`
 	CheckoutPath  string `yaml:"checkoutPath"`
 

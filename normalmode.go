@@ -103,9 +103,12 @@ func normalMode() (*mux.Router, error) {
 	workerAuthenticator := auth.NewBasicAuthenticator("Flamenco Manager", workerSecret)
 	registrationAuthenticator := flamenco.NewWorkerRegistrationAuthoriser(&config)
 	router := mux.NewRouter().StrictSlash(true)
-	dashboard.AddRoutes(router, shamanServer.Auther())
+
 	latestImageSystem.AddRoutes(router, workerAuthenticator, jwtAuther)
-	shamanServer.AddRoutes(router)
+	if shamanServer != nil {
+		dashboard.AddRoutes(router, shamanServer.Auther())
+		shamanServer.AddRoutes(router)
+	}
 	if !config.JWT.DisableSecurity {
 		jwtRedirector.AddRoutes(router)
 	}
@@ -123,7 +126,9 @@ func normalMode() (*mux.Router, error) {
 	if workerRemover != nil {
 		workerRemover.Go()
 	}
-	shamanServer.Go()
+	if shamanServer != nil {
+		shamanServer.Go()
+	}
 	dynamicPoolPoller.Go()
 
 	if !config.JWT.DisableSecurity {

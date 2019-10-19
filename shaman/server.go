@@ -49,6 +49,12 @@ type Server struct {
 
 // NewServer creates a new Shaman server.
 func NewServer(conf config.Config, auther jwtauth.Authenticator) *Server {
+
+	if !conf.Enabled {
+		packageLogger.Warning("Shaman server is disabled")
+		return nil
+	}
+
 	fileStore := filestore.New(conf)
 	checkoutMan := checkout.NewManager(conf, fileStore)
 	fileServer := fileserver.New(fileStore)

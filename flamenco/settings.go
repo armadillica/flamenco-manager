@@ -109,6 +109,7 @@ var (
 			},
 
 			Shaman: shamanconfig.Config{
+				Enabled:       true,
 				FileStorePath: "/shared/flamenco/file-store",
 				CheckoutPath:  "/shared/flamenco/jobs",
 

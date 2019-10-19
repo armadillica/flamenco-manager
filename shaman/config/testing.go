@@ -38,6 +38,7 @@ func CreateTestConfig() (conf Config, cleanup func()) {
 
 	conf = Config{
 		TestTempDir:   tempDir,
+		Enabled:       true,
 		FileStorePath: path.Join(tempDir, "file-store"),
 		CheckoutPath:  path.Join(tempDir, "checkout"),
 

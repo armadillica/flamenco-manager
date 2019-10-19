@@ -107,6 +107,12 @@
 
             <p>Note that <em>Shaman</em> uses symlinking, and thus is incompatible with platforms or storage systems that do not support symbolic links.</p>
 
+            <checkbox-field id_input="shaman_enabled" v-model="config.shaman.enabled" :original_value="original_config.shaman.enabled"
+                label="Enable Shaman"
+                label2="Enable Shaman storage system"
+                help="Shaman requires symlinks, so disable this when using platforms or shared storage systems that do not support this.">
+            </checkbox-field>
+
             <input-field id_input="shaman_fileStorePath" v-model="config.shaman.fileStorePath" :original_value="original_config.shaman.fileStorePath"
                 placeholder="/mnt/shared-filesystem/flamenco-file-store"
                 label="File Storage"
