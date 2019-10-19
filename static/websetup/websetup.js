@@ -312,8 +312,10 @@ Vue.component('variable-editor', {
     }},
     template: '#template_variable_editor',
     created() {
-        let reducer = (acc, varValue) => { return acc && varValue.audience == 'all' };
-        let isAllAudience = this.varDef.values.reduce(reducer, true);
+        let isAllAudience = true;
+        for (var varValue of this.varDef.values) {
+            isAllAudience &= (varValue.audience == 'all' || varValue.audience == '' || typeof varValue.audience == 'undefined');
+        }
         this.allAudience = isAllAudience ? 'all' : 'separate';
 
         // Before the configuration is saved, we need to clean up some stuff.
@@ -350,7 +352,7 @@ Vue.component('variable-editor', {
 
             // See which platforms and audiences already have values.
             for (var value of this.varDef.values) {
-                if (isAllAudience || value.audience == "all") {
+                if (isAllAudience || value.audience == "all" || value.audience == "") {
                     platformsLeft.workers.delete(value.platform);
                     platformsLeft.users.delete(value.platform);
                 } else {
