@@ -109,8 +109,8 @@ var (
 			},
 
 			Shaman: shamanconfig.Config{
-				FileStorePath: "../shaman-file-store",
-				CheckoutPath:  "../shaman-checkout",
+				FileStorePath: "/shared/flamenco/file-store",
+				CheckoutPath:  "/shared/flamenco/jobs",
 
 				GarbageCollect: shamanconfig.GarbageCollect{
 					Period:            0,
@@ -142,20 +142,28 @@ var (
 					ConfV2VariableValue{Platform: "darwin", Value: "/Volumes/Applications/FFmpeg/ffmpeg"},
 				},
 			},
+			"shaman": ConfV2Variable{
+				Direction: "oneway",
+				Values: ConfV2VariableValues{
+					ConfV2VariableValue{Platform: "linux", Value: "/shared/flamenco/jobs"},
+					ConfV2VariableValue{Platform: "windows", Value: "S:/flamenco/jobs"},
+					ConfV2VariableValue{Platform: "darwin", Value: "/Volumes/Shared/flamenco/jobs"},
+				},
+			},
 			"render": ConfV2Variable{
 				Direction: "twoway",
 				Values: ConfV2VariableValues{
-					ConfV2VariableValue{Platform: "linux", Value: "/render"},
-					ConfV2VariableValue{Platform: "windows", Value: "R:"},
-					ConfV2VariableValue{Platform: "darwin", Value: "/Volumes/render"},
+					ConfV2VariableValue{Platform: "linux", Value: "/shared/flamenco/render"},
+					ConfV2VariableValue{Platform: "windows", Value: "S:/flamenco/render"},
+					ConfV2VariableValue{Platform: "darwin", Value: "/Volumes/Shared/flamenco/render"},
 				},
 			},
 			"job_storage": ConfV2Variable{
 				Direction: "twoway",
 				Values: ConfV2VariableValues{
-					ConfV2VariableValue{Platform: "linux", Value: "/shared/flamenco-jobs"},
-					ConfV2VariableValue{Platform: "windows", Value: "S:"},
-					ConfV2VariableValue{Platform: "darwin", Value: "/Volumes/shared/flamenco-jobs"},
+					ConfV2VariableValue{Platform: "linux", Value: "/shared/flamenco/jobs"},
+					ConfV2VariableValue{Platform: "windows", Value: "S:/flamenco/jobs"},
+					ConfV2VariableValue{Platform: "darwin", Value: "/Volumes/Shared/flamenco/jobs"},
 				},
 			},
 		},
