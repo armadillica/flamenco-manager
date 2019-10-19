@@ -114,7 +114,7 @@ var (
 				CheckoutPath:  "/shared/flamenco/jobs",
 
 				GarbageCollect: shamanconfig.GarbageCollect{
-					Period:            0,
+					Period:            24 * time.Hour,
 					MaxAge:            31 * 24 * time.Hour,
 					ExtraCheckoutDirs: []string{},
 				},
