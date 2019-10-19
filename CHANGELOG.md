@@ -1,6 +1,18 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.6 (in development)
+
+- Allow Shaman file server to be disabled. Since this component uses symbolic links on the shared
+  storage, it's incompatible with Windows (which has very limited support for symlinks), and then
+  it's simpler to just turn Shaman off.
+- Fixed some small bugs in the web setup.
+- Simplified and clarified the default & example settings.
+- Shaman: enable garbage collection (GC) by default. GC was previously disabled as it deletes files
+  and thus a bug can have far-fetching consequences. By now it's been used in production for long
+  enough to trust it.
+
+
 ## Version 2.5.1 (2019-07-18)
 
 - Compatibility fix for certain SMB filesystems.
