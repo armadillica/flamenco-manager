@@ -105,6 +105,8 @@
             by symlinking those files. Effectively it ensures that, when you create a new render job, you only
             have to upload files that are new or have changed.</p>
 
+            <p>Note that <em>Shaman</em> uses symlinking, and thus is incompatible with platforms or storage systems that do not support symbolic links.</p>
+
             <input-field id_input="shaman_fileStorePath" v-model="config.shaman.fileStorePath" :original_value="original_config.shaman.fileStorePath"
                 placeholder="/mnt/shared-filesystem/flamenco-file-store"
                 label="File Storage"
@@ -114,7 +116,7 @@
             <input-field id_input="shaman_checkoutPath" v-model="config.shaman.checkoutPath" :original_value="original_config.shaman.checkoutPath"
                 placeholder="/mnt/shared-filesystem/flamenco-checkout"
                 label="Checkout"
-                help="Path where render job file structures are created. Must be on the same filesystem as the File Storage path, and must be accessible by Workers.">
+                help="Path where render job file structures are created. Must be on the same filesystem as the File Storage path, and must match the {shaman} variable configured above.">
             </input-field>
         </section>
 
