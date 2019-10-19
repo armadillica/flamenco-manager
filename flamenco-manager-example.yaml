@@ -1,6 +1,13 @@
+# The version of this configuration file.
+_meta:
+  version: 2
+
+
+# Name of this Manager shown on the dashboard.
+manager_name: "Flamenco Manager"
 
 # You can leave the database_url empty to use the built-in MongoDB server, or you can
-# point Flamenco Manager to an existing MongoDB server.
+# point Flamenco Manager to an existing MongoDB server (preferred).
 #database_url: mongodb://localhost/flamanager
 database_url:
 
@@ -12,7 +19,7 @@ database_url:
 # Where Flamenco Manager stores the task logs it receives from Workers.
 # As of Manager version 2.2 it no longer sends the entire log to the Server,
 # but stores them here in full and only sends the last few lines upstream.
-task_logs_path: /tmp/flamenco/logs
+task_logs_path: /var/log/flamenco-logs
 
 # Flamenco Manager listens to incoming connections from workers on this address.
 listen: ':8080'
@@ -31,11 +38,14 @@ listen: ':8080'
 # The URL where the workers can reach this Flamenco Manager.
 own_url: http://192.168.3.108:8083/
 
-flamenco: https://cloud.blender.org/
-manager_id: 1234567899876543212345678
-manager_secret: theworldistheworld
+# These settings determine which Flamenco Server we are linked to. Generally you don't edit
+# this yourself, but use the linking procedure from the setup.
+#flamenco: https://cloud.blender.org/
+#manager_id: 1234567899876543212345678
+#manager_secret: theworldistheworld
 
-# Enables auto-discovery via UPnP/SSDP. Make sure the device UUID is unique.
+# Enables auto-discovery via UPnP/SSDP. Make sure the device UUID is unique within your network
+# when you have multiple Flamenco Managers running.
 ssdp_discovery: true
 ssdp_device_uuid: 1e97b633-34f6-416f-abbb-853de75e5c57
 
@@ -95,41 +105,77 @@ task_fail_after_softfail_count: 3
 
 
 # If set, Flamenco Manager will recursively monitor this path, and show the latest
-# image placed there on the status dashboard.
-# watch_for_latest_image: /path/to/render/outputs
+# image placed there on the status dashboard. This is not generally needed, as the
+# workers also notify Flamenco Manager when they have produced output.
+#watch_for_latest_image: /path/to/render/outputs
 
+# Shaman is the deduplicating file store. Only works on Linux.
+shaman:
+  enabled: true
+  fileStorePath: /shared/flamenco/file-store
+  checkoutPath: /shared/flamenco/jobs
+  garbageCollect:
+    period: 1h
+    maxAge: 744h
+    extraCheckoutPaths: []
 
 variables:
-    blender:
-        darwin: /Users/gast/Downloads/blender-2.80/blender.app/Contents/MacOS/blender --factory-startup
-        linux: /home/sybren/bin/blender --factory-startup
-        windows: c:/data/blender-2.80/blender.exe --factory-startup
-    ffmpeg:
-        darwin: /usr/local/bin/ffmpeg
-        linux: /shared/software/ffmpeg/ffmpeg-flamenco/ffmpeg
-        windows: c:/data/ffmpeg-4.1-win64-static/bin/ffmpeg.exe
-
-
-# Two-way translations of POSIX-style paths.
-path_replacement:
-    render:
-        windows: r:/
-        linux: /render
-        darwin: /Volume/render/
-    job_storage:
-        windows: s:/
-        linux: /shared/
-        darwin: /Volume/shared/
+  blender:
+    direction: oneway
+    values:
+      - audience: users
+        platform: linux
+        value: /linux/path/to/blender
+      - audience: workers
+        platform: linux
+        value: /farm/path/to/blender
+      - platform: windows
+        value: 'C:/windows/path/to/blender.exe'
+      - platform: darwin
+        value: /Volumes/Applications/Blender/blender
+  ffmpeg:
+    direction: oneway
+    values:
+      - platform: linux
+        value: /usr/bin/ffmpeg
+      - platform: windows
+        value: 'C:/windows/path/to/ffmpeg.exe'
+      - platform: darwin
+        value: /Volumes/Applications/FFmpeg/ffmpeg
+  job_storage:
+    direction: twoway
+    values:
+      - platform: linux
+        value: /shared/flamenco/jobs
+      - platform: windows
+        value: 'S:/flamenco/jobs'
+      - platform: darwin
+        value: /Volumes/Shared/flamenco/jobs
+  render:
+    direction: twoway
+    values:
+      - platform: linux
+        value: /shared/flamenco/render
+      - platform: windows
+        value: 'S:/flamenco/render'
+      - platform: darwin
+        value: /Volumes/Shared/flamenco/render
+  shaman:
+    direction: oneway
+    values:
+      - platform: linux
+        value: /shared/flamenco/jobs
+      - platform: windows
+        value: 'S:/flamenco/jobs'
+      - platform: darwin
+        value: /Volumes/Shared/flamenco/jobs
 
 # Example configuration for making it possible to perform test tasks.
 # For more details, see the Flamenco documentation.
 test_tasks:
     test_blender_render:
         # The location where the blend file will be placed for the Worker to pick up.
-        job_storage: '{render}/_flamenco/tests/jobs'
+        job_storage: '{job_storage}/flamenco-tests'
 
         # The location where the Worker will save the rendered frame.
-        render_output: '{render}/_flamenco/tests/renders'
-
-# Name of this Manager shown on the dashboard.
-manager_name: "Flamenco Manager"
+        render_output: '{render}/flamenco-tests'
