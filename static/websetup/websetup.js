@@ -441,8 +441,12 @@ var vueApp = new Vue({
     el: '#vueApp',
     data: {
         own_urls: [],
-        config: {},
-        original_config: {},
+        config: {
+            shaman: {},
+        },
+        original_config: {
+            shaman: {},
+        },
         mongo_choice: "builtin",
         vueAppMode: "form",   // or "yaml", see switchAppMode().
     },
