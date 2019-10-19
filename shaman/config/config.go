@@ -26,10 +26,6 @@ import (
 	"time"
 )
 
-const (
-	configFilename = "shaman.yaml"
-)
-
 // Config contains all the Shaman configuration
 type Config struct {
 	// Used only for unit tests, so that they know where the temporary
