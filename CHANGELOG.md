@@ -1,7 +1,7 @@
 Changelog for Flamenco Manager
 ==============================
 
-## Version 2.6 (in development)
+## Version 2.6 (2019-10-22)
 
 - Allow Shaman file server to be disabled. Since this component uses symbolic links on the shared
   storage, it's incompatible with Windows (which has very limited support for symlinks), and then
