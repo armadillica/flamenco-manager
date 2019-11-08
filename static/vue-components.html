@@ -79,7 +79,7 @@
             <ul class="list-unstyled m-0">
                 <li v-for="pool in pools" :key="pool.ID" :title="pool.allocationState">
                     <dl class="row m-0">
-                        <dt class="col-xl-4 col-sm-3 col-xs-3 text-wrap font-weight-normal">{{ pool.ID }}</dt>
+                        <dt class="col-xl-4 col-sm-3 col-xs-3 text-wrap font-weight-normal">{{ pool.ID }} [{{ pool.vmSize }}]</dt>
 
                         <dd class="col-xl-8 col-sm-9 col-xs-9">
                             <span v-if="pool.allocationState == 'steady'" :title="nodeCountExplicit(pool.currentSize)">({{ currentNodeCount(pool) }})</span>
