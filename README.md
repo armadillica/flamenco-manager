@@ -101,6 +101,8 @@ Flamenco Manager accepts the following CLI arguments:
 4. Run `systemctl start flamenco-manager` to start Flamenco Manager.
 5. Run `systemctl enable flamenco-manager` to ensure it starts at boot too.
 
+Logs can be viewed with `journalctl -u flamenco-manager.service`.
+
 
 ## Starting development
 
