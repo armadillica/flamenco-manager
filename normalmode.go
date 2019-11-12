@@ -105,8 +105,8 @@ func normalMode() (*mux.Router, error) {
 	router := mux.NewRouter().StrictSlash(true)
 
 	latestImageSystem.AddRoutes(router, workerAuthenticator, jwtAuther)
+	dashboard.AddRoutes(router, jwtAuther)
 	if shamanServer != nil {
-		dashboard.AddRoutes(router, shamanServer.Auther())
 		shamanServer.AddRoutes(router)
 	}
 	if !config.JWT.DisableSecurity {

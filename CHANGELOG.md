@@ -4,6 +4,7 @@ Changelog for Flamenco Manager
 ## Version 2.7 (in development)
 
 - Update ACME/Let's Encrypt protocol to v2.
+- Fix dashboard not working when Shaman is disabled.
 
 
 ## Version 2.6 (2019-10-22)

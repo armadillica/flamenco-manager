@@ -89,11 +89,6 @@ func (s *Server) Go() {
 	}
 }
 
-// Auther returns the JWT authentication manager.
-func (s *Server) Auther() jwtauth.Authenticator {
-	return s.auther
-}
-
 // AddRoutes adds the Shaman server endpoints to the given router.
 func (s *Server) AddRoutes(router *mux.Router) {
 	s.checkoutMan.AddRoutes(router, s.auther)
