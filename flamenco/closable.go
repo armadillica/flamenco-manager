@@ -51,7 +51,6 @@ func (closable *closable) closableAdd(delta int) {
 	closable.closingMutex.Lock()
 	defer closable.closingMutex.Unlock()
 
-	log.Debugf("Closable: doneWg.Add(%d) ok", delta)
 	closable.doneWg.Add(delta)
 }
 
@@ -60,7 +59,6 @@ func (closable *closable) closableDone() {
 	closable.closingMutex.Lock()
 	defer closable.closingMutex.Unlock()
 
-	log.Debug("Closable: doneWg.Done() ok")
 	closable.doneWg.Done()
 }
 
