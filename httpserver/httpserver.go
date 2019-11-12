@@ -62,9 +62,10 @@ func New(config flamenco.Conf, handler http.Handler) Server {
 
 	case config.ACMEDomainName != "":
 		logrus.WithFields(logrus.Fields{
-			"acme_domain_name": config.ACMEDomainName,
-			"listen":           config.Listen,
-			"listen_https":     config.ListenHTTPS,
+			"acme_domain_name":   config.ACMEDomainName,
+			"listen":             config.Listen,
+			"listen_https":       config.ListenHTTPS,
+			"acme_directory_url": autocert.DefaultACMEDirectory,
 		}).Info("creating ACME/Let's Encrypt enabled server")
 		mgr := autocert.Manager{
 			Prompt:     autocert.AcceptTOS,

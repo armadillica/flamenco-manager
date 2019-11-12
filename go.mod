@@ -18,7 +18,7 @@ require (
 	github.com/sirupsen/logrus v1.3.0
 	github.com/stretchr/testify v1.3.0
 	gitlab.com/blender-institute/gossdp v0.0.0-20181105120310-0fce4178969b
-	golang.org/x/crypto v0.0.0-20190418165655-df01cb2cc480
+	golang.org/x/crypto v0.0.0-20191111213947-16651526fdb4
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
 	gopkg.in/jarcoal/httpmock.v1 v1.0.0-20181117152235-275e9df93516
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce

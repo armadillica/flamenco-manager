@@ -1,6 +1,11 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.7 (in development)
+
+- Update ACME/Let's Encrypt protocol to v2.
+
+
 ## Version 2.6 (2019-10-22)
 
 - Allow Shaman file server to be disabled. Since this component uses symbolic links on the shared
