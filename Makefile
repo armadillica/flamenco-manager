@@ -89,7 +89,7 @@ _prepare_package:
 _finish_package:
 	rm -rf ${PACKAGE_PATH}
 	rm -f ${PACKAGE_PATH}.sha256
-	sha256sum ${PACKAGE_PATH}* | tee ${PACKAGE_PATH}.sha256
+	cd $(dir ${PACKAGE_PATH}) && sha256sum $(notdir ${PACKAGE_PATH})* | tee $(notdir ${PACKAGE_PATH}).sha256
 
 _package_tar: static
 ifeq (${GOOS},linux)
