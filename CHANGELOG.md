@@ -1,6 +1,11 @@
 Changelog for Flamenco Manager
 ==============================
 
+## Version 2.8 (in development)
+
+- Allow startup without network interfaces
+
+
 ## Version 2.7 (2019-11-12)
 
 - Update ACME/Let's Encrypt protocol to v2.

@@ -58,19 +58,22 @@ func EnterSetupMode(config *flamenco.Conf, flamencoVersion string, router *mux.R
 
 	urls, err := availableURLs(config, false)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to find any network address: %s", err)
-	}
-
-	log.Info("Point your browser at any of these URLs:")
-	for _, url := range urls {
-		setupURL, err := url.Parse(webroot)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"webroot": webroot,
-				"url":     setupURL.String(),
-			}).WithError(err).Warning("Unable to append web root to URL", webroot, setupURL, err)
+		if err != ErrNoInterface {
+			return nil, fmt.Errorf("Unable to find any network address: %s", err)
 		}
-		log.Infof("  - %s", setupURL)
+		// Ignore ErrNoInterface errors, but if they occur, also don't show "Point your browser to..."
+	} else {
+		log.Info("Point your browser at any of these URLs:")
+		for _, url := range urls {
+			setupURL, err := url.Parse(webroot)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"webroot": webroot,
+					"url":     setupURL.String(),
+				}).WithError(err).Warning("Unable to append web root to URL", webroot, setupURL, err)
+			}
+			log.Infof("  - %s", setupURL)
+		}
 	}
 
 	// We don't need to return a reference to this object, since it's still referred to by the
